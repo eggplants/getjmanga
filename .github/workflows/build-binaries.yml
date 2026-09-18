@@ -39,6 +39,14 @@ jobs:
         with:
           fetch-depth: 0
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      # cryptography ships no win_arm64 wheel, so uv builds it from source there and
+      # its openssl-sys crate needs an OpenSSL it can find; the runner's vcpkg provides one.
+      - name: Install OpenSSL for the cryptography source build
+        if: matrix.target == 'windows-arm64'
+        shell: bash
+        run: |
+          "$VCPKG_INSTALLATION_ROOT/vcpkg" install openssl:arm64-windows-static-md
+          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> "$GITHUB_ENV"
       - name: Build standalone binary
         shell: bash
         run: |
