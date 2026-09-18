@@ -1,0 +1,118 @@
+"""Fakes every test file shares: a canned `requests.Session` and its responses."""
+
+from __future__ import annotations
+
+import os
+from http import HTTPStatus
+
+import pytest
+from requests import HTTPError, Session
+
+
+class FakeResponse:
+    """What a route hands back. `payload` is what `.json()` returns."""
+
+    def __init__(
+        self,
+        content=b"",
+        *,
+        text=None,
+        payload=None,
+        status_code=HTTPStatus.OK,
+        url=None,
+        content_type="text/html; charset=utf-8",
+    ):
+        self.content = content if text is None else text.encode()
+        self.text = text if text is not None else content.decode(errors="replace")
+        self._payload = payload
+        self.status_code = int(status_code)
+        self.ok = self.status_code < HTTPStatus.BAD_REQUEST
+        # None means "wherever it was asked for"; a value stands for a redirect.
+        self.url = url
+        self.headers = {"content-type": content_type}
+
+    def raise_for_status(self):
+        if not self.ok:
+            error = HTTPError(f"HTTP {self.status_code}")
+            error.response = self  # type: ignore[assignment]  (a fake stands in for the real response)
+            raise error
+
+    def json(self):
+        return self._payload
+
+
+class FakeSession(Session):
+    """Answers by substring match on the requested URL, first route wins.
+
+    A route may hold a list of responses, handed out in order; the last one
+    is then repeated.
+    """
+
+    def __init__(self, routes):
+        super().__init__()
+        self.routes = routes
+        self.calls = []
+        self.params_seen = []
+        self.headers_seen = []
+        self.posts = []
+        self.puts = []
+
+    def get(self, url, **kwargs):
+        self.calls.append(url)
+        self.params_seen.append(kwargs.get("params"))
+        self.headers_seen.append(kwargs.get("headers") or {})
+        return self._route(url)
+
+    def post(self, url, data=None, json=None, **_kwargs):
+        self.posts.append((url, data if data is not None else json))
+        return self._route(url)
+
+    def put(self, url, data=None, **kwargs):
+        self.puts.append((url, kwargs.get("params")))
+        self.headers_seen.append(kwargs.get("headers") or {})
+        return self._route(url)
+
+    def _route(self, url):
+        for needle, scripted in self.routes.items():
+            if needle in url:
+                response = scripted
+                if isinstance(scripted, list):
+                    response = scripted.pop(0) if len(scripted) > 1 else scripted[0]
+                if response.url is None:
+                    response.url = url
+                return response
+        msg = f"no route for {url}"
+        raise AssertionError(msg)
+
+
+def pytest_collection_modifyitems(items):
+    """Skip the `geoblocked` network tests on GitHub's runners.
+
+    Some sites refuse whole networks -- a 403, a 412, or a stand-in page with
+    no viewer in it -- and GitHub's are among them. That is the site's call
+    about where it serves from, not a bug in the client, so those tests run
+    only from a network the site answers.
+    """
+    if not os.environ.get("GITHUB_ACTIONS"):
+        return
+    skip = pytest.mark.skip(reason="the site refuses requests from GitHub's runners")
+    for item in items:
+        if item.get_closest_marker("geoblocked"):
+            item.add_marker(skip)
+
+
+@pytest.fixture
+def fake_response():
+    return FakeResponse
+
+
+@pytest.fixture
+def fake_session():
+    return FakeSession
+
+
+@pytest.fixture(autouse=True)
+def isolated_config(monkeypatch, tmp_path):
+    """Keep the tests away from the user's own `~/.config/getjmanga/config.toml`."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg"))
+    return tmp_path / "xdg" / "getjmanga" / "config.toml"
