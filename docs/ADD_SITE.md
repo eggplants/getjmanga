@@ -293,8 +293,7 @@ that only refuses some networks with a 403.
 
 ## 4. Documentation
 
-- **`docs/SUPPORTED_SITES.md` `Sites` table.** One row per site, in the order of
-  <https://gist.github.com/eggplants/05e3d0a29b234eddafd5ea8dfb0277c4>, naming
+- **`docs/SUPPORTED_SITES.md` `Sites` table.** One row per site, naming
   the publisher, the viewer platform and the extractor; a site that is not in
   the list yet gets a new row in the same shape. When something needs saying
   (a site that moved domains, a sibling site that is not covered), add a note
