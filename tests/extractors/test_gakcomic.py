@@ -531,7 +531,7 @@ def test_a_viewer_url_downloads_on_its_own(tmp_path):
         "https://gakcomic.gakken.jp/viewer/?content_id=0f3fcbd2b42749f788bfdc16731af5a9",
     )
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "うまくなる卓球" / "第１章"
+    assert result.save_dir == tmp_path / "gakcomic.gakken.jp" / "うまくなる卓球" / "第１章"
 
 
 @pytest.mark.network
