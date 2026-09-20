@@ -65,28 +65,33 @@ Option = Literal["savedir", "overwrite", "bulk", "both"]
 
 _T = TypeVar("_T", str, bool)
 
-#: What `init` writes. The defaults are real lines, not comments, so that
-#: `set_option` replaces them in place instead of appending below the
-#: commented-out section example, where uncommenting it would swallow them.
+#: What `init` writes. The defaults and `patrol` are real lines, not comments,
+#: so that `set_option` and `-S` fill them in place instead of appending below
+#: the commented-out section example, where uncommenting it would swallow them.
 TEMPLATE = """\
-# getjmanga config -- `jm config --help` edits it.
+# see `jm config -h` for details
 
-# Defaults for the command line flags of the same name.
+# options
 savedir = "."
 overwrite = false
 bulk = false
 both = false
 
-# One [site.<key>] section per account. The key is the site's host, or the
-# key `jm --list-extractors` prints for a login shared across hosts.
-# Leave the password out to be prompted for it once per run.
-# [site."shonenjumpplus.com"]
-# username = "you@example.com"
-# password = "..."
+# targets of `jm patrol`
+# patrol = [
+#   { url = "https://shonenjumpplus.com/episode/13932016480028799982", title = "SPY×FAMILY" },
+#   { url = "https://shonenjumpplus.com/", search = true },
+#   ...
+# ]
+patrol = []
 
-# What `jm patrol` goes through: `jm -S <url>` adds an entry here.
-# [[patrol]]
-# url = "https://shonenjumpplus.com/episode/1"
+# [site."foobar"]
+# username = "XXXX"
+# password = "XXXX"
+
+# [site."example.com"]
+# username = "XXXX"
+# password = "XXXX"
 """
 
 
@@ -355,9 +360,11 @@ def store_work(work: Work, path: Path | None = None, *, replacing: str | None = 
             if isinstance(entry, Table | InlineTable) and entry.get("url") in urls:
                 _fill(entry, work)
                 return
-        # A hand-written `patrol = [{...}, ...]` keeps its shape; otherwise one `[[patrol]]` per work.
+        # The template's `patrol = []` and a hand-written `patrol = [{...}, ...]` keep
+        # their shape, one entry per line; otherwise one `[[patrol]]` per work.
         if isinstance(entries, Array):
             entry: Table | InlineTable = tomlkit.inline_table()
+            entries.multiline(multiline=True)
         else:
             entry = tomlkit.table()
             # A blank line before the table, unless it is the first thing in the file.

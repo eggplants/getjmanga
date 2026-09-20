@@ -130,7 +130,7 @@ lint.per-file-ignores."tests/**" = [
   "SLF001",  # Private member access (the base class helpers the extractors share)
   "TRY003",  # Long exception messages (fakes raise inline)
 ]
-lint.allowed-confusables = [ "／", "｜" ]  # Fullwidth forms the sites put in titles
+lint.allowed-confusables = [ "×", "／", "｜" ]  # Fullwidth forms the sites put in titles
 lint.pydocstyle.convention = "google"
 
 [tool.pytest]
