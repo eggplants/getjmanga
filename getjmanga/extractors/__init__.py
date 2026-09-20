@@ -22,6 +22,7 @@ from .bloom import Bloom
 from .boost import Boost
 from .carula import Carula
 from .ciao import Ciao
+from .cmoa import Cmoa
 from .comicessay import ComicEssay
 from .comici import Comici
 from .comico import Comico
@@ -161,6 +162,7 @@ EXTRACTORS: tuple[type[Extractor], ...] = (
     Michikusa,
     Carula,
     Gakcomic,
+    Cmoa,
 )
 
 
@@ -211,6 +213,7 @@ __all__ = (
     "Boost",
     "Carula",
     "Ciao",
+    "Cmoa",
     "ComicEssay",
     "ComicWalker",
     "Comici",

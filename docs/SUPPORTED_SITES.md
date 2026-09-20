@@ -128,6 +128,11 @@
 | [新都社](http://neetsha.jp/) | 新都社（同人） | - | `neetsha` |
 | [路草](https://michikusacomics.jp/) | トゥーヴァージンズ | SpeedBinb | `michikusa` |
 | [コミックカルラ](https://carula.jp/) | 世界文化ブックス | note | `carula` |
+| [コミックシーモア](https://www.cmoa.jp/) | NTTソルマーレ | SpeedBinb | `cmoa` |
+
+コミックシーモア is read without an account: the 立ち読み of every volume, and the whole
+volume while it is on a free campaign. The store signs in through an OpenID provider
+guarded by reCAPTCHA, so `cmoa` has no `login()` and bought volumes are out of reach.
 
 ## URL formats
 
@@ -283,3 +288,5 @@
 | | `https://note.com/carula/m/<key>` -- every episode of a note magazine, oldest first |
 | `gakcomic` | `https://gakcomic.gakken.jp/comic/page-<slug>/#episode-<id>` (as the work page lists it) or `https://gakcomic.gakken.jp/viewer/?content_id=<id>` |
 | | `https://gakcomic.gakken.jp/comic/page-<slug>/` -- every episode, oldest first |
+| `cmoa` | `https://www.cmoa.jp/title/<title-id>/vol/<n>/` (also the volume's `/reader/sample/`, `/reader/browserviewer/` and `/bib/speedreader/` URLs) -- the 立ち読み, or the whole volume while it is free |
+| | `https://www.cmoa.jp/title/<title-id>/` -- every volume of the title, oldest first |
