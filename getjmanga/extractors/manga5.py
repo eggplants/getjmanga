@@ -19,8 +19,8 @@ What the directory holds depends on `cty`:
   `content.json`: a list of story steps, each naming one or more plain images.
 - `0`, `1` and `2` are PUBLUS fixed-layout books, `configuration_pack.json`,
   read by ACCESS's PUBLUS Reader. Most packs come wrapped in the cipher
-  `boost.py` unwraps, with hashed page names and the xorshift tile shuffle,
-  and that port does the work. The free samples of the paid volumes come as
+  `viewers/publus.py` unwraps, with hashed page names and the xorshift tile
+  shuffle, and that port does the work. The free samples of the paid volumes come as
   plain JSON without shuffle seeds instead, and their pages are tiled by an
   older, unkeyed shuffle: 64x64 blocks moved around by one of four fixed
   patterns picked from the page's path. `descramble()` below is a port of
@@ -46,9 +46,9 @@ from PIL import Image
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .boost import Boost, Slice, decode_pack
-from .boost import descramble as descramble_keyed
+from getjmanga.viewers.publus import Slice, decode_pack
+from getjmanga.viewers.publus import descramble as descramble_keyed
+from getjmanga.viewers.publus import pages as publus_pages
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -576,10 +576,7 @@ class Manga5(Extractor):
             return [], {}
         if "data" in pack and "configuration" not in pack:
             decoded = decode_pack(res.text)
-            pages = [
-                replace(page, url=f"{page.url}?{query}")
-                for page in Boost._pages(decoded, base)  # noqa: SLF001 (the PUBLUS pack walk lives with its port)
-            ]
+            pages = [replace(page, url=f"{page.url}?{query}") for page in publus_pages(decoded, base)]
             return pages, {"configuration": decoded.content["configuration"]}
         return plain_pages(pack, base, query), {"configuration": pack.get("configuration")}
 

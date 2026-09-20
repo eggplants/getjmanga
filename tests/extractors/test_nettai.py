@@ -8,7 +8,6 @@ from PIL import Image
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors import nettai
-from getjmanga.extractors.boost import Pack, page_seeds, tile_slices
 from getjmanga.extractors.nettai import (
     BASE_URL,
     LAST_PAGE_URL,
@@ -16,6 +15,7 @@ from getjmanga.extractors.nettai import (
     Nettai,
     viewer_url,
 )
+from getjmanga.viewers.publus import Pack, page_seeds, tile_slices
 
 CID = "eyJpdiI6InE2dXJxNnVycTZ1cnE2dXJxNnVycXc9PSIsInZhbHVlIjoiYkZYeHg3ZVNremNF"
 NEXT_CID = "eyJpdiI6InE2dXJxNnVycTZ1cnE2dXJxNnVycXc9PSIsInZhbHVlIjoiNjFKSkszNTZ2NWNR"

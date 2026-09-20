@@ -9,7 +9,6 @@ from PIL import Image
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors import manga5
-from getjmanga.extractors.boost import Pack
 from getjmanga.extractors.manga5 import (
     BASE_URL,
     LICENSE_URL,
@@ -21,6 +20,7 @@ from getjmanga.extractors.manga5 import (
     split_title,
     tile_slices,
 )
+from getjmanga.viewers.publus import Pack
 
 SERIES_URL = f"{BASE_URL}/content/00850001"
 EPISODE_URL = f"{BASE_URL}/product/00850001"

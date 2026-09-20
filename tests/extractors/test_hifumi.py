@@ -7,7 +7,8 @@ from PIL import Image
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractors.hifumi import Hifumi, parse_ptimg, work_url
+from getjmanga.extractors.hifumi import Hifumi, work_url
+from getjmanga.viewers.speedbinb import parse_ptimg
 
 EPISODE_URL = "https://www.123hon.com/vw/mujintou_reijo/sv_pt00069b2277ab77a1_01/"
 NEXT_URL = "https://www.123hon.com/vw/mujintou_reijo/sv_pt0006a8f9e8730428_09/"
@@ -428,7 +429,7 @@ def test_series_urls_refuses_what_is_not_a_work_page(fake_session, url):
 # --- download ------------------------------------------------------------------------
 
 
-def test_image_puts_the_page_together_through_porta(fake_session, fake_response):
+def test_image_puts_the_page_together(fake_session, fake_response):
     session = site(
         fake_session,
         fake_response,

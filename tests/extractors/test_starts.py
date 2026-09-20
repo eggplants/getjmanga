@@ -9,12 +9,12 @@ from PIL import Image
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractors.piccoma import shuffle_order
 from getjmanga.extractors.starts import (
     Starts,
     descramble,
     parse_comic_data,
 )
+from getjmanga.viewers.seedrandom import shuffle_order
 
 ORIGIN = "https://www.berrys-cafe.jp"
 SERIES_URL = f"{ORIGIN}/comic/serial/n53"

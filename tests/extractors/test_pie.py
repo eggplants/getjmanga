@@ -409,7 +409,7 @@ def test_content_is_titled_after_the_work_page_that_lists_it(client):
     assert episode.metadata["content_id"] == "52480"
     assert episode.metadata["binb_id"] == BINB_ID
     json.dumps(episode.metadata)
-    # The work page once, then Ohta's dance: the content page, the stub, the reader, the API, content.js.
+    # The work page once, then the reader's dance: the content page, the stub, the reader, the API, content.js.
     assert session.calls == [
         MANGA_WORK_URL,
         CONTENT_URL,
@@ -427,9 +427,10 @@ def test_a_bare_content_finds_its_work_page_through_the_publisher_link(client):
     assert episode.series_title == "星旅少年"
     assert episode.episode_title == "【無料】第1話 まどろみの星"
     assert episode.next_url == NEXT_CONTENT_URL
-    # The content page, the publisher link (which lands on the work page), then Ohta's dance.
-    assert session.calls[:3] == [CONTENT_URL, "https://pie.co.jp/series/4858311/", CONTENT_URL]
-    assert session.calls.count("https://pie.co.jp/series/4858311/") == 1
+    # The content page and the reader's dance, then the publisher link (which lands on the work page).
+    assert session.calls[0] == CONTENT_URL
+    assert session.calls[-1] == "https://pie.co.jp/series/4858311/"
+    assert session.calls.count(CONTENT_URL) == 1
 
     # The work page is remembered for the episodes it lists.
     pie.episode(CONTENT_URL)
@@ -438,7 +439,7 @@ def test_a_bare_content_finds_its_work_page_through_the_publisher_link(client):
     assert MANGA_WORK_URL not in session.calls
 
 
-def test_a_content_without_a_publisher_link_keeps_ohta_titles(client, fake_response):
+def test_a_content_without_a_publisher_link_is_titled_off_the_content_page(client, fake_response):
     pie, session = client({"/contents/52480": fake_response(text=content_html(back_link=""))})
     episode = pie.episode(CONTENT_URL)
 

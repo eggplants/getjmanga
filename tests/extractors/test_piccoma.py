@@ -8,16 +8,7 @@ from PIL import Image
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractors.piccoma import (
-    BASE_URL,
-    TILE_SIZE,
-    Entry,
-    Piccoma,
-    descramble,
-    parse_seed,
-    seedrandom,
-    shuffle_order,
-)
+from getjmanga.extractors.piccoma import BASE_URL, TILE_SIZE, Entry, Piccoma, parse_seed
 
 # The checksum and the `expires` stamp of a real page image, and the seed the
 # viewer derives from them.
@@ -25,10 +16,6 @@ CHECKSUM = "G0UQD7CENPH26H9YIEIYEU"
 EXPIRES = "1788372000"
 SEED = "OQI26H8XIDIYETF0TQD7BD"
 IMAGE_URL = f"//pcm.kakaocdn.net/dna/ta9nw/btqGHxiZm9S/{CHECKSUM}/i00001.jpg?credential=abc&expires={EXPIRES}"
-
-# `shuffle_order(12, SEED)`, as the reference implementation of the viewer's
-# PRNG produces it.
-ORDER_12 = [1, 10, 11, 0, 3, 6, 8, 7, 2, 9, 4, 5]
 
 VIEWER_HTML = f"""
 <html><head>
@@ -147,18 +134,6 @@ def image_routes(fake_response):
     return {"kakaocdn.net": fake_response(raw.getvalue())}
 
 
-# --- the PRNG and the shuffle -----------------------------------------------
-
-
-def test_shuffle_order_matches_the_viewer():
-    assert shuffle_order(12, SEED) == ORDER_12
-
-
-def test_seedrandom_rejects_an_empty_seed():
-    with pytest.raises(GetjmangaError, match="empty"):
-        seedrandom("")
-
-
 # --- the seed -----------------------------------------------------------------
 
 
@@ -178,27 +153,6 @@ def test_parse_seed_needs_an_expires_stamp():
 def test_parse_seed_needs_a_checksum_segment():
     with pytest.raises(GetjmangaError, match="checksum"):
         parse_seed("https://pcm.kakaocdn.net/i00001.jpg?expires=1")
-
-
-# --- descrambling -------------------------------------------------------------
-
-
-def test_descramble_puts_the_tiles_back():
-    order = shuffle_order(12, SEED)
-    inverse = [0] * 12
-    for destination, source in enumerate(order):
-        inverse[source] = destination
-    original = tile_image(range(12))
-    scrambled = tile_image(inverse)
-    assert descramble(scrambled, SEED).tobytes() == original.tobytes()
-
-
-def test_descramble_handles_edges_that_do_not_fill_a_tile():
-    image = tile_image(range(12)).crop((0, 0, 137, 89))
-    out = descramble(image, SEED)
-    assert out.size == (137, 89)
-    # Every group is permuted among itself, so no pixel value is invented.
-    assert out.histogram() == image.histogram()
 
 
 # --- urls ---------------------------------------------------------------------

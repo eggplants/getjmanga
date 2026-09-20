@@ -8,7 +8,7 @@ from PIL import Image
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.kirapo import Kirapo
-from getjmanga.extractors.porta import parse_ptimg
+from getjmanga.viewers.speedbinb import parse_ptimg
 
 EPISODE_URL = "https://kirapo.jp/pt/meteor/aroundforty/1017660/viewer"
 SPECIAL_URL = "https://kirapo.jp/pt/meteor/aroundforty/2022179/viewer"

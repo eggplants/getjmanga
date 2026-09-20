@@ -383,12 +383,6 @@ def test_reader_without_a_viewer_is_not_an_episode(client, fake_response):
         bloom.episode(EPISODE_URL)
 
 
-def test_api_that_does_not_describe_the_content_is_not_an_episode(client):
-    bloom, _ = client(body={"result": 1, "items": [{"ContentID": CONTENT_ID}]})
-    with pytest.raises(NotAnEpisodePageError, match="did not describe"):
-        bloom.episode(EPISODE_URL)
-
-
 def test_api_on_another_backend_is_unsupported(client):
     bloom, _ = client(server_type=1)
     with pytest.raises(GetjmangaError, match="ServerType 1"):

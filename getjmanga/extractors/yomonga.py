@@ -9,7 +9,7 @@ sends the browser to the newest episode instead.
 
 The viewer is Voyager's SpeedBinb in its REST flavour (`ServerType` 2): the
 `bibGetCntntInfo` handshake, the key, the scramble tables and the tile shuffle
-are the ones `gaugau.py` describes and are reused from there. What differs
+are `viewers/speedbinb.py`'s. What differs
 is where the pages live: the handshake answer sets CloudFront signed cookies
 for `<ContentsServer>` on the session, the page list is `<ContentsServer>/content`
 (plain JSON, not JSONP) and each page is `<ContentsServer>/img/<src>`, served
@@ -19,19 +19,17 @@ only with those cookies. No Referer check, no login.
 from __future__ import annotations
 
 import re
-import time
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
-from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .gaugau import decode_table, descramble, parse_content, parse_pages, pick_tables, viewer_key
+from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -39,8 +37,6 @@ if TYPE_CHECKING:
 
 BASE_URL = "https://www.yomonga.com"
 
-#: `ServerType` of a `bibGetCntntInfo` item whose pages are behind the REST endpoints.
-_SERVER_TYPE_REST = 2
 
 # A work page. With `?episode=<n>` it is an episode, without one a series.
 _TITLE_PATH = re.compile(r"^/titles/(?P<id>\d+)/?$")
@@ -284,40 +280,30 @@ class Yomonga(Extractor):
             raise NotAnEpisodePageError(msg)
 
         content_id = work.content_id
-        key = viewer_key(content_id)
-        item = self._content_info(work.info_url, content_id, key, referer=page_url)
-        server = str(item["ContentsServer"]).rstrip("/")
-        ctbl = decode_table(content_id, key, str(item.get("ctbl", "")))
-        ptbl = decode_table(content_id, key, str(item.get("ptbl", "")))
-        if not isinstance(ctbl, list) or not isinstance(ptbl, list):
-            msg = f"{work.info_url} carried no scramble tables for {content_id}."
-            raise GetjmangaError(msg)
-
-        content_res = self._get(f"{server}/content", headers={**self.HEADERS, "Referer": page_url})
-        content = parse_content(content_res.text)
-        pages = []
-        for attrs in parse_pages(content["ttx"]):
-            page_table, served_table = pick_tables(attrs["src"], ctbl, ptbl)
-            pages.append(
-                Page(
-                    url=f"{server}/img/{attrs['src']}",
-                    width=int(attrs.get("orgwidth") or 0),
-                    height=int(attrs.get("orgheight") or 0),
-                    extra={"ctbl": page_table, "ptbl": served_table},
-                ),
-            )
+        content = speedbinb.content_info(
+            self,
+            work.info_url,
+            content_id,
+            referer=page_url,
+            server_types=frozenset({speedbinb.SERVER_TYPE_REST}),
+        )
+        if content is None:
+            msg = f"{work.info_url} did not describe {content_id}."
+            raise NotAnEpisodePageError(msg)
+        book = speedbinb.page_list(self, content, referer=page_url)
+        item = content.item
 
         return Episode(
             url=page_url,
             series_title=work.series_title,
             episode_title=work.episode_title or listed.title or f"Chapter.{number}",
-            pages=tuple(pages),
+            pages=book.pages,
             next_url=next_url,
             metadata={
                 "title_id": title_id,
                 "episode_no": number,
                 "content_id": content_id,
-                "contents_server": server,
+                "contents_server": content.server,
                 "publish_end": listed.publish_end,
                 "title": item.get("Title"),
                 "authors": item.get("Authors"),
@@ -339,8 +325,7 @@ class Yomonga(Extractor):
         Returns:
             The page in reading order, padding gone.
         """
-        image = self._fetch_image(page.url, headers={**self.HEADERS, "Referer": episode.url})
-        return descramble(image, str(page.extra.get("ctbl", "")), str(page.extra.get("ptbl", "")))
+        return speedbinb.fetch_page(self, page, referer=episode.url)
 
     def _listing(self, title_id: str) -> tuple[Listed, ...]:
         """The readable episodes of a work, oldest first, read once per work."""
@@ -357,28 +342,6 @@ class Yomonga(Extractor):
         self._episodes[title_id] = work.episodes
         return work.episodes
 
-    def _content_info(self, info_url: str, content_id: str, key: str, *, referer: str) -> dict[str, Any]:
-        """Call `bibGetCntntInfo` and return its first item.
-
-        The site answers an unknown content id with a 503 error page, which
-        `_get` raises on.
-        """
-        res = self._get(
-            info_url,
-            params={"cid": content_id, "k": key, "dmytime": _now_ms()},
-            headers={**self.HEADERS, "Referer": referer},
-        )
-        body = res.json()
-        items = body.get("items") if isinstance(body, dict) and body.get("result") == 1 else None
-        if not items or not isinstance(items[0], dict) or not items[0].get("ContentsServer"):
-            msg = f"{info_url} did not describe {content_id}: {str(body)[:200]}"
-            raise NotAnEpisodePageError(msg)
-        item: dict[str, Any] = items[0]
-        if int(item.get("ServerType", 0)) != _SERVER_TYPE_REST:
-            msg = f"{content_id} is on a SpeedBinb ServerType {item.get('ServerType')} backend, which is not supported."
-            raise GetjmangaError(msg)
-        return item
-
 
 def _episode_number(url: str) -> int | None:
     """The `episode=<n>` of a URL, or None when it has none (or not a number)."""
@@ -387,8 +350,3 @@ def _episode_number(url: str) -> int | None:
         return int(values[0]) if values else None
     except ValueError:
         return None
-
-
-def _now_ms() -> int:
-    """The cache-busting timestamp the viewer sends as `dmytime`."""
-    return int(time.time() * 1000)

@@ -6,7 +6,7 @@ each as one path prefix of the same Laravel app. A work page
 `/<imprint>/titles/<slug>` lists the episodes newest first, and every one
 still free to read links its reader at `/pt/<imprint>/<slug>/<id>/viewer`:
 Voyager's SpeedBinb in its "PtBinb" form, the same static export COMICポルタ
-serves, so the `ptimg.json` parsing and the descrambling come from `porta`.
+serves, so the `ptimg.json` parsing and the descrambling are `viewers/speedbinb.py`'s.
 No API, no cookie, no Referer check, no account. An episode whose free run
 has ended is dropped from the listing and its reader answers 404.
 """
@@ -25,8 +25,8 @@ from requests import RequestException
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .porta import descramble, parse_ptimg, split_title
+from getjmanga.viewers import speedbinb
+from getjmanga.viewers.speedbinb import split_title
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -203,10 +203,7 @@ class Kirapo(Extractor):
         Returns:
             The page in reading order.
         """
-        headers = {**self.HEADERS, "Referer": episode.url}
-        ptimg = parse_ptimg(self._get(page.url, headers=headers).json(), page.url)
-        images = {key: self._fetch_image(src, headers=headers) for key, src in ptimg.resources.items()}
-        return descramble(ptimg, images)
+        return speedbinb.fetch_ptimg_page(self, page.url, referer=episode.url)
 
     def _listing_of(self, url: str) -> Listing | None:
         """Read the work page a reader URL belongs to, or None when it cannot be read.

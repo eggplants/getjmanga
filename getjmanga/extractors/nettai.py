@@ -18,10 +18,10 @@ needs it: the viewer's own API does the work.
   link and the way back to the work page. The work page's `h1` is the only
   place the series title is written down.
 
-The content directory is a PUBLUS one, exactly as `boost.py` describes it:
-`configuration_pack.json` under the viewer's home-grown cipher, hashed page
-file names and xorshift-shuffled tiles. Everything after the license call is
-`boost.py`'s port; the CDN wants neither cookie nor `Referer`. There is no
+The content directory is a PUBLUS one, exactly as `viewers/publus.py`
+describes it: `configuration_pack.json` under the viewer's home-grown cipher,
+hashed page file names and xorshift-shuffled tiles. Everything after the
+license call is that port's; the CDN wants neither cookie nor `Referer`. There is no
 account to sign in to -- bookmarks and history go to `book.crefar.com` under
 an anonymous token -- so `login()` is the default.
 """
@@ -38,8 +38,7 @@ from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .boost import Boost, decode_pack, descramble
+from getjmanga.viewers.publus import decode_pack, descramble, pages
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -291,7 +290,7 @@ class Nettai(Extractor):
             url=canonical,
             series_title=series_title or episode_title or content_id,
             episode_title=episode_title or content_id,
-            pages=tuple(Boost._pages(pack, content_url)),  # noqa: SLF001 (the PUBLUS pack walk lives with its port)
+            pages=tuple(pages(pack, content_url)),
             next_url=colophon.next_url if colophon is not None else None,
             metadata={**metadata, "configuration": pack.content["configuration"]},
         )

@@ -17,12 +17,12 @@ The work page lists only its first and last few episodes; the rest come from
 that inserts one `li.mod-episode-item` per episode, which `parse_listing()`
 reads back.
 
-The reader is the one `gaugau.py` describes, in its `ServerType` 2 ("Rest")
+The reader is the one `viewers/speedbinb.py` describes, in its `ServerType` 2 ("Rest")
 form: `bibGetCntntInfo` (on the site itself) answers the scramble tables and
 a contents server on `sbc.yanmaga.jp`, and sets the CloudFront cookies that
 server wants; `<server>/content` is the page list as plain JSON, and
 `<server>/img/<src>` the tiled page images, put back together by
-`gaugau.descramble()`. A locked episode opened through the reader URL
+`speedbinb.descramble()`. A locked episode opened through the reader URL
 answers `bibGetCntntInfo` with `result: 0`.
 
 Sign-in goes through Kodansha ID (`id-members.kodansha.co.jp`, OpenID
@@ -32,19 +32,17 @@ Connect on top of Gigya), which is out of reach here.
 from __future__ import annotations
 
 import re
-import time
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, quote, unquote, urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
-from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .gaugau import decode_table, descramble, parse_content, parse_pages, pick_tables, viewer_key
+from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -57,12 +55,6 @@ _WORK_PATH = re.compile(r"^/comics/(?!(?:series|authors)(?:/|$))(?P<title>[^/]+)
 # An episode page, or the reader page it redirects to.
 _EPISODE_PATH = re.compile(r"^/(?:viewer/)?comics/(?!(?:series|authors)/)(?P<title>[^/]+)/(?P<id>[0-9a-f]{32})/?$")
 
-#: `ServerType` of a `bibGetCntntInfo` item whose pages are static files, and one behind the Rest API.
-_SERVER_TYPE_DIRECT = 1
-_SERVER_TYPE_REST = 2
-
-#: The fields of a `bibGetCntntInfo` item that hold the encrypted tables, left out of the metadata.
-_TABLE_FIELDS = frozenset({"stbl", "ttbl", "ctbl", "ptbl"})
 
 #: How many episodes to ask the listing for at once; the site takes far more than any work has.
 _LISTING_LIMIT = 10000
@@ -286,53 +278,35 @@ class YanMaga(Extractor):
 
         reader_url = landed.geturl()
         info_url = urljoin(reader_url, str(viewer["data-ptbinb"]))
-        key = viewer_key(content_id)
-        item = self._content_info(info_url, content_id, key, referer=reader_url)
-        if item is None:
+        content = speedbinb.content_info(
+            self,
+            info_url,
+            content_id,
+            referer=reader_url,
+            server_types=frozenset({speedbinb.SERVER_TYPE_DIRECT, speedbinb.SERVER_TYPE_REST}),
+        )
+        if content is None:
             # The reader page renders for a locked episode too; the API is what says no.
             return self._locked(soup, canonical, title, episode_id, content_id=content_id)
 
-        server = str(item["ContentsServer"]).rstrip("/")
-        server_type = int(item.get("ServerType", 0))
-        ctbl = decode_table(content_id, key, str(item.get("ctbl", "")))
-        ptbl = decode_table(content_id, key, str(item.get("ptbl", "")))
-        if not isinstance(ctbl, list) or not isinstance(ptbl, list):
-            msg = f"{info_url} carried no scramble tables for {content_id}."
-            raise GetjmangaError(msg)
-
-        content_res = self._get(
-            f"{server}/content.js" if server_type == _SERVER_TYPE_DIRECT else f"{server}/content",
-            params={"dmytime": _now_ms()},
-            headers={**self.HEADERS, "Referer": reader_url},
-        )
-        content = parse_content(content_res.text)
-        pages = []
-        for attrs in parse_pages(content["ttx"]):
-            page_table, served_table = pick_tables(attrs["src"], ctbl, ptbl)
-            pages.append(
-                Page(
-                    url=self._page_url(server, server_type, attrs["src"], content),
-                    width=int(attrs.get("orgwidth") or 0),
-                    height=int(attrs.get("orgheight") or 0),
-                    extra={"ctbl": page_table, "ptbl": served_table},
-                ),
-            )
+        book = speedbinb.page_list(self, content, referer=reader_url)
 
         page_series, page_episode = split_page_title(soup.title.get_text() if soup.title else "")
+        item = content.item
         following = item.get("NextEpisode")
         next_path = following.get("ViewerPath") if isinstance(following, dict) else None
         return Episode(
             url=canonical,
             series_title=str(item.get("ParentTitle") or page_series),
             episode_title=str(item.get("Title") or page_episode or episode_id),
-            pages=tuple(pages),
+            pages=book.pages,
             next_url=_episode_url_of(urljoin(canonical, str(next_path))) if next_path else None,
             metadata={
                 "episode_id": episode_id,
                 "content_id": content_id,
-                "contents_server": server,
+                "contents_server": content.server,
                 "locked": False,
-                "info": {key: value for key, value in item.items() if key not in _TABLE_FIELDS},
+                "info": content.info,
             },
         )
 
@@ -346,8 +320,7 @@ class YanMaga(Extractor):
         Returns:
             The page in reading order, padding gone.
         """
-        image = self._fetch_image(page.url, headers={**self.HEADERS, "Referer": episode.url})
-        return descramble(image, str(page.extra.get("ctbl", "")), str(page.extra.get("ptbl", "")))
+        return speedbinb.fetch_page(self, page, referer=episode.url)
 
     def listing(self, title: str) -> list[Listed]:
         """List a work's episodes, oldest first, fetched once per work.
@@ -414,48 +387,11 @@ class YanMaga(Extractor):
             metadata={"episode_id": episode_id, "content_id": content_id, "locked": True},
         )
 
-    def _content_info(self, info_url: str, content_id: str, key: str, *, referer: str) -> dict[str, Any] | None:
-        """Call `bibGetCntntInfo` and return its first item, or None when the site refuses the episode."""
-        res = self._get(
-            info_url,
-            params={"cid": content_id, "k": key, "dmytime": _now_ms()},
-            headers={**self.HEADERS, "Referer": referer},
-        )
-        body = res.json()
-        if not isinstance(body, dict):
-            msg = f"{info_url} did not describe {content_id}: {str(body)[:200]}"
-            raise NotAnEpisodePageError(msg)
-        items = body.get("items")
-        if body.get("result") != 1 or not items:
-            # `result: 0` with an `eurl` at the sign-up page: a sign-in or a rental is wanted.
-            return None
-        item = items[0]
-        if not isinstance(item, dict) or not item.get("ContentsServer"):
-            msg = f"{info_url} did not describe {content_id}: {str(body)[:200]}"
-            raise NotAnEpisodePageError(msg)
-        if int(item.get("ServerType", 0)) not in (_SERVER_TYPE_DIRECT, _SERVER_TYPE_REST):
-            msg = f"{content_id} is on a SpeedBinb ServerType {item.get('ServerType')} backend, which is not supported."
-            raise GetjmangaError(msg)
-        return item
-
-    @staticmethod
-    def _page_url(server: str, server_type: int, src: str, content: dict[str, Any]) -> str:
-        """Where a page image is: `img/<src>` on the Rest backend, `<src>/M_H.jpg` on the static one."""
-        if server_type == _SERVER_TYPE_DIRECT:
-            file_name = "M.jpg" if content.get("ImageClass") == "singlequality" else "M_H.jpg"
-            return f"{server}/{src}/{file_name}"
-        return f"{server}/img/{src}"
-
 
 def _episode_url_of(url: str) -> str:
     """`url` in its canonical form when it is an episode URL, else as it is."""
     match = _EPISODE_PATH.match(urlparse(url).path)
     return episode_url(match["title"], match["id"]) if match else url
-
-
-def _now_ms() -> int:
-    """The cache-busting timestamp the reader sends as `dmytime`."""
-    return int(time.time() * 1000)
 
 
 def _text(tag: Tag | None) -> str:

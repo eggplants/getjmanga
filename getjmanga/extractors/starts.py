@@ -4,8 +4,8 @@ The three sites are one Laravel app under three hostnames: they ship the same
 hashed JS bundles, lay their `/comic/serial/` pages out the same way and
 serve page images from the same `/img/serial-comic/` tree. Each page is cut
 into a grid of square tiles shuffled with `shuffle-seed` over `seedrandom`
--- the very shuffle Piccoma's viewer does -- so the descrambling is
-imported from `piccoma.py` rather than ported again.
+-- the very shuffle Piccoma's viewer does -- so `viewers/seedrandom.py`
+does the descrambling.
 """
 
 from __future__ import annotations
@@ -22,8 +22,7 @@ from bs4.element import Tag
 
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .piccoma import descramble as _descramble_tiles
+from getjmanga.viewers.seedrandom import descramble as _descramble_tiles
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -60,7 +59,7 @@ def descramble(image: Image.Image, seed: str, size: int) -> Image.Image:
     into as many as fit (the last one cut short), and every group of
     same-shaped tiles is shuffled among itself with `shuffle-seed`, which
     draws its floats from `seedrandom(seed)`. That is Piccoma's scramble
-    with a per-page tile side, so its port does the work.
+    with a per-page tile side, so the shared port does the work.
 
     Args:
         image: The page exactly as the site serves it.

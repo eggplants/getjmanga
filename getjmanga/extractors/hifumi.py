@@ -5,7 +5,7 @@ The two imprints share one domain and one theme: a work page at
 oldest first, each one still free to read as a `読む` button that opens
 `https://www.123hon.com/vw/<slug>/<id>/` in a new tab. That directory is
 Voyager's SpeedBinb reader in its static "PtBinb" form -- the one
-`porta.py` reads: one `<div data-ptimg="data/NNNN.ptimg.json">` per page,
+`viewers/speedbinb.py` reads: one `<div data-ptimg="data/NNNN.ptimg.json">` per page,
 each JSON naming a scrambled JPEG next to it and the rectangles to copy out
 of it. No API, no cookie, no Referer check; the files are on S3 behind
 CloudFront.
@@ -37,8 +37,8 @@ from requests import RequestException
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .porta import descramble, parse_ptimg, split_title
+from getjmanga.viewers import speedbinb
+from getjmanga.viewers.speedbinb import split_title
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -291,10 +291,7 @@ class Hifumi(Extractor):
         Returns:
             The page in reading order.
         """
-        headers = {**self.HEADERS, "Referer": episode.url}
-        ptimg = parse_ptimg(self._get(page.url, headers=headers).json(), page.url)
-        images = {key: self._fetch_image(src, headers=headers) for key, src in ptimg.resources.items()}
-        return descramble(ptimg, images)
+        return speedbinb.fetch_ptimg_page(self, page.url, referer=episode.url)
 
     def _listing_of(self, url: str, recommend: str) -> Listing | None:
         """Find the work page an episode belongs to and read it, or None.

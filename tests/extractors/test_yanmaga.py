@@ -10,11 +10,11 @@ from requests import HTTPError
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractors.gaugau import viewer_key
 from getjmanga.extractors.yanmaga import (
     YanMaga,
     parse_listing,
 )
+from getjmanga.viewers.speedbinb import viewer_key
 
 TITLE = "妹は知っている"
 TITLE_ENC = "%E5%A6%B9%E3%81%AF%E7%9F%A5%E3%81%A3%E3%81%A6%E3%81%84%E3%82%8B"
@@ -344,7 +344,7 @@ def test_episode_calls_the_api_and_the_content_server_the_way_the_reader_does(cl
     assert session.headers_seen[info_call]["Referer"] == READER_URL
 
     content_call = next(index for index, url in enumerate(session.calls) if url == f"{SERVER}/content")
-    assert "dmytime" in session.params_seen[content_call]
+    assert session.params_seen[content_call] is None
     assert session.headers_seen[content_call]["Referer"] == READER_URL
     assert not any("/episodes" in url for url in session.calls)
 
@@ -474,12 +474,6 @@ def test_other_http_errors_propagate(client, fake_response):
 
 def test_a_page_with_neither_a_reader_nor_a_title_is_not_an_episode(client, fake_response):
     yanmaga, _ = client({f"/{EPISODE_ID}": fake_response(text="<html><body>nope</body></html>")})
-    with pytest.raises(NotAnEpisodePageError):
-        yanmaga.episode(EPISODE_URL)
-
-
-def test_api_that_does_not_describe_the_content_is_not_an_episode(client):
-    yanmaga, _ = client(body={"result": 1, "items": [{"Title": "x"}]})
     with pytest.raises(NotAnEpisodePageError):
         yanmaga.episode(EPISODE_URL)
 

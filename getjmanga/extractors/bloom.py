@@ -26,31 +26,23 @@ there is no `login()`.
 from __future__ import annotations
 
 import re
-import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urlencode, urljoin, urlparse
+from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
-from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .gaugau import decode_table, descramble, parse_content, parse_pages, pick_tables, viewer_key
-from .porta import split_title
+from getjmanga.viewers import speedbinb
+from getjmanga.viewers.speedbinb import split_title
 
 if TYPE_CHECKING:
     from PIL import Image
     from requests import Session
 
 HOST = "bloom.homesha.co.jp"
-
-#: `ServerType` of a `bibGetCntntInfo` item whose pages come through `sbcGetImg.php`.
-_SERVER_TYPE_SBC = 0
-
-#: The fields of a `bibGetCntntInfo` item that hold the encrypted tables, left out of the metadata.
-_TABLE_FIELDS = frozenset({"stbl", "ttbl", "ctbl", "ptbl"})
 
 # A work page: `/webcomic/<slug>/`, but not the listing's own feed.
 _WORK_PATH = re.compile(r"^/webcomic/(?!feed/?$)(?P<slug>[\w.-]+)/?$")
@@ -243,9 +235,14 @@ class Bloom(Extractor):
             "work_url": work_url,
         }
 
-        key = viewer_key(content_id)
-        item = self._content_info(info_url, content_id, key, referer=reader_url)
-        if item is None:
+        content = speedbinb.content_info(
+            self,
+            info_url,
+            content_id,
+            referer=reader_url,
+            server_types=frozenset({speedbinb.SERVER_TYPE_SBC}),
+        )
+        if content is None:
             return Episode(
                 url=canonical,
                 series_title=series_title,
@@ -254,45 +251,19 @@ class Bloom(Extractor):
                 metadata={**metadata, "locked": True},
             )
 
-        server = urljoin(reader_url, str(item["ContentsServer"])).rstrip("/")
-        token = str(item.get("p") or "")
-        view_mode = str(item.get("ViewMode") or 1)
-        ctbl = decode_table(content_id, key, str(item.get("ctbl", "")))
-        ptbl = decode_table(content_id, key, str(item.get("ptbl", "")))
-        if not isinstance(ctbl, list) or not isinstance(ptbl, list):
-            msg = f"{info_url} carried no scramble tables for {content_id}."
-            raise GetjmangaError(msg)
-
-        content_res = self._get(
-            f"{server}/sbcGetCntnt.php",
-            params={"cid": content_id, "p": token, "vm": view_mode, "dmytime": _now_ms()},
-            headers={**self.HEADERS, "Referer": reader_url},
-        )
-        content = parse_content(content_res.text)
-        pages = []
-        for attrs in parse_pages(content["ttx"]):
-            page_table, served_table = pick_tables(attrs["src"], ctbl, ptbl)
-            query = urlencode({"cid": content_id, "src": attrs["src"], "p": token, "q": "0", "vm": view_mode})
-            pages.append(
-                Page(
-                    url=f"{server}/sbcGetImg.php?{query}",
-                    width=int(attrs.get("orgwidth") or 0),
-                    height=int(attrs.get("orgheight") or 0),
-                    extra={"ctbl": page_table, "ptbl": served_table},
-                ),
-            )
+        book = speedbinb.page_list(self, content, referer=reader_url)
 
         return Episode(
             url=canonical,
             series_title=series_title,
-            episode_title=str(episode_title or item.get("Title") or match["id"]),
-            pages=tuple(pages),
+            episode_title=str(episode_title or content.item.get("Title") or match["id"]),
+            pages=book.pages,
             next_url=next_url,
             metadata={
                 **metadata,
                 "locked": False,
-                "contents_server": server,
-                "info": {key: value for key, value in item.items() if key not in _TABLE_FIELDS},
+                "contents_server": content.server,
+                "info": content.info,
             },
         )
 
@@ -306,8 +277,7 @@ class Bloom(Extractor):
         Returns:
             The page in reading order, padding gone.
         """
-        image = self._fetch_image(page.url, headers={**self.HEADERS, "Referer": urljoin(episode.url, "speed_iv.php")})
-        return descramble(image, str(page.extra.get("ctbl", "")), str(page.extra.get("ptbl", "")))
+        return speedbinb.fetch_page(self, page, referer=urljoin(episode.url, "speed_iv.php"))
 
     def _work(self, url: str) -> tuple[str, list[str]]:
         """Read a work page, once per URL."""
@@ -335,29 +305,6 @@ class Bloom(Extractor):
             next_url = urls[index] if index < len(urls) else None
         return series, episode, next_url
 
-    def _content_info(self, info_url: str, content_id: str, key: str, *, referer: str) -> dict[str, Any] | None:
-        """Call `bibGetCntntInfo` and return its first item, or None when the site refuses the content."""
-        res = self._get(
-            info_url,
-            params={"cid": content_id, "dmytime": _now_ms(), "k": key},
-            headers={**self.HEADERS, "Referer": referer},
-        )
-        body = res.json()
-        if not isinstance(body, dict):
-            msg = f"{info_url} did not describe {content_id}: {str(body)[:200]}"
-            raise NotAnEpisodePageError(msg)
-        items = body.get("items")
-        if body.get("result") != 1 or not items:
-            return None
-        item = items[0]
-        if not isinstance(item, dict) or not item.get("ContentsServer"):
-            msg = f"{info_url} did not describe {content_id}: {str(body)[:200]}"
-            raise NotAnEpisodePageError(msg)
-        if int(item.get("ServerType", -1)) != _SERVER_TYPE_SBC:
-            msg = f"{content_id} is on a SpeedBinb ServerType {item.get('ServerType')} backend, which is not supported."
-            raise GetjmangaError(msg)
-        return item
-
 
 def _work_link(reader: BeautifulSoup, reader_url: str) -> str | None:
     """The work page the reader's description links, or None when it links none (a volume trial)."""
@@ -367,8 +314,3 @@ def _work_link(reader: BeautifulSoup, reader_url: str) -> str | None:
         if parsed.hostname == HOST and _WORK_PATH.match(parsed.path):
             return f"https://{HOST}{parsed.path.rstrip('/')}/"
     return None
-
-
-def _now_ms() -> int:
-    """The cache-busting timestamp the reader sends as `dmytime`."""
-    return int(time.time() * 1000)

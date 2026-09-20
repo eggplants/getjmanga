@@ -9,7 +9,7 @@ from PIL import Image
 from requests import HTTPError
 
 from getjmanga.downloader import Downloader
-from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.ohta import Ohta, parse_work
 
 WORK_URL = "https://webcomic.ohtabooks.com/kishotenten/"
@@ -306,28 +306,15 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.metadata["address_list"] == [[0, 1, 0, 1]]
     json.dumps(episode.metadata)
 
-    # The content page, the work page, the stub, the reader, the API, content.js -- in that order.
-    assert session.calls[0] == EPISODE_URL
-    assert session.calls[1] == WORK_URL
-    assert session.calls[2] == f"{EPISODE_URL}?view=1"
-    assert session.calls[3] == READER_URL
-    assert session.calls[4] == INFO_URL
-    assert session.calls[5] == f"{SERVER}/content.js"
-    assert len(session.calls) == 6
-
-
-def test_episode_calls_the_api_the_way_the_viewer_does(client):
-    ohta, session = client()
-    ohta.episode(EPISODE_URL)
-
-    params = session.params_seen[4]
-    assert params["cid"] == BINB_ID
-    assert len(params["k"]) == 32
-    assert "dmytime" in params
-    assert session.headers_seen[3]["Referer"] == EPISODE_URL
-    assert session.headers_seen[4]["Referer"] == READER_URL
-    assert session.headers_seen[5]["Referer"] == READER_URL
-    assert "dmytime" in session.params_seen[5]
+    # The content page, the stub, the reader, the API, content.js, then the work page -- in that order.
+    assert session.calls == [
+        EPISODE_URL,
+        f"{EPISODE_URL}?view=1",
+        READER_URL,
+        INFO_URL,
+        f"{SERVER}/content.js",
+        WORK_URL,
+    ]
 
 
 @pytest.mark.parametrize(
@@ -342,12 +329,6 @@ def test_episode_takes_the_url_the_work_page_opens(client, url):
     episode = ohta.episode(url)
     assert episode.url == EPISODE_URL
     assert session.calls[0] == EPISODE_URL
-
-
-def test_episode_uses_m_jpg_for_a_single_quality_content(client, fake_response):
-    ohta, _ = client({"content.js": fake_response(text=content_js(image_class="singlequality"))})
-    episode = ohta.episode(EPISODE_URL)
-    assert episode.pages[0].url == f"{SERVER}/pages/a.jpg/M.jpg"
 
 
 def test_last_episode_has_no_next(client, fake_response):
@@ -427,24 +408,6 @@ def test_content_page_without_a_content_is_not_an_episode(client, fake_response)
 def test_other_http_errors_propagate(client, fake_response):
     ohta, _ = client({"/contents/64823": fake_response(text="", status_code=HTTPStatus.SERVICE_UNAVAILABLE)})
     with pytest.raises(HTTPError):
-        ohta.episode(EPISODE_URL)
-
-
-def test_reader_without_a_viewer_is_not_an_episode(client, fake_response):
-    ohta, _ = client({"/speed_reader": fake_response(text=reader_html(viewer=False))})
-    with pytest.raises(NotAnEpisodePageError, match="SpeedBinb"):
-        ohta.episode(EPISODE_URL)
-
-
-def test_api_that_does_not_describe_the_content_is_not_an_episode(client):
-    ohta, _ = client(body={"result": 0, "items": []})
-    with pytest.raises(NotAnEpisodePageError, match="did not describe"):
-        ohta.episode(EPISODE_URL)
-
-
-def test_api_on_another_backend_is_unsupported(client):
-    ohta, _ = client(server_type=2)
-    with pytest.raises(GetjmangaError, match="ServerType"):
         ohta.episode(EPISODE_URL)
 
 

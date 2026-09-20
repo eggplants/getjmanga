@@ -8,7 +8,7 @@ from PIL import Image
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.michikusa import Michikusa, parse_listing
-from getjmanga.extractors.porta import parse_ptimg
+from getjmanga.viewers.speedbinb import parse_ptimg
 
 EPISODE_URL = "https://michikusacomics.jp/wp-content/uploads/data/11_vegetable/01/index.html"
 NEXT_URL = "https://michikusacomics.jp/wp-content/uploads/data/11_vegetable/02/index.html"

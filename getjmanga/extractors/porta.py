@@ -4,7 +4,8 @@ Every free episode is a directory `/p_data/<slug>/` holding Voyager's
 SpeedBinb reader in its "PtBinb" form: the page HTML lists one
 `<div data-ptimg="data/NNNN.ptimg.json">` per page, and each of those JSON
 files names a scrambled JPEG next to it plus the list of rectangles to copy
-out of it to rebuild the page. No API, no cookie, no Referer check.
+out of it to rebuild the page -- the static form `viewers/speedbinb.py`
+reads. No API, no cookie, no Referer check.
 """
 
 from __future__ import annotations
@@ -12,20 +13,20 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from PIL import Image
 from requests import RequestException
 
-from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.viewers import speedbinb
+from getjmanga.viewers.speedbinb import split_title
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
+    from PIL import Image
     from requests import Session
 
 # An episode: the directory of one SpeedBinb export.
@@ -33,18 +34,6 @@ _EPISODE_PATH = re.compile(r"^/p_data/(?P<slug>[^/]+)/?$")
 
 # A work page, listing the episodes oldest first.
 _SERIES_PATH = re.compile(r"^/series/(?P<id>\d+)/?$")
-
-# The reader's `<title>` is `"<series>　<episode>"`, the two joined by an
-# ideographic space -- or, on a hand-edited page, by a run of plain ones.
-_TITLE_SEPARATOR = re.compile(r"　|[ \t]{2,}")
-
-# Whatever separates the series from the episode once the series is known:
-# whitespace, or a colon, slash, bar or dash in either width.
-_TITLE_GAP = re.compile(r"^[\s　:/|\-\uff1a\uff0f\uff5c\uff0d]+")
-
-# One entry of a ptimg `coords` list: `"<resource>:<x>,<y>+<w>,<h>><dx>,<dy>"`,
-# a `w` x `h` rectangle at (`x`, `y`) of the resource, to land at (`dx`, `dy`).
-_COORD = re.compile(r"^(?P<res>[^:]+):(?P<x>\d+),(?P<y>\d+)\+(?P<w>\d+),(?P<h>\d+)>(?P<dx>\d+),(?P<dy>\d+)$")
 
 # The element the reader hangs its page list on.
 _CONTAINER_CLASS = "ptbinb-container"
@@ -54,138 +43,11 @@ _DETAIL_LINK_TEXT = "作品詳細"
 
 
 @dataclass(frozen=True)
-class Transfer:
-    """One rectangle to copy out of a scrambled resource into the page."""
-
-    resource: str
-    x: int
-    y: int
-    width: int
-    height: int
-    dest_x: int
-    dest_y: int
-
-
-@dataclass(frozen=True)
 class Listing:
     """What a work page says: its title and the episodes it links, oldest first."""
 
     title: str
     urls: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class Ptimg:
-    """What one `NNNN.ptimg.json` says: the resources to fetch and how to lay them out."""
-
-    #: Resource key -> absolute image URL.
-    resources: dict[str, str]
-    width: int
-    height: int
-    transfers: tuple[Transfer, ...]
-
-
-def parse_ptimg(data: Mapping[str, Any], url: str) -> Ptimg:
-    """Read a page's `ptimg.json`.
-
-    Args:
-        data: The decoded JSON.
-        url: Where the JSON came from; its resources are named relative to it.
-
-    Returns:
-        The resources to fetch and the transfers to apply, as the reader would.
-
-    Raises:
-        GetjmangaError: The JSON is not a version-1 ptimg the reader would accept.
-    """
-    if data.get("ptimg-version") != 1:
-        msg = f"{url} is not a ptimg-version 1 file: {data.get('ptimg-version')!r}."
-        raise GetjmangaError(msg)
-    resources = {
-        str(key): urljoin(url, str(resource["src"]))
-        for key, resource in (data.get("resources") or {}).items()
-        if isinstance(resource, dict) and resource.get("src")
-    }
-    views = data.get("views") or []
-    if not resources or not views:
-        msg = f"{url} names no resources or no views."
-        raise GetjmangaError(msg)
-    view = views[0]
-    transfers: list[Transfer] = []
-    for coord in view.get("coords") or []:
-        match = _COORD.match(str(coord))
-        if match is None or match["res"] not in resources:
-            msg = f"{url} holds an unreadable transfer: {coord!r}."
-            raise GetjmangaError(msg)
-        transfers.append(
-            Transfer(
-                resource=match["res"],
-                x=int(match["x"]),
-                y=int(match["y"]),
-                width=int(match["w"]),
-                height=int(match["h"]),
-                dest_x=int(match["dx"]),
-                dest_y=int(match["dy"]),
-            ),
-        )
-    if not transfers:
-        msg = f"{url} lists no transfers."
-        raise GetjmangaError(msg)
-    return Ptimg(resources=resources, width=int(view["width"]), height=int(view["height"]), transfers=tuple(transfers))
-
-
-def descramble(ptimg: Ptimg, images: Mapping[str, Image.Image]) -> Image.Image:
-    """Put a page back together from its scrambled resources.
-
-    The reader draws onto a blank canvas of the view's size and copies every
-    transfer's rectangle across; the resources are larger than the page,
-    since the tiles sit in them with a gutter in between.
-
-    Args:
-        ptimg: The parsed `ptimg.json`.
-        images: The decoded resource images, by resource key.
-
-    Returns:
-        A new image, the page in reading order.
-    """
-    mode = next(iter(images.values())).mode
-    out = Image.new(mode if mode in ("L", "RGB") else "RGB", (ptimg.width, ptimg.height), "white")
-    for transfer in ptimg.transfers:
-        source = images[transfer.resource]
-        tile = source.crop(
-            (
-                transfer.x,
-                transfer.y,
-                transfer.x + transfer.width,
-                transfer.y + transfer.height,
-            ),
-        )
-        out.paste(tile, (transfer.dest_x, transfer.dest_y))
-    return out
-
-
-def split_title(title: str, series: str = "") -> tuple[str, str]:
-    """Split the reader's `<title>` into the series and the episode.
-
-    Args:
-        title: The `<title>` text, `"<series>　<episode>"`.
-        series: The series title, when the work page said what it is; the
-            episode is then whatever follows it, however the two are joined.
-
-    Returns:
-        The two halves. With no separator to split on, the episode is the
-        whole title, and so is the series unless one was given.
-    """
-    title = title.strip()
-    rest = title.removeprefix(series) if series else title
-    if series and rest != title and (not rest or _TITLE_GAP.match(rest)):
-        return series, _TITLE_GAP.sub("", rest) or title
-    parts = _TITLE_SEPARATOR.split(title, maxsplit=1)
-    head = parts[0].strip()
-    episode = parts[1].strip() if len(parts) > 1 else ""
-    if not episode:
-        return series or title, title
-    return series or head, episode
 
 
 class Porta(Extractor):
@@ -328,10 +190,7 @@ class Porta(Extractor):
         Returns:
             The page in reading order.
         """
-        headers = {**self.HEADERS, "Referer": episode.url}
-        ptimg = parse_ptimg(self._get(page.url, headers=headers).json(), page.url)
-        images = {key: self._fetch_image(src, headers=headers) for key, src in ptimg.resources.items()}
-        return descramble(ptimg, images)
+        return speedbinb.fetch_ptimg_page(self, page.url, referer=episode.url)
 
     def _listing_of(self, url: str, recommend: str) -> Listing | None:
         """Find the work page an episode belongs to and read it, or None.

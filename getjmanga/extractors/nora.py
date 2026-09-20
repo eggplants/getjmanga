@@ -13,20 +13,14 @@ The viewer is a Nuxt app whose data comes from `https://api.<host>`:
 - `GET /web/episode/viewer?version=6.0.0&platform=3&episode_id=<id>` answers
   the page list, the previous and the next episode, and `scramble_seed`.
   The site does not check the hash header at the time of writing, but the
-  viewer sends it, so `service_hash()` builds it the way the bundle does:
-  sorted `sha256(key)_sha512(value)` pairs, SHA-256'd, then SHA-512'd with a
-  birthday cookie's `sha256(birthday)_sha512(expires)` (both empty for an
-  anonymous reader) appended.
+  viewer sends it, so it is built the way the bundle does
+  (`kmanga.service_hash()`).
 - An unreleased or missing episode is a `400` with `response_code` 3100 or
   3104, never a page list.
 
 Pages are plain JPEGs on `cdn.<host>` (signed CloudFront URLs when the
 episode is scrambled), served without a Referer or a cookie. With a seed,
-`descramble()` undoes what the viewer's canvas does: the page is cut into a
-4 x 4 grid of tiles whose side is a multiple of 8, the tiles are shuffled by
-sorting them on the values of an xorshift32 generator seeded with
-`scramble_seed`, and the strip left over on the right and at the bottom stays
-where it is.
+`kmanga.descramble()` undoes the viewer's 4 x 4 tile shuffle.
 
 Nora's other comic site, ガッコミ (`gakcomic.gakken.jp`), shares the
 `/comic/page-<id>/` URL shape but not the viewer: it serves DRM-encrypted
@@ -35,7 +29,6 @@ EPUBs through Keyring's BookEnd, so it is not covered here.
 
 from __future__ import annotations
 
-import hashlib
 import re
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
@@ -46,10 +39,9 @@ from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.viewers.kmanga import SEED_MAX, SEED_MIN, descramble, service_hash
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
-
     from PIL import Image
 
 _WORK_PATH = re.compile(r"^/comic/page-(?P<slug>[^/]+)/?$")
@@ -60,95 +52,6 @@ _PLATFORM = "3"
 #: The request-signing header the API expects, and the one that flags a crawler.
 _HASH_HEADER = "x-com-sega-md-hash"
 _CRAWLER_HEADER = "x-com-sega-md-is-crawler"
-
-#: The scramble grid: `GRID x GRID` tiles whose sides are multiples of `UNIT`.
-GRID = 4
-UNIT = 8
-_SEED_MIN = 1
-_SEED_MAX = 2**32 - 1
-_MASK = 0xFFFFFFFF
-
-
-def service_hash(params: Mapping[str, str | int], birthday: str = "", expires: str = "") -> str:
-    """Sign a set of query parameters the way the viewer does.
-
-    Args:
-        params: The query parameters of the request.
-        birthday: The reader's birthday cookie, empty when signed out.
-        expires: When that cookie expires, empty when signed out.
-
-    Returns:
-        The value of the `x-com-sega-md-hash` header.
-    """
-    pairs = ",".join(f"{_sha256(key)}_{_sha512(str(params[key]))}" for key in sorted(params))
-    return _sha512(_sha256(pairs) + f"{_sha256(birthday)}_{_sha512(expires)}")
-
-
-def _sha256(text: str) -> str:
-    return hashlib.sha256(text.encode()).hexdigest()
-
-
-def _sha512(text: str) -> str:
-    return hashlib.sha512(text.encode()).hexdigest()
-
-
-def xorshift32(seed: int) -> Iterator[int]:
-    """Yield the xorshift32 sequence the viewer shuffles tiles with.
-
-    Args:
-        seed: The `scramble_seed` of the episode.
-
-    Yields:
-        Unsigned 32-bit values, one per call.
-    """
-    state = seed & _MASK
-    while True:
-        state ^= (state << 13) & _MASK
-        state ^= state >> 17
-        state ^= (state << 5) & _MASK
-        yield state
-
-
-def tile_order(seed: int, grid: int = GRID) -> list[int]:
-    """The tile permutation a seed produces.
-
-    Args:
-        seed: The `scramble_seed` of the episode.
-        grid: Tiles per side.
-
-    Returns:
-        For every destination tile (row-major), the index of the source tile
-        in the served image that belongs there.
-    """
-    values = xorshift32(seed)
-    keyed = [(next(values), index) for index in range(grid * grid)]
-    keyed.sort(key=lambda pair: pair[0])
-    return [index for _, index in keyed]
-
-
-def descramble(image: Image.Image, seed: int, grid: int = GRID) -> Image.Image:
-    """Put a scrambled page back together.
-
-    Args:
-        image: The page as served.
-        seed: The `scramble_seed` of the episode.
-        grid: Tiles per side.
-
-    Returns:
-        A new image with the tiles in place. The image is returned as is when
-        the seed is out of range or the image is too small to be tiled.
-    """
-    width, height = image.size
-    if not (_SEED_MIN <= seed <= _SEED_MAX) or width < grid * UNIT or height < grid * UNIT:
-        return image
-    tile_width = width // UNIT // grid * UNIT
-    tile_height = height // UNIT // grid * UNIT
-    out = image.copy()
-    for destination, source in enumerate(tile_order(seed, grid)):
-        sx, sy = source % grid * tile_width, source // grid * tile_height
-        dx, dy = destination % grid * tile_width, destination // grid * tile_height
-        out.paste(image.crop((sx, sy, sx + tile_width, sy + tile_height)), (dx, dy))
-    return out
 
 
 class Nora(Extractor):
@@ -278,7 +181,7 @@ class Nora(Extractor):
         following = viewer.get("next_episode") or {}
         next_id = following.get("episode_id") if isinstance(following, dict) else None
         seed = viewer.get("scramble_seed")
-        extra = {"seed": seed} if isinstance(seed, int) and _SEED_MIN <= seed <= _SEED_MAX else {}
+        extra = {"seed": seed} if isinstance(seed, int) and SEED_MIN <= seed <= SEED_MAX else {}
         return Episode(
             url=episode_url,
             series_title=series_title,

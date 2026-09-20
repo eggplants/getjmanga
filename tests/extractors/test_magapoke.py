@@ -10,7 +10,7 @@ from requests import HTTPError
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.magapoke import SEED_ALPHABETS, MagaPoke, scramble_seed
-from getjmanga.extractors.nora import GRID, UNIT, service_hash, tile_order
+from getjmanga.viewers.kmanga import GRID, UNIT, service_hash, tile_order
 
 HOST = "https://pocket.shonenmagazine.com"
 TITLE_URL = f"{HOST}/title/03251"

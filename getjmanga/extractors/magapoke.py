@@ -1,7 +1,7 @@
 """マガポケ (Magazine Pocket, 講談社), and the K MANGA viewer it runs.
 
 The site is a Nuxt app whose data comes from Kodansha's K MANGA API -- the
-same one Comic NORA's white-label viewer talks to (`nora.py`), with the
+same one Comic NORA's white-label viewer talks to (`viewers/kmanga.py`), with the
 signing header renamed to `x-manga-hash`. An episode lives at
 `/title/<title id, 5 digits>/episode/<episode id>`; `/title/<title id>` is the
 work page, which the site redirects to the first episode and whose episode
@@ -17,12 +17,12 @@ list is what the title API answers.
 - `GET /web/title/detail?title_id=<id>` lists the episode ids, oldest first.
 
 Every call needs `x-manga-platform: 3` and `x-manga-hash`, which is
-`nora.service_hash()` of the query parameters -- and, unlike Nora, the site
+`kmanga.service_hash()` of the query parameters -- and, unlike Nora, the site
 checks it (`invalid hash` without one).
 
 Pages are signed CloudFront JPEGs on `mgpk-cdn.magazinepocket.com`, served
 without a Referer or a cookie, and scrambled the way Nora's are
-(`nora.descramble()`: a 4 x 4 tile shuffle keyed by an xorshift32 seed). The
+(`kmanga.descramble()`: a 4 x 4 tile shuffle keyed by an xorshift32 seed). The
 seed is hidden a little better here: `scramble_seed` is a string the
 viewer's WebAssembly turns into the number by mapping each character to a
 digit through one of two ten-letter alphabets -- `svdk0m7acl` for an even
@@ -42,8 +42,7 @@ from urllib.parse import urlparse
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .nora import descramble, service_hash
+from getjmanga.viewers.kmanga import descramble, service_hash
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -82,7 +81,7 @@ def scramble_seed(title_id: int, episode_id: int, seed: str) -> int | None:
         seed: The `scramble_seed` the viewer API answered.
 
     Returns:
-        The seed for `nora.descramble()`, or None when the string does not
+        The seed for `kmanga.descramble()`, or None when the string does not
         parse (a character outside the alphabet, or a number past 32 bits),
         in which case the viewer draws the page as served.
     """

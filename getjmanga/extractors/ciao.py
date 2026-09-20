@@ -2,7 +2,7 @@
 
 The site is a Nuxt app under `/comics/` whose data comes from
 `https://api.ciao.shogakukan.co.jp`, the same white-label viewer family as
-K MANGA and Comic NORA (`nora.py`): the bundle names its platform `bambi`
+K MANGA and Comic NORA (`viewers/kmanga.py`): the bundle names its platform `bambi`
 (`x-bambi-hash`, `bambi_img_viewer_recommend.png`) and speaks the same
 `/web/episode/viewer` API. Every request is signed with the sorted
 `sha256(key)_sha512(value)` pairs of its parameters, SHA-256'd, then
@@ -26,9 +26,9 @@ hash.` without it, and its signature carries no birthday suffix.
 
 Pages are JPEGs on `cdn.ciao.shogakukan.co.jp`, served without a Referer
 or a cookie, cut into a 4 x 4 grid and shuffled with the xorshift32
-permutation `nora.py` already undoes. `scramble_ver` picks how the tile
+permutation `viewers/kmanga.py` undoes. `scramble_ver` picks how the tile
 side is worked out: version 2 rounds `width / 8 / 4` down and multiplies
-by 8 (what `nora.descramble()` does), version 1 rounds the image down to
+by 8 (what `kmanga.descramble()` does), version 1 rounds the image down to
 a multiple of 8 first and then divides by 4, so its tiles need only be
 even.
 """
@@ -43,9 +43,8 @@ from urllib.parse import urlparse
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .nora import GRID, UNIT, tile_order
-from .nora import descramble as descramble_v2
+from getjmanga.viewers.kmanga import GRID, SEED_MAX, SEED_MIN, UNIT, tile_order
+from getjmanga.viewers.kmanga import descramble as descramble_v2
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -67,8 +66,6 @@ _CRAWLER_HEADER = "x-bambi-is-crawler"
 _EPISODE_NOT_FOUND = 3100
 _TITLE_NOT_FOUND = 3000
 
-_SEED_MIN = 1
-_SEED_MAX = 2**32 - 1
 #: The tile-size formula the viewer used before `scramble_ver` 2.
 _SCRAMBLE_V1 = 1
 
@@ -114,7 +111,7 @@ def descramble(image: Image.Image, seed: int, version: int = 2) -> Image.Image:
     if version != _SCRAMBLE_V1:
         return descramble_v2(image, seed)
     width, height = image.size
-    if not (_SEED_MIN <= seed <= _SEED_MAX) or width < GRID or height < GRID:
+    if not (SEED_MIN <= seed <= SEED_MAX) or width < GRID or height < GRID:
         return image
     if width > UNIT and height > UNIT:
         width, height = width // UNIT * UNIT, height // UNIT * UNIT

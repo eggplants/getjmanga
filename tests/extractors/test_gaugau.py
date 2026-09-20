@@ -9,17 +9,8 @@ from PIL import Image
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractors.gaugau import (
-    Gaugau,
-    Transfer,
-    decode_table,
-    descramble,
-    parse_content,
-    parse_pages,
-    parse_scramble,
-    pick_tables,
-    viewer_key,
-)
+from getjmanga.extractors.gaugau import Gaugau
+from getjmanga.viewers.speedbinb import viewer_key
 
 WORK_ID = "g5JBaom0KiedHfUAbnZwXURtl"
 WORK_URL = f"https://gaugau.futabanet.jp/list/work/{WORK_ID}"
@@ -27,19 +18,9 @@ EPISODE_URL = f"{WORK_URL}/episodes/1"
 CONTENT_ID = f"{WORK_ID}_001-1"
 SERVER = f"https://gaugau.futabanet.jp/trial_data/{CONTENT_ID}/non_member_trial"
 
-# What the real viewer sent for CONTENT_ID, and the tables the site answered with.
-REAL_KEY = "W_XEufUgVUT5QiqVpKIGohxVomVnQAHo"
-REAL_STBL = (
-    'pb"^p)yhFsJozY-n)E6hu]A[67%-u)U\\A4[fF@)@ayPE5A1[6ju!Q$iJ6jFpJCh")=a0}"IQi;D>2:j%$3YRiq_T"'
-    ",n&TKe%q/eGCp?9_6[nJpK/gU4hk&)`q}Pwz+(3\\"
-)
-REAL_CTBL = "=8-8+4-DAABCCCCDFFDAGAEKmMchitw21SpxZTNkGn9-srbJfE7qlvu0QyHO_6gAj5aIF4D3RozdPe8CXWYLUBV"
-REAL_PTBL = "=8-8-4-DFGGGGEEBEGBFEFAuHVQIJEoqW1bXzdhskawr2nj53xOARUGSBieYP9807gpvDtylN46-_ZTfMKFmCLc"
-
 # A 2x2 grid, two pixels of padding, with the narrow column and the short row last
 # on both sides: `BB` (short row per column) + `BB` (narrow column per row) + order.
 IDENTITY_CTBL = "=2-2+2-BBBBABCD"
-IDENTITY_PTBL = "=2-2-2-BBBBABCD"
 SWAPPED_PTBL = "=2-2-2-BBBBBADC"
 
 COLOURS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0)]
@@ -169,99 +150,6 @@ def served_image(order):
     return image
 
 
-# --- the key and the tables ---------------------------------------------------------------
-
-
-def test_viewer_key_interleaves_the_checksum_the_viewer_does():
-    assert viewer_key(CONTENT_ID, REAL_KEY[::2]) == REAL_KEY
-
-
-def test_decode_table_reads_what_the_site_sent():
-    assert decode_table(CONTENT_ID, REAL_KEY, REAL_STBL)[:8] == [3, 4, 6, 4, 7, 1, 2, 1]
-
-
-def test_decode_table_raises_with_the_wrong_key():
-    with pytest.raises(GetjmangaError, match="key"):
-        decode_table(CONTENT_ID, "another-key", REAL_STBL)
-
-
-def test_pick_tables_uses_the_file_name_only():
-    ctbl = [f"c{index}" for index in range(8)]
-    ptbl = [f"p{index}" for index in range(8)]
-    assert pick_tables("pages/zC4iHmGp.jpg", ctbl, ptbl) == pick_tables("zC4iHmGp.jpg", ctbl, ptbl)
-    # 'z','4','H','G','.','p' at even positions: 122+52+72+71+46+112 = 475 -> 3; odd: 67+105+109+112+106+103 = 602 -> 2.
-    assert pick_tables("pages/zC4iHmGp.jpg", ctbl, ptbl) == ("c2", "p3")
-
-
-# --- descrambling -------------------------------------------------------------------------
-
-
-def test_parse_scramble_matches_the_viewer_on_a_real_page():
-    # What the site's own speedbinb.js computed for this table pair on a 1190x1664 page.
-    scramble = parse_scramble(REAL_CTBL, REAL_PTBL)
-    assert scramble is not None
-    assert scramble.page_size(1190, 1664) == (1126, 1600)
-    assert scramble.transfers(1190, 1664)[:3] == [
-        Transfer(4, 4, 141, 200, 0, 1400),
-        Transfer(153, 4, 139, 200, 0, 1200),
-        Transfer(300, 4, 141, 200, 564, 1000),
-    ]
-    assert sorted(scramble.order) == list(range(64))
-
-
-@pytest.mark.parametrize(
-    ("ctbl", "ptbl"),
-    [
-        ("8-8-dcabcGcdbccFgd", "8-8-dGcFaGcGFceDbD"),  # the decoy format
-        ("=2-2-2-BBBBABCD", "=2-2-2-BBBBABCD"),  # both destination-signed
-        ("=2-2+2-BBBBABCD", "=2-3-2-BBBBBABCD"),  # grids disagree
-        ("=2-2+2-BBBBABC", "=2-2-2-BBBBABCD"),  # too few indices
-        ("=9-9+2-" + "A" * 99, "=9-9-2-" + "A" * 99),  # too big a grid
-    ],
-)
-def test_parse_scramble_rejects_bad_tables(ctbl, ptbl):
-    with pytest.raises(GetjmangaError):
-        parse_scramble(ctbl, ptbl)
-
-
-def test_descramble_strips_the_padding_and_keeps_an_identity_order():
-    page = descramble(served_image([0, 1, 2, 3]), IDENTITY_CTBL, IDENTITY_PTBL)
-    assert page.size == (392, 392)
-    assert [page.getpixel((column * 196 + 5, row * 196 + 5)) for row in range(2) for column in range(2)] == COLOURS
-    # The corners of every tile are content, not padding.
-    assert page.getpixel((195, 195)) == COLOURS[0]
-    assert page.getpixel((196, 196)) == COLOURS[3]
-
-
-def test_descramble_moves_the_tiles_where_the_tables_say():
-    # Served tile n holds page tile SWAPPED[n]: 0<->1 and 2<->3.
-    page = descramble(served_image([1, 0, 3, 2]), IDENTITY_CTBL, SWAPPED_PTBL)
-    assert [page.getpixel((column * 196 + 5, row * 196 + 5)) for row in range(2) for column in range(2)] == COLOURS
-
-
-def test_descramble_leaves_a_small_image_alone():
-    image = Image.new("RGB", (50, 50), COLOURS[2])
-    assert descramble(image, IDENTITY_CTBL, SWAPPED_PTBL).tobytes() == image.tobytes()
-
-
-def test_descramble_with_empty_tables_is_the_image_itself():
-    image = Image.new("RGB", (400, 400))
-    assert descramble(image, "", "") is image
-
-
-# --- content.js ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize("text", ["nope(", 'DataGet_Content({"result":0,"ttx":""})', "{}"])
-def test_parse_content_rejects_what_is_not_a_page_list(text):
-    with pytest.raises(GetjmangaError):
-        parse_content(text)
-
-
-def test_parse_pages_without_a_case_reads_every_tag():
-    assert [page["src"] for page in parse_pages('<t-img src="a"><t-img src="b">')] == ["a", "b"]
-
-
 # --- urls -----------------------------------------------------------------------------------
 
 
@@ -339,11 +227,6 @@ def test_episode_calls_the_api_the_way_the_viewer_does(client):
     assert "dmytime" in session.params_seen[content_call]
 
 
-def test_episode_picks_the_single_quality_file_when_told_to(client, fake_response):
-    gaugau, _ = client({"content.js": fake_response(text=content_js(image_class="singlequality"))})
-    assert gaugau.episode(EPISODE_URL).pages[0].url.endswith("/M.jpg")
-
-
 def test_episode_at_the_end_of_the_list_has_no_next(client, fake_response):
     gaugau, _ = client({f"/list/work/{WORK_ID}/episodes/": fake_response(text=episode_html())})
     assert gaugau.episode(f"{WORK_URL}/episodes/3").next_url is None
@@ -383,12 +266,6 @@ def test_series_title_falls_back_to_the_page_title(client, fake_response):
 def test_episode_refuses_a_work_url():
     with pytest.raises(UnsupportedUrlError):
         Gaugau().episode(WORK_URL)
-
-
-def test_episode_refuses_an_api_error(client):
-    gaugau, _ = client(item={"ContentsServer": ""})
-    with pytest.raises(NotAnEpisodePageError):
-        gaugau.episode(EPISODE_URL)
 
 
 def test_episode_refuses_another_server_type(client):

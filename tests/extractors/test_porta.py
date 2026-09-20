@@ -6,8 +6,9 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractors.porta import Porta, Ptimg, Transfer, descramble, parse_ptimg, split_title
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractors.porta import Porta
+from getjmanga.viewers.speedbinb import parse_ptimg
 
 EPISODE_URL = "https://comic-porta.com/p_data/ol_ningyo001al/"
 SERIES_URL = "https://comic-porta.com/series/7981/"
@@ -138,29 +139,6 @@ def test_is_series_only_for_a_work_page():
     assert Porta.is_series("https://comic-porta.com/series/7981")
     assert not Porta.is_series(EPISODE_URL)
     assert not Porta.is_series("https://comic-porta.com/series/")
-
-
-# --- titles ------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    ("title", "series", "expected"),
-    [
-        ("OLと人魚　OLと人魚", "", ("OLと人魚", "OLと人魚")),
-        ("かくりよ骨董収集録  １話「骨董屋」", "", ("かくりよ骨董収集録", "１話「骨董屋」")),
-        ("人魚喰らわば　第一話　山椒魚", "", ("人魚喰らわば", "第一話　山椒魚")),
-        # A single plain space is not a separator on its own, only once the series is known.
-        ("かくりよ骨董収集録 ２話「犬筥」", "", ("かくりよ骨董収集録 ２話「犬筥」", "かくりよ骨董収集録 ２話「犬筥」")),
-        ("かくりよ骨董収集録 ２話「犬筥」", "かくりよ骨董収集録", ("かくりよ骨董収集録", "２話「犬筥」")),
-        # The known series has to be followed by a gap, not just be a prefix.
-        ("Solo", "S", ("S", "Solo")),
-        ("Solo", "Solo", ("Solo", "Solo")),
-        ("A　B", "Z", ("Z", "B")),
-        ("", "", ("", "")),
-    ],
-)
-def test_split_title(title, series, expected):
-    assert split_title(title, series) == expected
 
 
 # --- episode ------------------------------------------------------------------------
@@ -308,57 +286,6 @@ def test_series_urls_raises_on_an_empty_listing(fake_session, fake_response):
 def test_series_urls_refuses_an_episode_url(fake_session, fake_response):
     with pytest.raises(UnsupportedUrlError):
         Porta(fake_session({})).series_urls(EPISODE_URL)
-
-
-# --- ptimg ------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "data",
-    [
-        {"ptimg-version": 2, "resources": PTIMG["resources"], "views": PTIMG["views"]},
-        {"ptimg-version": 1, "resources": {}, "views": PTIMG["views"]},
-        {"ptimg-version": 1, "resources": PTIMG["resources"], "views": []},
-        {"ptimg-version": 1, "resources": PTIMG["resources"], "views": [{"width": 1, "height": 1, "coords": []}]},
-        {"ptimg-version": 1, "resources": PTIMG["resources"], "views": [{"width": 1, "height": 1, "coords": ["x"]}]},
-        {
-            "ptimg-version": 1,
-            "resources": PTIMG["resources"],
-            "views": [{"width": 1, "height": 1, "coords": ["j:0,0+1,1>0,0"]}],
-        },
-    ],
-)
-def test_parse_ptimg_rejects_what_the_reader_would(data):
-    with pytest.raises(GetjmangaError):
-        parse_ptimg(data, "https://x/0001.ptimg.json")
-
-
-def test_descramble_puts_the_tiles_where_the_transfers_say():
-    ptimg = parse_ptimg(PTIMG, "https://x/data/0001.ptimg.json")
-    page = descramble(ptimg, {"i": scrambled_resource()})
-
-    assert page.size == (20, 20)
-    for transfer in ptimg.transfers:
-        assert page.getpixel((transfer.dest_x, transfer.dest_y)) == (transfer.dest_x * 10, transfer.dest_y * 10, 200)
-        assert page.getpixel((transfer.dest_x + 9, transfer.dest_y + 9)) == (
-            transfer.dest_x * 10,
-            transfer.dest_y * 10,
-            200,
-        )
-
-
-def test_descramble_leaves_uncovered_canvas_white_and_keeps_grayscale():
-    ptimg = Ptimg(
-        resources={"i": "https://x/0001.jpg"},
-        width=4,
-        height=4,
-        transfers=(Transfer("i", 0, 0, 2, 2, 2, 2),),
-    )
-    page = descramble(ptimg, {"i": Image.new("L", (2, 2), 0)})
-
-    assert page.mode == "L"
-    assert page.getpixel((0, 0)) == 255
-    assert page.getpixel((3, 3)) == 0
 
 
 # --- download ------------------------------------------------------------------------

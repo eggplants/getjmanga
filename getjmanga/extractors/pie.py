@@ -6,7 +6,7 @@ collected volume). Each entry is either a story on the site itself
 (`https://comics.pie.co.jp/story/<slug>`, a WordPress post whose images sit
 inline in `.c-content`), a YONDEMILL content
 (`https://www.yondemill.jp/contents/<id>?view=1`, Voyager's SpeedBinb reader
-behind Toko-Ai's shared ebook platform, which `ohta.py` already reads), a shop
+behind Toko-Ai's shared ebook platform, read by `viewers/yondemill.py`), a shop
 link for an episode sold as a single (Amazon), or a `p-series_nolink` span for
 one that is not public any more. Most work pages run newest first, a few
 oldest first, so the dates decide.
@@ -23,10 +23,10 @@ no `login()`.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from http import HTTPStatus
 from io import BytesIO
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
@@ -35,8 +35,9 @@ from PIL import Image
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .ohta import Ohta, content_url
+from getjmanga.viewers import yondemill
+from getjmanga.viewers.speedbinb import split_title
+from getjmanga.viewers.yondemill import Content, content_url
 
 if TYPE_CHECKING:
     from requests import Session
@@ -256,10 +257,9 @@ class Pie(Extractor):
     """Fetch episodes from PIE COMICS.
 
     A story on the site is read off its page. A YONDEMILL content is read
-    through `Ohta`, which knows the reader, and titled after the work page
-    that lists it; `suitable()` leaves bare YONDEMILL URLs to `Ohta`, but
-    `episode()` takes the ones a work page lists. Work pages are fetched once
-    per run.
+    through the platform's reader and titled after the work page that lists
+    it; `suitable()` leaves bare YONDEMILL URLs to `Ohta`, but `episode()`
+    takes the ones a work page lists. Work pages are fetched once per run.
     """
 
     NAME = "pie"
@@ -276,7 +276,6 @@ class Pie(Extractor):
             session: A session to reuse. A retrying one is made when omitted.
         """
         super().__init__(session)
-        self._ohta = Ohta(self._session)
         # Work page URL -> what it listed, so a work page is read once.
         self._works: dict[str, Work] = {}
         # Episode URL -> the work page that lists it.
@@ -368,7 +367,7 @@ class Pie(Extractor):
             The page image.
         """
         if "ctbl" in page.extra:
-            return self._ohta.image(page, episode)
+            return yondemill.fetch_page(self, page, referer=episode.url)
         original = page.extra.get("original")
         if original:
             res = self._session.get(original, headers=self.HEADERS, timeout=self.IMAGE_TIMEOUT)
@@ -405,17 +404,48 @@ class Pie(Extractor):
         )
 
     def _content(self, canonical: str) -> Episode:
-        """Read a YONDEMILL content through `Ohta`, titled after the work page that lists it."""
-        work = self._work_of(canonical)
-        episode = self._ohta.episode(canonical)
+        """Read a YONDEMILL content, titled after the work page that lists it."""
+        reading = yondemill.read(self, canonical)
+        work = self._work_of(canonical, reading.content)
         if work is None:
-            return replace(episode, metadata={**episode.metadata, "kind": "yondemill"})
-        return replace(
-            episode,
-            series_title=work.title,
-            episode_title=work.listed_title(canonical) or episode.episode_title,
-            next_url=work.next_url(canonical),
-            metadata={**episode.metadata, "kind": "yondemill", "work_url": work.url, "author": work.author},
+            series_title, episode_title = split_title(reading.content.title)
+            next_url = None
+        else:
+            series_title = work.title
+            episode_title = work.listed_title(canonical) or split_title(reading.content.title)[1]
+            next_url = work.next_url(canonical)
+        metadata: dict[str, Any] = {
+            "kind": "yondemill",
+            "content_id": reading.content_id,
+            "title": reading.content.title,
+            "author": work.author if work else reading.content.author,
+            "label": reading.content.label,
+            "work_url": work.url if work else None,
+            "flags": reading.content.flags,
+        }
+        opened = reading.opened
+        if opened is None:
+            return Episode(
+                url=canonical,
+                series_title=series_title,
+                episode_title=episode_title,
+                next_url=next_url,
+                metadata={**metadata, "locked": True},
+            )
+        return Episode(
+            url=canonical,
+            series_title=series_title,
+            episode_title=episode_title,
+            pages=opened.book.pages,
+            next_url=next_url,
+            metadata={
+                **metadata,
+                "binb_id": opened.binb_id,
+                "contents_server": opened.info.server,
+                "reader_title": opened.info.item.get("Title"),
+                "view_mode": opened.info.item.get("ViewMode"),
+                "shop_url": opened.info.item.get("ShopURL") or None,
+            },
         )
 
     def _work(self, url: str) -> Work:
@@ -430,15 +460,10 @@ class Pie(Extractor):
             self._remember(parse_work(res.content, str(res.url or key)), key)
         return self._works[key]
 
-    def _work_of(self, canonical: str) -> Work | None:
+    def _work_of(self, canonical: str, content: Content) -> Work | None:
         """The work page listing a YONDEMILL content: the one already read, else the one the content links back to."""
         if canonical not in self._listed:
-            res = self._session.get(canonical, headers=self.HEADERS, timeout=self.TIMEOUT)
-            if res.status_code == HTTPStatus.NOT_FOUND:
-                msg = f"{canonical} is gone (HTTP 404): YONDEMILL no longer serves it."
-                raise NotAnEpisodePageError(msg)
-            res.raise_for_status()
-            work_url = work_link(res.content, canonical)
+            work_url = work_link(content)
             if work_url is None:
                 return None
             # `pie.co.jp/series/<n>/` redirects to the work page; anything else is not one.
@@ -463,22 +488,19 @@ def _work_key(url: str) -> str:
     return urljoin(url, urlparse(url).path.rstrip("/") + "/")
 
 
-def work_link(html: str | bytes, url: str) -> str | None:
+def work_link(content: Content) -> str | None:
     """The link back to the publisher a YONDEMILL content page carries, or None.
 
     Args:
-        html: The content page.
-        url: The URL it came from, to resolve links against.
+        content: The content page as read.
 
     Returns:
         A `https://pie.co.jp/series/<n>/` (redirects to the work page) or a
         `https://comics.pie.co.jp/series/<slug>/` link.
     """
-    soup = BeautifulSoup(html, "html.parser")
-    for anchor in soup.select("a[href]"):
-        href = urljoin(url, str(anchor["href"]))
+    hosts = (HOST, PUBLISHER_HOST, f"www.{PUBLISHER_HOST}")
+    for href in content.links:
         parsed = urlparse(href)
-        hosts = (HOST, PUBLISHER_HOST, f"www.{PUBLISHER_HOST}")
         if parsed.scheme == "https" and parsed.hostname in hosts and _SERIES_PATH.match(parsed.path):
             return href
     return None

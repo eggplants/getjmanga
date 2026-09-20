@@ -7,7 +7,7 @@ public right now, oldest first, each as a link into a directory
 SpeedBinb reader in its static "PtBinb" form: the page HTML lists one
 `<div data-ptimg="data/NNNN.ptimg.json">` per page, and each JSON names a
 scrambled JPEG next to it plus the rectangles to copy out of it to rebuild
-the page. `parse_ptimg()` and `descramble()` are `porta.py`'s. No API, no
+the page. `parse_ptimg()` and `descramble_ptimg()` are `viewers/speedbinb.py`'s. No API, no
 cookie, no Referer check, no account.
 
 An episode whose run has ended is deleted (its directory answers 404), so
@@ -31,8 +31,8 @@ from requests import RequestException
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .porta import descramble, parse_ptimg, split_title
+from getjmanga.viewers import speedbinb
+from getjmanga.viewers.speedbinb import split_title
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -267,10 +267,7 @@ class Michikusa(Extractor):
         Returns:
             The page in reading order.
         """
-        headers = {**self.HEADERS, "Referer": episode.url}
-        ptimg = parse_ptimg(self._get(page.url, headers=headers).json(), page.url)
-        images = {key: self._fetch_image(src, headers=headers) for key, src in ptimg.resources.items()}
-        return descramble(ptimg, images)
+        return speedbinb.fetch_ptimg_page(self, page.url, referer=episode.url)
 
     def _frame_links(self, url: str, recommend: str) -> tuple[str | None, str | None]:
         """Read the frame past the last page: the work page it links back to, and its "next" button.

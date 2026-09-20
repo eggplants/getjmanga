@@ -10,7 +10,7 @@ from requests import HTTPError
 from getjmanga.downloader import Downloader
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.ciao import Ciao, descramble, episode_url, service_hash
-from getjmanga.extractors.nora import GRID, UNIT, tile_order
+from getjmanga.viewers.kmanga import GRID, UNIT, tile_order
 
 SERIES_URL = "https://ciao.shogakukan.co.jp/comics/title/00813/"
 EPISODE_URL = "https://ciao.shogakukan.co.jp/comics/title/00813/episode/32965"

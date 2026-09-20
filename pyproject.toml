@@ -91,12 +91,18 @@ lint.per-file-ignores."getjmanga/cli.py" = [
 lint.per-file-ignores."getjmanga/downloader.py" = [
   "PLR0913", # Too many arguments (one keyword per command line flag)
 ]
-lint.per-file-ignores."getjmanga/extractors/boost.py" = [
+lint.per-file-ignores."getjmanga/viewers/*.py" = [
+  "SLF001", # Private member access (a viewer sends its requests through the extractor's `_get` and `_fetch_image`)
+]
+lint.per-file-ignores."getjmanga/viewers/publus.py" = [
   "C901",    # Complex functions (straight ports of the PUBLUS viewer's routines)
   "PLR0912", # Too many branches (same)
   "PLR0913", # Too many arguments (same)
   "PLR0915", # Too many statements (same)
   "PLR2004", # Magic values (the viewer's own bounds)
+]
+lint.per-file-ignores."getjmanga/viewers/speedbinb.py" = [
+  "PLR0913", # Too many arguments (the API call takes what the viewer sends, plus whose session to send it on)
 ]
 lint.per-file-ignores."packaging/entrypoint.py" = [
   "INP001", # Implicit namespace package (frozen entry point, not importable content)
