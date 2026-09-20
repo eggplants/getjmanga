@@ -296,6 +296,57 @@ def test_download_never_visits_a_url_twice(tmp_path):
     assert isinstance(downloader.save_path, Path)
 
 
+# --- -s ----------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def searched(monkeypatch, recording):
+    """`-s` finds these links on any page, without fetching anything."""
+    links = ["https://mangabu.jp/episodes/0", "https://mangabu.jp/episodes/9"]
+    pages = []
+    monkeypatch.setattr("getjmanga.cli.search", lambda session, url, extractor=None: pages.append(url) or list(links))
+    return pages
+
+
+def test_search_downloads_every_link_on_the_page(recording, searched, capsys):
+    main(["-s", "https://example.com/list"])
+    assert searched == ["https://example.com/list"]
+    assert recording.instances[0].episodes == ["https://mangabu.jp/episodes/0", "https://mangabu.jp/episodes/9"]
+    assert "search: 2 links found on https://example.com/list." in capsys.readouterr().out
+
+
+def test_search_steps_over_a_link_that_fails(recording, searched, capsys):
+    recording.missing = {"https://mangabu.jp/episodes/0"}
+    main(["-s", "https://example.com/list"])
+    assert recording.instances[0].episodes == ["https://mangabu.jp/episodes/0", "https://mangabu.jp/episodes/9"]
+    assert "skip: https://mangabu.jp/episodes/0: no viewer on" in capsys.readouterr().err
+
+
+def test_search_with_nothing_to_download_fails(monkeypatch, recording, capsys):
+    monkeypatch.setattr("getjmanga.cli.search", lambda session, url, extractor=None: [])
+    with pytest.raises(SystemExit) as excinfo:
+        main(["-s", "https://example.com/list"])
+    assert excinfo.value.code == 1
+    assert "nothing on https://example.com/list links to" in capsys.readouterr().err
+
+
+def test_search_hands_dash_e_on(monkeypatch, recording):
+    seen = []
+    monkeypatch.setattr("getjmanga.cli.search", lambda session, url, extractor=None: seen.append(extractor) or [])
+    with pytest.raises(SystemExit):
+        main(["-s", "-e", "recording", "https://example.com/list"])
+    assert seen == [recording]
+
+
+def test_search_fetches_with_the_shared_session(monkeypatch, recording, fake_session, fake_response):
+    monkeypatch.setattr("getjmanga.search.EXTRACTORS", (recording,))
+    session = fake_session({"example.com": fake_response(text='<a href="https://mangabu.jp/episodes/0">x</a>')})
+    monkeypatch.setattr("getjmanga.cli.make_session", lambda: session)
+    main(["-s", "-q", "https://example.com/list"])
+    assert session.calls[0] == "https://example.com/list"
+    assert recording.instances[0].episodes == ["https://mangabu.jp/episodes/0"]
+
+
 # --- the config file --------------------------------------------------------------------
 
 

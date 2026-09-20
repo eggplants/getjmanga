@@ -30,8 +30,9 @@ from .config import (
     set_site,
 )
 from .downloader import Downloader
-from .errors import GetjmangaError, NotAnEpisodePageError
+from .errors import GetjmangaError, NotAnEpisodePageError, NothingReadableError
 from .extractors import EXTRACTORS, find_extractor, get_extractor
+from .search import search
 from .session import make_session
 
 if TYPE_CHECKING:
@@ -97,6 +98,12 @@ def parse_args(args: list[str] | None = None) -> Namespace:
         + "\n\nconfig: `%(prog)s config --help` sets up the config file",
     )
     parser.add_argument("urls", metavar="url", nargs="*", help="episode url, or a series url to take every episode of")
+    parser.add_argument(
+        "-s",
+        "--search",
+        action="store_true",
+        help="treat each url as a web page and download what it links to instead",
+    )
     # `-b`, `-d` and `-o` default to None so that the config file can fill them in.
     parser.add_argument("-b", "--bulk", action=BooleanOptionalAction, help="follow every next episode")
     parser.add_argument(
@@ -361,7 +368,7 @@ class Runner:
         """Download `url`: the episode, or every episode of the series.
 
         Raises:
-            SystemExit: Nothing in the series was readable.
+            NothingReadableError: Nothing in the series was readable.
         """
         parsed = self.parsed
         extractor = self.extractor(url)
@@ -382,8 +389,30 @@ class Runner:
         queue = episode_urls(extractor, url, quiet=parsed.quiet)
         done = download(downloader, queue, parsed, series=series)
         if series and not done:
-            print(f"error: no episode in the series at {url} was readable.", file=sys.stderr)
-            raise SystemExit(1)
+            msg = f"no episode in the series at {url} was readable."
+            raise NothingReadableError(msg)
+
+    def search(self, url: str) -> None:
+        """Download every link on the page at `url` that an extractor takes.
+
+        A link that fails is reported and stepped over, since a page links to
+        more than what is readable.
+
+        Raises:
+            NothingReadableError: The page links to nothing an extractor takes.
+        """
+        parsed = self.parsed
+        links = search(self.session, url, get_extractor(parsed.extractor) if parsed.extractor else None)
+        if not links:
+            msg = f"nothing on {url} links to a page an extractor takes."
+            raise NothingReadableError(msg)
+        if not parsed.quiet:
+            print(f"search: {len(links)} links found on {url}.")
+        for link in links:
+            try:
+                self.run(link)
+            except (GetjmangaError, HTTPError) as exc:
+                print(f"skip: {link}: {exc}", file=sys.stderr)
 
 
 def main(args: list[str] | None = None) -> None:
@@ -408,7 +437,10 @@ def main(args: list[str] | None = None) -> None:
         apply_config(parsed, config)
         runner = Runner(parsed, config, password)
         for url in parsed.urls:
-            runner.run(url)
+            if parsed.search:
+                runner.search(url)
+            else:
+                runner.run(url)
     except (GetjmangaError, HTTPError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc

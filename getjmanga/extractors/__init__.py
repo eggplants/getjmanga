@@ -11,6 +11,7 @@ from getjmanga.errors import (
     GetjmangaError,
     LoginError,
     NotAnEpisodePageError,
+    NothingReadableError,
     UnknownExtractorError,
     UnsupportedUrlError,
 )
@@ -263,6 +264,7 @@ __all__ = (
     "NicoManga",
     "Nora",
     "NotAnEpisodePageError",
+    "NothingReadableError",
     "Ohta",
     "Omocoro",
     "Pachikuri",

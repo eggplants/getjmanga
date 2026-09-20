@@ -60,10 +60,14 @@ jm -b https://shonenjumpplus.com/episode/13932016480028799982
 
 # login
 jm -u you@example.com https://piccoma.com/web/viewer/8195/1185884
+
+# every link on a page that some extractor takes
+jm -s https://shonenjumpplus.com/
 ```
 
 | Option | Description |
 | --- | --- |
+| `-s`, `--search` | treat each url as a web page and download what it links to instead |
 | `-b`, `--bulk`, `--no-bulk` | follow every next episode |
 | `-d DIR`, `--savedir DIR` | directory to save into, as `<DIR>/<host>/<series>/<episode>/` (default: the config's `savedir`, else `.`) |
 | `-f`, `--first` | download only the first page |

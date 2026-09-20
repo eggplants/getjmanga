@@ -59,6 +59,8 @@ then reacts to `release: [published]` and does the PyPI and GHCR publish.
   and the viewers all speak in these terms.
 - `getjmanga/cipher.py` -- the two ways page files are hidden in transit
   (AES-CBC, a repeating XOR key), undone.
+- `getjmanga/search.py` -- `-s`: the links on an arbitrary web page that some
+  extractor's `suitable()` takes, for the CLI to download one by one.
 
 ## Testing conventions
 

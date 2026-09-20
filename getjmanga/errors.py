@@ -21,3 +21,7 @@ class NotAnEpisodePageError(GetjmangaError):
 
 class LoginError(GetjmangaError):
     """The site refused the credentials, or the extractor cannot sign in at all."""
+
+
+class NothingReadableError(GetjmangaError):
+    """A series listed no readable episode, or a searched page linked to nothing downloadable."""
