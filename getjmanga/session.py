@@ -1,10 +1,12 @@
-"""The HTTP client every extractor shares."""
+"""The HTTP client every extractor shares, and the browser it claims to be."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
 import httpx
+import ua_generator
+from ua_generator.options import Options
 
 if TYPE_CHECKING:
     from httpx._types import QueryParamTypes
@@ -13,13 +15,32 @@ if TYPE_CHECKING:
 RETRIES = 10
 
 
-#: Headers a browser would send, so sites serve what they serve a browser.
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
-}
+def browser_headers() -> dict[str, str]:
+    """Headers a current desktop browser would send, so sites serve what they serve one.
+
+    The User-Agent is drawn once per process from Chrome, Edge and Safari
+    (each among its last three versions) on the latest macOS or Windows, with
+    the client-hint headers a Chromium browser sends alongside it.
+
+    Returns:
+        The headers, with `User-Agent` and `Accept-Language` always present.
+    """
+    agent = ua_generator.generate(
+        device="desktop",
+        platform=("macos", "windows"),
+        browser=("chrome", "edge", "safari"),
+        options=Options(latest_versions={"chrome": 3, "edge": 3, "safari": 3, "macos": 1, "windows": 1}),
+    )
+    hints = {key: value for key, value in agent.headers.get().items() if key != "user-agent"}
+    return {
+        "User-Agent": agent.text,
+        "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+        **hints,
+    }
+
+
+#: Headers a browser would send, drawn once and sent with every request.
+HEADERS = browser_headers()
 
 
 class Session(httpx.Client):

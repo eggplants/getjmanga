@@ -42,6 +42,7 @@ dependencies = [
   "pathvalidate>=3.2",
   "pillow>=10.4",
   "rich>=13.7",
+  "ua-generator>=2",
 ]
 urls.Documentation = "https://eggplants.github.io/getjmanga/"
 urls.Issues = "https://github.com/eggplants/getjmanga/issues"

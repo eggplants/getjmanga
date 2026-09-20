@@ -4,7 +4,24 @@ from __future__ import annotations
 
 import httpx
 
-from getjmanga.session import make_session
+from getjmanga.session import HEADERS, browser_headers, make_session
+
+
+def test_browser_headers_name_a_current_desktop_browser():
+    for _ in range(20):
+        headers = browser_headers()
+        agent = headers["User-Agent"]
+        assert agent.startswith("Mozilla/5.0 (")
+        assert "Macintosh" in agent or "Windows NT" in agent
+        assert "Chrome/" in agent or "Version/" in agent
+        assert "Mobile" not in agent
+        assert headers["Accept-Language"].startswith("ja")
+        # Chromium browsers say who they are in the client hints as well; Safari sends none.
+        assert ("sec-ch-ua" in headers) == ("Chrome/" in agent)
+
+
+def test_headers_are_drawn_once():
+    assert HEADERS["User-Agent"].startswith("Mozilla/5.0 (")
 
 
 def test_session_params_add_to_the_query_the_url_carries():
