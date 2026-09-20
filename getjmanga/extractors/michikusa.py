@@ -29,7 +29,9 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 from requests import RequestException
 
-from .common import Episode, Extractor, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
+
 from .porta import descramble, parse_ptimg, split_title
 
 if TYPE_CHECKING:

@@ -45,7 +45,8 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from PIL import Image
 
-from .common import Episode, Extractor, GetjmangaError, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

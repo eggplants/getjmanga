@@ -8,7 +8,7 @@ from PIL import Image
 from requests import HTTPError
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.splush import Splush
 
 WORK_URL = "https://www.splush.jp/series/14712/"

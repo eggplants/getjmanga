@@ -16,32 +16,13 @@ from urllib.parse import urlparse
 
 from PIL import Image
 
-from getjmanga.session import HEADERS, make_session
+from .errors import LoginError, UnsupportedUrlError
+from .session import HEADERS, make_session
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from requests import Response, Session
-
-
-class GetjmangaError(Exception):
-    """Base class for every error this package raises."""
-
-
-class UnsupportedUrlError(GetjmangaError):
-    """No extractor takes the URL, or the one asked for does not take it."""
-
-
-class UnknownExtractorError(GetjmangaError):
-    """No extractor goes by the name."""
-
-
-class NotAnEpisodePageError(GetjmangaError):
-    """The fetched page describes no episode the extractor can read."""
-
-
-class LoginError(GetjmangaError):
-    """The site refused the credentials, or the extractor cannot sign in at all."""
 
 
 @dataclass(frozen=True)

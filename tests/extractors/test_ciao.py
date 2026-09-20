@@ -8,8 +8,8 @@ from PIL import Image
 from requests import HTTPError
 
 from getjmanga.downloader import Downloader
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.ciao import Ciao, descramble, episode_url, service_hash
-from getjmanga.extractors.common import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.nora import GRID, UNIT, tile_order
 
 SERIES_URL = "https://ciao.shogakukan.co.jp/comics/title/00813/"

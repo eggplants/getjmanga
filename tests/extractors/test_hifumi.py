@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.hifumi import Hifumi, parse_ptimg, work_url
 
 EPISODE_URL = "https://www.123hon.com/vw/mujintou_reijo/sv_pt00069b2277ab77a1_01/"

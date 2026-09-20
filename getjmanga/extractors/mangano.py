@@ -35,7 +35,8 @@ from urllib.parse import unquote, urlparse
 
 from requests import HTTPError
 
-from .common import Episode, Extractor, GetjmangaError, LoginError, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

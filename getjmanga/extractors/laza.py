@@ -39,7 +39,8 @@ from bs4.element import Tag
 from requests import ConnectionError as RequestsConnectionError
 from requests.exceptions import ChunkedEncodingError
 
-from .common import Episode, Extractor, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.fullpercent import FullPercent, parse_viewer, parse_work, split_heading
 
 WORK_URL = "https://fullpercent.net/comic/detail/2"

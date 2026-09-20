@@ -31,7 +31,8 @@ from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
-from .common import Episode, Extractor, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 
 _WORK_PATH = re.compile(r"^/(?:sp/)?works/(?P<work>[0-9a-f]+)\.html$")
 _EPISODE_PATH = re.compile(r"^/(?:sp/)?works/(?P<work>[0-9a-f]+)/episode/(?P<episode>[0-9a-f]+)\.html$")

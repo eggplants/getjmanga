@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.nicomanga import API_URL, BASE_URL, NicoManga, unmask
 
 SERIES_URL = f"{BASE_URL}/comic/30941"

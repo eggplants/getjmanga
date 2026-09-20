@@ -23,7 +23,8 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 from requests import HTTPError
 
-from .common import Episode, Extractor, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
     from PIL import Image

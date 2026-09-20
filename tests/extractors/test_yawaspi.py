@@ -8,7 +8,7 @@ from PIL import Image
 from requests import HTTPError
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.yawaspi import Yawaspi
 
 WORK_URL = "https://yawaspi.com/hajisef/index.html"

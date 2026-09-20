@@ -33,7 +33,9 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 from PIL import Image
 
-from .common import Episode, Extractor, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
+
 from .ohta import Ohta, content_url
 
 if TYPE_CHECKING:

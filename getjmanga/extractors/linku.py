@@ -30,10 +30,11 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from PIL import Image
 
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 from getjmanga.protobuf import integer, message, messages, raw, string
 
 from .comicwalker import unmask
-from .common import Episode, Extractor, LoginError, NotAnEpisodePageError, Page, UnsupportedUrlError
 from .fuz import decrypt
 
 if TYPE_CHECKING:

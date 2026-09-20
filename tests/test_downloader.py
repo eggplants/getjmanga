@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page
 
 
 class Canned(Extractor):

@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.ynjn import API_URL, BASE_URL, GRID, YanJan, descramble
 
 SERIES_URL = f"{BASE_URL}/title/931"

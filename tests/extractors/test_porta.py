@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.porta import Porta, Ptimg, Transfer, descramble, parse_ptimg, split_title
 
 EPISODE_URL = "https://comic-porta.com/p_data/ol_ningyo001al/"

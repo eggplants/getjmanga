@@ -9,7 +9,7 @@ from PIL import Image
 from requests import HTTPError
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.gigaviewer import DIV, MUL, GigaViewer, descramble
 
 # One episode per known host, free to read without an account.

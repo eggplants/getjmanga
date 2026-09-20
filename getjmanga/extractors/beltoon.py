@@ -27,7 +27,8 @@ from urllib.parse import parse_qs, unquote, urlencode, urlparse
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from PIL import Image
 
-from .common import Episode, Extractor, GetjmangaError, LoginError, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

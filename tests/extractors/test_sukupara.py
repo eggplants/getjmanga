@@ -6,8 +6,8 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors import sukupara
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.sukupara import Sukupara, episode_url, series_url
 
 MANGA = "180"

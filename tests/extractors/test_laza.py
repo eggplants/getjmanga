@@ -8,7 +8,7 @@ from PIL import Image
 from requests import ConnectionError as RequestsConnectionError
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.laza import (
     Laza,
     episode_title,

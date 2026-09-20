@@ -7,6 +7,15 @@ the ones that are picky.
 
 from __future__ import annotations
 
+from getjmanga.errors import (
+    GetjmangaError,
+    LoginError,
+    NotAnEpisodePageError,
+    UnknownExtractorError,
+    UnsupportedUrlError,
+)
+from getjmanga.extractor import Episode, Extractor, Page
+
 from .alphapolis import AlphaPolis
 from .beltoon import BeLToon
 from .bloom import Bloom
@@ -17,16 +26,6 @@ from .comicessay import ComicEssay
 from .comici import Comici
 from .comico import Comico
 from .comicwalker import ComicWalker
-from .common import (
-    Episode,
-    Extractor,
-    GetjmangaError,
-    LoginError,
-    NotAnEpisodePageError,
-    Page,
-    UnknownExtractorError,
-    UnsupportedUrlError,
-)
 from .corocoro import Corocoro
 from .corona import Corona
 from .crea import Crea

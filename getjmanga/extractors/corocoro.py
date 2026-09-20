@@ -19,9 +19,10 @@ from urllib.parse import urlparse
 
 from PIL import Image
 
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 from getjmanga.protobuf import integer, message, messages, raw, string
 
-from .common import Episode, Extractor, NotAnEpisodePageError, Page, UnsupportedUrlError
 from .fuz import decrypt
 
 if TYPE_CHECKING:

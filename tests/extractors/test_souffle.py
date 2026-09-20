@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.souffle import AJAX_URL, BASE_URL, PAGE_SIZE, Souffle
 
 SERIES = "chigau-kurasu-no-sukina-hito"

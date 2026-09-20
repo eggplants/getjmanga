@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .extractors.common import GetjmangaError
+from .errors import GetjmangaError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

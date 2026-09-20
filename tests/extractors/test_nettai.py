@@ -6,9 +6,9 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors import nettai
 from getjmanga.extractors.boost import Pack, page_seeds, tile_slices
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.nettai import (
     BASE_URL,
     LAST_PAGE_URL,

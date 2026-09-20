@@ -36,7 +36,8 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
-from .common import Episode, Extractor, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
     from requests import Response

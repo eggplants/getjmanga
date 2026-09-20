@@ -20,7 +20,7 @@ from rich.progress import (
 )
 
 if TYPE_CHECKING:
-    from .extractors.common import Episode, Extractor
+    from .extractor import Episode, Extractor
 
 #: What became of an episode: written, left alone because it was already
 #: there, or locked behind a purchase, a wait or a login.

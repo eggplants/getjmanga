@@ -8,7 +8,7 @@ from PIL import Image
 from requests import HTTPError
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.magapoke import SEED_ALPHABETS, MagaPoke, scramble_seed
 from getjmanga.extractors.nora import GRID, UNIT, service_hash, tile_order
 

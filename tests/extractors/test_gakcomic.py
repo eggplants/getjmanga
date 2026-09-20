@@ -9,7 +9,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.gakcomic import (
     BASE_URL,
     Gakcomic,

@@ -36,8 +36,10 @@ from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
+
 from .boost import Boost, decode_pack, descramble
-from .common import Episode, Extractor, NotAnEpisodePageError, Page, UnsupportedUrlError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

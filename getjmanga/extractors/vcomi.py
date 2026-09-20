@@ -31,7 +31,9 @@ from urllib.parse import urlparse
 
 from PIL import Image
 
-from .common import Episode, Extractor, LoginError, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
+
 from .fuz import decrypt
 
 if TYPE_CHECKING:

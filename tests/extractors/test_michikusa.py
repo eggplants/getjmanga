@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.michikusa import Michikusa, parse_listing
 from getjmanga.extractors.porta import parse_ptimg
 

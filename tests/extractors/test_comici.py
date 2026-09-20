@@ -8,8 +8,8 @@ from PIL import Image
 from requests import HTTPError
 
 from getjmanga.downloader import Downloader
+from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.comici import COLUMNS, ROWS, TILES, Comici, descramble, parse_scramble
-from getjmanga.extractors.common import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
 
 SCRAMBLE = [1, 5, 13, 8, 4, 14, 3, 2, 10, 0, 11, 12, 7, 6, 9, 15]
 

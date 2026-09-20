@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.crea import BASE_URL, ROOM_TITLE, Crea, original_image_url
 
 CDN = "https://crea.ismcdn.jp"

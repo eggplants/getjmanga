@@ -9,7 +9,7 @@ from PIL import Image
 from requests import HTTPError
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.gaugau import viewer_key
 from getjmanga.extractors.yanmaga import (
     YanMaga,

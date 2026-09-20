@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.piccoma import (
     BASE_URL,
     TILE_SIZE,

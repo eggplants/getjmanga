@@ -9,7 +9,7 @@ from PIL import Image
 from requests import HTTPError
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.ohta import Ohta, parse_work
 
 WORK_URL = "https://webcomic.ohtabooks.com/kishotenten/"

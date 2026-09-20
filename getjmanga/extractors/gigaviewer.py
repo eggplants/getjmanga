@@ -12,7 +12,8 @@ from xml.etree import ElementTree as ET
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
-from .common import Episode, Extractor, LoginError, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
     from PIL import Image

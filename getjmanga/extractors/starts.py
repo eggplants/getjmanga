@@ -20,7 +20,9 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
-from .common import Episode, Extractor, GetjmangaError, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
+
 from .piccoma import descramble as _descramble_tiles
 
 if TYPE_CHECKING:

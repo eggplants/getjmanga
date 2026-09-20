@@ -10,8 +10,10 @@ from urllib.parse import urlparse
 
 from PIL import Image
 
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
+
 from .comicwalker import unmask as _xor_unmask
-from .common import Episode, Extractor, NotAnEpisodePageError, Page, UnsupportedUrlError
 
 if TYPE_CHECKING:
     from requests import Session

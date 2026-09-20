@@ -12,9 +12,9 @@ from urllib.parse import urlparse
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from PIL import Image
 
+from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 from getjmanga.protobuf import encode_bytes_field, encode_varint_field, integer, message, messages, raw, string
-
-from .common import Episode, Extractor, GetjmangaError, LoginError, NotAnEpisodePageError, Page, UnsupportedUrlError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

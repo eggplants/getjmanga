@@ -7,9 +7,9 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors import manga5
 from getjmanga.extractors.boost import Pack
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.manga5 import (
     BASE_URL,
     LICENSE_URL,

@@ -9,7 +9,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.ganma import (
     BASE_URL,
     GRAPHQL_URL,

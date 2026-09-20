@@ -9,7 +9,7 @@ from PIL import Image
 from requests import HTTPError
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.pie import Pie, parse_story, parse_work
 
 WORK_URL = "https://comics.pie.co.jp/series/poetic/"

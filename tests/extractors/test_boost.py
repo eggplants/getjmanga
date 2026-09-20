@@ -8,6 +8,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.boost import (
     BASE_URL,
     LICENSE_URL,
@@ -24,7 +25,6 @@ from getjmanga.extractors.boost import (
     page_seeds,
     tile_slices,
 )
-from getjmanga.extractors.common import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 
 SERIES_URL = f"{BASE_URL}/content/01700001"
 EPISODE_URL = f"{BASE_URL}/product/01700001"

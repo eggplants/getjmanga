@@ -7,6 +7,7 @@ import pytest
 from PIL import Image, UnidentifiedImageError
 
 from getjmanga.downloader import Downloader
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.comicwalker import (
     API_URL,
     BASE_URL,
@@ -15,7 +16,6 @@ from getjmanga.extractors.comicwalker import (
     episode_title,
     unmask,
 )
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
 
 WORK_URL = f"{BASE_URL}/detail/KC_001981_S"
 EPISODE_URL = f"{BASE_URL}/detail/KC_001981_S/episodes/KC_0019810000100011_E"

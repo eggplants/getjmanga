@@ -9,7 +9,8 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlparse
 
-from .common import Episode, Extractor, GetjmangaError, LoginError, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
     from PIL import Image

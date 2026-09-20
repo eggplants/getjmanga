@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.drecomi import API_URL, BASE_URL, LIST_LIMIT, Drecomi, decrypt, verify
 
 SERIES_URL = f"{BASE_URL}/series/CD20013"

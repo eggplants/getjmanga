@@ -8,7 +8,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.gecchan import Gecchan, parse_work
 
 WORK_URL = "https://nikkangecchan.jp/comics/hanikamu"

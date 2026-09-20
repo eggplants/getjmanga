@@ -8,7 +8,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.mechacreators import MechaCreators, next_data, page_data
 
 BASE = "https://creators.mechacomic.jp"

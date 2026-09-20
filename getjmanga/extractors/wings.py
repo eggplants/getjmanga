@@ -43,7 +43,8 @@ from bs4.element import Tag
 from PIL import Image
 from requests import HTTPError
 
-from .common import Episode, Extractor, GetjmangaError, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

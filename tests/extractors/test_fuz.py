@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.fuz import BASE_URL, Fuz, decrypt
 from getjmanga.protobuf import decode_fields, encode_bytes_field, encode_varint_field
 

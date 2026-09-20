@@ -8,7 +8,7 @@ from PIL import Image
 from requests import HTTPError
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.firecross import UNIT, FireCross, descramble
 
 ORIGIN = "https://firecross.jp"

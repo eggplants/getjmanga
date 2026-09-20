@@ -41,7 +41,9 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlparse
 
-from .common import Episode, Extractor, LoginError, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
+
 from .nora import GRID, UNIT, tile_order
 from .nora import descramble as descramble_v2
 

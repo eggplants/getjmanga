@@ -21,9 +21,9 @@ from urllib.parse import quote, unquote, urlparse
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 from getjmanga.protobuf import integer, message, messages, string
-
-from .common import Episode, Extractor, NotAnEpisodePageError, Page, UnsupportedUrlError
 
 if TYPE_CHECKING:
     from requests import Session

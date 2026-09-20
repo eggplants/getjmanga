@@ -8,7 +8,8 @@ import pytest
 from getjmanga import __version__
 from getjmanga.cli import download, extractor_list, main, parse_args
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import Episode, Extractor, LoginError, NotAnEpisodePageError, Page
+from getjmanga.errors import LoginError, NotAnEpisodePageError
+from getjmanga.extractor import Episode, Extractor, Page
 
 
 def test_parse_args_defaults():

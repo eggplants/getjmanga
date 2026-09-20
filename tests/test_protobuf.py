@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from getjmanga.extractors.common import GetjmangaError
+from getjmanga.errors import GetjmangaError
 from getjmanga.protobuf import decode_fields, encode_bytes_field, encode_varint_field
 
 

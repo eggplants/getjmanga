@@ -15,11 +15,12 @@ from requests import RequestException
 from . import __version__
 from .config import Config, Credentials, default_config_path, load_config
 from .downloader import Downloader
-from .extractors import EXTRACTORS, GetjmangaError, NotAnEpisodePageError, find_extractor, get_extractor
+from .errors import GetjmangaError, NotAnEpisodePageError
+from .extractors import EXTRACTORS, find_extractor, get_extractor
 from .session import make_session
 
 if TYPE_CHECKING:
-    from .extractors.common import Extractor
+    from .extractor import Extractor
 
 
 class HelpFormatter(ArgumentDefaultsHelpFormatter, RawDescriptionHelpFormatter):

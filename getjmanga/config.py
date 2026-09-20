@@ -27,12 +27,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
-from .extractors.common import GetjmangaError
+from .errors import GetjmangaError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from .extractors.common import Extractor
+    from .extractor import Extractor
 
 #: Where the config lives under `XDG_CONFIG_HOME` (`~/.config` when unset).
 CONFIG_RELPATH = Path("getjmanga") / "config.toml"

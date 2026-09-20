@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from PIL import Image
 
 from getjmanga.downloader import Downloader
+from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.comico import (
     API_URL,
     BASE_URL,
@@ -16,7 +17,6 @@ from getjmanga.extractors.comico import (
     api_headers,
     decrypt_url,
 )
-from getjmanga.extractors.common import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
 
 KEY = b"a7fc9dc89f2c873d79397f8a0028a4cd"
 

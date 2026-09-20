@@ -7,8 +7,8 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.comicessay import BASE_URL, LISTING_LIMIT, ComicEssay
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
 
 SERIES = "a1063"
 SERIES_URL = f"{BASE_URL}/episode/{SERIES}/"

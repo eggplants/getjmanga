@@ -13,6 +13,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from PIL import Image
 
 from getjmanga.downloader import Downloader
+from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.beltoon import (
     API_URL,
     BASE_URL,
@@ -22,7 +23,6 @@ from getjmanga.extractors.beltoon import (
     decrypt_index,
     descramble,
 )
-from getjmanga.extractors.common import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
 
 EPISODE_URL = f"{BASE_URL}/viewer/12s1/1"
 LOCKED_URL = f"{BASE_URL}/viewer/12s1/2"

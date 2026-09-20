@@ -7,7 +7,8 @@ from PIL import Image
 from requests import Session
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import LoginError, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Page
 from getjmanga.extractors.cycomi import (
     API_URL,
     BASE_URL,

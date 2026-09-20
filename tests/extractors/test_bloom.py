@@ -10,8 +10,8 @@ from PIL import Image
 from requests import HTTPError
 
 from getjmanga.downloader import Downloader
+from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.bloom import Bloom, parse_listing
-from getjmanga.extractors.common import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
 
 WORK_URL = "https://bloom.homesha.co.jp/webcomic/nankahanabi/"
 # How the reader links the work page: without the trailing slash.

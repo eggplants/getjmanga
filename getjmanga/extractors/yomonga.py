@@ -28,7 +28,9 @@ from urllib.parse import parse_qs, urljoin, urlparse
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
-from .common import Episode, Extractor, GetjmangaError, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
+
 from .gaugau import decode_table, descramble, parse_content, parse_pages, pick_tables, viewer_key
 
 if TYPE_CHECKING:

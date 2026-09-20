@@ -10,6 +10,7 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.alphapolis import (
     BASE_URL,
     LOGIN_URL,
@@ -19,7 +20,6 @@ from getjmanga.extractors.alphapolis import (
     parse_puzzle,
     parse_puzzles,
 )
-from getjmanga.extractors.common import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 
 WORK_URL = f"{BASE_URL}/manga/official/166000762"
 EPISODE_URL = f"{WORK_URL}/12255"

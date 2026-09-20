@@ -7,8 +7,8 @@ import pytest
 from PIL import Image
 
 from getjmanga.downloader import Downloader
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.carula import Carula, is_locked, next_key, split_title
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
 
 EPISODE_URL = "https://note.com/carula/n/nb016b73d0f1d"
 NEXT_URL = "https://note.com/carula/n/n596c41e8118a"

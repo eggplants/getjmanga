@@ -8,7 +8,7 @@ from PIL import Image
 from requests import HTTPError
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.shuro import Shuro, episode_number, parse_manga_data, reading_order
 
 WORK_URL = "https://shuro.world/manga/kappanokarty/"

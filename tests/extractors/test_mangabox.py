@@ -7,7 +7,7 @@ import pytest
 from PIL import Image, UnidentifiedImageError
 
 from getjmanga.downloader import Downloader
-from getjmanga.extractors.common import LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.mangabox import (
     API_URL,
     BASE_URL,
