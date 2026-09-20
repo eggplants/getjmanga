@@ -4,6 +4,7 @@
 savedir = "~/manga"           # what `-d` defaults to
 overwrite = false             # whether `-o` is on unless `--no-overwrite` is given
 bulk = false                  # whether `-b` is on unless `--no-bulk` is given
+both = false                  # whether `-B` is on unless `--no-both` is given; not with bulk
 
 [site."shonenjumpplus.com"]   # one GigaViewer site; each has an account of its own
 username = "you@example.com"
@@ -30,7 +31,8 @@ A `[site.<key>]` section is looked up by the URL's hostname first, then by the
 extractor's `CONFIG_KEY`, so a per-host section beats the shared one.
 
 `jm config` writes the file: `init` lays down a commented template, `site`
-asks for an account, and `savedir` / `overwrite` / `bulk` set the defaults.
+asks for an account, and `savedir` / `overwrite` / `bulk` / `both` set the
+defaults (`bulk` and `both` rule each other out: setting one clears the other).
 `-S` and `jm patrol` keep the `[[patrol]]` entries. The writes go through
 tomlkit so the comments in a hand-edited file survive.
 """
@@ -59,7 +61,7 @@ if TYPE_CHECKING:
 CONFIG_RELPATH = Path("getjmanga") / "config.toml"
 
 #: The top-level keys that stand in for a command line flag.
-Option = Literal["savedir", "overwrite", "bulk"]
+Option = Literal["savedir", "overwrite", "bulk", "both"]
 
 _T = TypeVar("_T", str, bool)
 
@@ -73,6 +75,7 @@ TEMPLATE = """\
 savedir = "."
 overwrite = false
 bulk = false
+both = false
 
 # One [site.<key>] section per account. The key is the site's host, or the
 # key `jm --list-extractors` prints for a login shared across hosts.
@@ -141,6 +144,8 @@ class Config:
     overwrite: bool = False
     #: Whether `-b` is on by default.
     bulk: bool = False
+    #: Whether `-B` is on by default; never together with `bulk`.
+    both: bool = False
 
     def credentials(self, extractor: type[Extractor], url: str) -> Credentials | None:
         """The credentials to sign in to `url` with.
@@ -187,13 +192,18 @@ def load_config(path: Path | None = None) -> Config:
         msg = f"{where} is not valid TOML: {exc}"
         raise ConfigError(msg) from exc
     savedir = _option(data, "savedir", str, where)
+    bulk, both = _option(data, "bulk", bool, where) or False, _option(data, "both", bool, where) or False
+    if bulk and both:
+        msg = f"{where}: bulk and both cannot both be true; -b follows the next episodes, -B the previous ones too."
+        raise ConfigError(msg)
     return Config(
         sites=_sites(data.get("site", {}), where),
         patrol=_patrol(data.get("patrol", []), where),
         path=where,
         savedir=Path(savedir).expanduser() if savedir else None,
         overwrite=_option(data, "overwrite", bool, where) or False,
-        bulk=_option(data, "bulk", bool, where) or False,
+        bulk=bulk,
+        both=both,
     )
 
 
@@ -291,12 +301,17 @@ def set_site(key: str, credentials: Credentials, path: Path | None = None) -> Pa
     return _edit(path, edit)
 
 
+#: Keys that rule each other out: turning one on turns the other off.
+_EXCLUSIVE: dict[str, str] = {"bulk": "both", "both": "bulk"}
+
+
 def set_option(name: Option, value: str | bool, path: Path | None = None) -> Path:
     """Write a top-level key, replacing the one already there.
 
     Args:
-        name: `savedir`, `overwrite` or `bulk`.
+        name: `savedir`, `overwrite`, `bulk` or `both`.
         value: A path for `savedir`, kept as given; True or False for the others.
+            Turning `bulk` on turns `both` off, and the other way round.
         path: The file to edit instead of `default_config_path()`.
 
     Returns:
@@ -308,6 +323,9 @@ def set_option(name: Option, value: str | bool, path: Path | None = None) -> Pat
 
     def edit(document: tomlkit.TOMLDocument) -> None:
         document[name] = value
+        other = _EXCLUSIVE.get(name)
+        if value is True and other is not None and document.get(other) is True:
+            document[other] = False
 
     return _edit(path, edit)
 

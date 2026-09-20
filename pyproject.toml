@@ -87,7 +87,8 @@ lint.ignore = [
   "D",
 ]
 lint.per-file-ignores."getjmanga/cli.py" = [
-  "T201", # `print` found
+  "PLR0913", # Too many arguments (`download` takes one keyword per command line flag)
+  "T201",    # `print` found
 ]
 lint.per-file-ignores."getjmanga/config.py" = [
   "FBT001", # Boolean positional argument (`set_option` takes the value `overwrite = true` is set to)

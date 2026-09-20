@@ -84,7 +84,13 @@ def test_load_config_is_empty_without_a_file(tmp_path):
 def test_load_config_reads_the_defaults(tmp_path):
     path = write(tmp_path / "c.toml", 'savedir = "~/manga"\noverwrite = true\nbulk = true\n')
     config = load_config(path)
-    assert (config.savedir, config.overwrite, config.bulk) == (Path.home() / "manga", True, True)
+    assert (config.savedir, config.overwrite, config.bulk, config.both) == (Path.home() / "manga", True, True, False)
+
+
+def test_load_config_refuses_bulk_and_both_together(tmp_path):
+    path = write(tmp_path / "c.toml", "bulk = true\nboth = true\n")
+    with pytest.raises(ConfigError, match="cannot both be true"):
+        load_config(path)
 
 
 def test_load_config_leaves_the_defaults_alone_when_unset(tmp_path):
@@ -127,6 +133,7 @@ def test_load_config_rejects_a_directory(tmp_path):
         ("savedir = 1\n", "savedir must be a string"),
         ('overwrite = "yes"\n', "overwrite must be a boolean"),
         ("bulk = 1\n", "bulk must be a boolean"),
+        ("both = 1\n", "both must be a boolean"),
         ("patrol = 1\n", "must be an array"),
         ("[[patrol]]\ntitle = 'x'\n", "needs a url"),
         ("[[patrol]]\nurl = 'https://a/'\nsearch = 1\n", "search a boolean"),
@@ -221,6 +228,14 @@ def test_set_option_replaces_the_template_line_in_place(isolated_config):
     assert text.index('savedir = "/manga"') < text.index("bulk = true") < text.index("# [site.")
     config = load_config()
     assert (config.savedir, config.bulk) == (Path("/manga"), True)
+
+
+def test_set_option_turns_the_other_chain_flag_off(tmp_path):
+    path = write(tmp_path / "c.toml", "bulk = true  # mine\n")
+    set_option("both", True, path)
+    assert path.read_text(encoding="utf-8") == "bulk = false  # mine\nboth = true\n"
+    set_option("both", False, path)
+    assert load_config(path).bulk is False  # turning one off leaves the other alone
 
 
 def test_set_option_goes_before_the_site_sections(tmp_path):

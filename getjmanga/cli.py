@@ -103,7 +103,9 @@ def parse_args(args: list[str] | None = None, *, patrol: bool = False) -> Namesp
             "getjmanga patrol",
             "Download what is new in every [[patrol]] entry of the config file (see -S)",
         )
-        parser.set_defaults(urls=[], search=False, store=False, bulk=None, extractor=None, list_extractors=False)
+        parser.set_defaults(
+            urls=[], search=False, store=False, bulk=None, both=None, extractor=None, list_extractors=False
+        )
     else:
         parser = make_parser(
             "getjmanga",
@@ -128,8 +130,10 @@ def parse_args(args: list[str] | None = None, *, patrol: bool = False) -> Namesp
             action="store_true",
             help="remember each url in the config file, for `%(prog)s patrol` to download what is new",
         )
-        # `-b`, `-d` and `-o` default to None so that the config file can fill them in.
-        parser.add_argument("-b", "--bulk", action=BooleanOptionalAction, help="follow every next episode")
+        # `-b`, `-B`, `-d` and `-o` default to None so that the config file can fill them in.
+        chain = parser.add_mutually_exclusive_group()
+        chain.add_argument("-b", "--bulk", action=BooleanOptionalAction, help="follow every next episode")
+        chain.add_argument("-B", "--both", action=BooleanOptionalAction, help="follow every previous episode too")
     parser.add_argument(
         "-d", "--savedir", metavar="DIR", help="directory to save into (default: the config's savedir, else .)"
     )
@@ -176,8 +180,14 @@ def apply_config(parsed: Namespace, config: Config) -> None:
         parsed.savedir = config.savedir if config.savedir is not None else "."
     if parsed.overwrite is None:
         parsed.overwrite = config.overwrite
-    if parsed.bulk is None:
-        parsed.bulk = config.bulk
+    # `-b` and `-B` rule each other out: one given on the command line (or turned
+    # off there) settles both; otherwise the config file does, which never has both on.
+    if parsed.bulk is not None:
+        parsed.both = False
+    elif parsed.both is not None:
+        parsed.bulk = False if parsed.both else config.bulk
+    else:
+        parsed.bulk, parsed.both = config.bulk, config.both
 
 
 def parse_config_args(args: list[str]) -> Namespace:
@@ -203,9 +213,9 @@ def parse_config_args(args: list[str]) -> Namespace:
     site.add_argument("key", help="the site's host, or the key `getjmanga --list-extractors` prints")
     savedir = commands.add_parser("savedir", help="set what -d defaults to")
     savedir.add_argument("dir", type=Path, help="directory to save into")
-    for name in ("overwrite", "bulk"):
-        flag = commands.add_parser(name, help=f"set whether -{name[0]} is on by default")
-        flag.add_argument("value", choices=("true", "false"))
+    for name, flag in (("overwrite", "-o"), ("bulk", "-b (turns both off)"), ("both", "-B (turns bulk off)")):
+        setter = commands.add_parser(name, help=f"set whether {flag} is on by default")
+        setter.add_argument("value", choices=("true", "false"))
     if not args:
         parser.print_help()
         raise SystemExit(0)
@@ -288,53 +298,121 @@ def episode_urls(extractor: Extractor, url: str, *, quiet: bool) -> list[str]:
     return urls
 
 
-def download(downloader: Downloader, queue: list[str], *, series: bool, bulk: bool, quiet: bool) -> list[Result]:
+class Walk:
+    """One pass over episodes: what was read, whatever became of it."""
+
+    def __init__(self, downloader: Downloader, *, series: bool, quiet: bool) -> None:
+        """Set up a pass.
+
+        Args:
+            downloader: The downloader to run.
+            series: The episodes come from a series listing, so a page with no
+                viewer is skipped rather than ending a chain.
+            quiet: Print nothing.
+        """
+        self.downloader = downloader
+        self.series = series
+        self.quiet = quiet
+        #: Every episode read, in reading order.
+        self.visited: list[Result] = []
+        self._seen: set[str] = set()
+
+    def visit(self, url: str, what: str) -> Result | None:
+        """Download one episode.
+
+        Args:
+            url: The episode.
+            what: What `url` is, for the message when it has no viewer: "the next episode".
+
+        Returns:
+            The result; None when the URL was visited already, or a chain hit
+            a page with no viewer on it.
+
+        Raises:
+            NotAnEpisodePageError: The very first URL of a chain has no viewer.
+        """
+        if url in self._seen:
+            return None
+        self._seen.add(url)
+        if not self.quiet:
+            print("get:", url)
+        try:
+            result = self.downloader.download(url)
+        except NotAnEpisodePageError:
+            # Locked episodes on some sites serve a purchase page with no viewer
+            # on it, which is where a chain is meant to end rather than fail.
+            if not self.series and not self.visited:
+                raise
+            message = f"skip: {url} is not readable." if self.series else f"stop: {what} is not readable."
+            print(message, file=sys.stderr)
+            return None
+        self.visited.append(result)
+        if result.status == "locked":
+            print(f"skip: '{result.episode.episode_title}' needs a purchase, a wait or a login.", file=sys.stderr)
+        elif not self.quiet:
+            print("saved:" if result.saved else "skipped (already there):", result.save_dir)
+        return result
+
+    def chain(self, start: Result, *, back: bool) -> list[Result]:
+        """Follow the next (or previous) episode from `start` as far as it goes.
+
+        Args:
+            start: Where to walk from.
+            back: Follow `prev_url` instead of `next_url`.
+
+        Returns:
+            What was walked to, in walking order.
+        """
+        walked: list[Result] = []
+        result: Result | None = start
+        while result is not None:
+            url = result.episode.prev_url if back else result.episode.next_url
+            if not url:
+                break
+            result = self.visit(url, "the previous episode" if back else "the next episode")
+            if result is not None:
+                walked.append(result)
+        return walked
+
+
+def download(
+    downloader: Downloader,
+    queue: list[str],
+    *,
+    series: bool,
+    bulk: bool,
+    back: bool = False,
+    quiet: bool,
+) -> list[Result]:
     """Download every queued episode.
 
     Args:
         downloader: The downloader to run.
-        queue: The episodes to download, extended with the next episode of each
-            when `bulk` walks a chain.
+        queue: The episodes to download: a series listing, or one episode
+            to walk a chain from.
         series: The queue came from a series listing, whose episodes stand on
-            their own, so the next episode is never followed.
+            their own, so no chain is walked.
         bulk: Follow each episode's next episode.
+        back: Follow each episode's previous episode first.
         quiet: Print nothing.
 
     Returns:
-        Every episode read, in order, whatever became of it.
+        Every episode read, whatever became of it, in reading order: what
+        `back` walked to comes before the episode it started from.
     """
-    visited: list[Result] = []
-    seen: set[str] = set()
-    while queue:
-        url = queue.pop(0)
-        if url in seen:
+    walk = Walk(downloader, series=series, quiet=quiet)
+    for url in queue:
+        start = walk.visit(url, "the episode")
+        if series or start is None:
             continue
-        seen.add(url)
-        if not quiet:
-            print("get:", url)
-        try:
-            result = downloader.download(url)
-        except NotAnEpisodePageError:
-            # Locked episodes on some sites serve a purchase page with no viewer
-            # on it, which is where a bulk run is meant to end rather than fail.
-            if not series and not visited:
-                raise
-            print(
-                f"skip: {url} is not readable." if series else "stop: the next episode is not readable.",
-                file=sys.stderr,
-            )
-            if series:
-                continue
-            break
-
-        visited.append(result)
-        if result.status == "locked":
-            print(f"skip: '{result.episode.episode_title}' needs a purchase, a wait or a login.", file=sys.stderr)
-        elif not quiet:
-            print("saved:" if result.saved else "skipped (already there):", result.save_dir)
-        if bulk and not series and result.episode.next_url:
-            queue.append(result.episode.next_url)
-    return visited
+        if back:
+            earlier = walk.chain(start, back=True)
+            # Walked to from the start, but read before it.
+            del walk.visited[-len(earlier) - 1 :]
+            walk.visited.extend([*reversed(earlier), start])
+        if bulk:
+            walk.chain(start, back=False)
+    return walk.visited
 
 
 class Runner:
@@ -390,12 +468,13 @@ class Runner:
         if not self.parsed.quiet:
             print("logged in as:", credentials.username)
 
-    def run(self, url: str, *, bulk: bool | None = None) -> list[Result]:
+    def run(self, url: str, *, bulk: bool | None = None, back: bool | None = None) -> list[Result]:
         """Download `url`: the episode, or every episode of the series.
 
         Args:
             url: The episode or series URL.
-            bulk: Follow the next episode, instead of doing so when `-b` says to.
+            bulk: Follow the next episode, instead of doing so when `-b` or `-B` says to.
+            back: Follow the previous episode, instead of doing so when `-B` says to.
 
         Returns:
             Every episode read, in order, whatever became of it.
@@ -409,8 +488,8 @@ class Runner:
 
         # A series listing already names every episode, so there is no next episode to follow.
         series = extractor.is_series(url)
-        if series and bulk is None and parsed.bulk:
-            print("warning: -b does nothing for a series, every listed episode is downloaded.", file=sys.stderr)
+        if series and bulk is None and (parsed.bulk or parsed.both):
+            print("warning: -b/-B does nothing for a series, every listed episode is downloaded.", file=sys.stderr)
         downloader = Downloader(
             extractor,
             parsed.savedir,
@@ -424,7 +503,8 @@ class Runner:
             downloader,
             queue,
             series=series,
-            bulk=parsed.bulk if bulk is None else bulk,
+            bulk=(parsed.bulk or parsed.both) if bulk is None else bulk,
+            back=parsed.both if back is None else back,
             quiet=parsed.quiet,
         )
         if series and all(result.status == "locked" for result in visited):
@@ -432,12 +512,13 @@ class Runner:
             raise NothingReadableError(msg)
         return visited
 
-    def visit(self, work: Work, *, bulk: bool | None = None) -> Work | None:
+    def visit(self, work: Work, *, bulk: bool | None = None, back: bool | None = None) -> Work | None:
         """Download `work`, the way `-S` stored it, and say what to store now.
 
         Args:
             work: A URL to download, or -- with `search` -- a page to scan.
-            bulk: Follow the next episode, instead of doing so when `-b` says to.
+            bulk: Follow the next episode, instead of doing so when `-b` or `-B` says to.
+            back: Follow the previous episode, instead of doing so when `-B` says to.
 
         Returns:
             The entry to remember `work` as. A chain moves on to the first
@@ -448,7 +529,7 @@ class Runner:
         if work.search:
             self.search(work.url)
             return Work(url=work.url, search=True)
-        visited = self.run(work.url, bulk=bulk)
+        visited = self.run(work.url, bulk=bulk, back=back)
         if all(result.status == "locked" for result in visited):
             return None
         chain = not self.extractor(work.url).is_series(work.url)
@@ -520,7 +601,8 @@ def patrol_main(args: list[str]) -> None:
         if not parsed.quiet:
             print("patrol:", work.title or work.url)
         try:
-            stored = runner.visit(work, bulk=True)
+            # A chain entry sits at the first episode still locked, so there is nothing to walk back to.
+            stored = runner.visit(work, bulk=True, back=False)
             if stored is not None and stored != work:
                 store_work(stored, parsed.config, replacing=work.url)
         except (GetjmangaError, HTTPError) as exc:

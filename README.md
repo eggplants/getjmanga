@@ -55,8 +55,11 @@ docker run --rm -v "$PWD:/work" -w /work \
 # one episode
 jm https://takecomic.jp/episodes/74f33031e13cd https://piccoma.com/web/viewer/8195/1185884
 
-# episodes in bulk
+# episodes in bulk: this one and every next one
 jm -b https://shonenjumpplus.com/episode/13932016480028799982
+
+# every previous one too: the whole work from one episode
+jm -B https://shonenjumpplus.com/episode/13932016480028799982
 
 # login
 jm -u you@example.com https://piccoma.com/web/viewer/8195/1185884
@@ -83,6 +86,7 @@ jm c site piccoma
 jm c savedir ~/manga
 jm c overwrite true
 jm c bulk false
+jm c both true      # -B by default; turns bulk off, and the other way round
 ```
 
 ### Patrol

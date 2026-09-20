@@ -25,7 +25,34 @@ def test_parse_args_defaults():
 def test_apply_config_fills_in_what_the_command_line_left_out():
     parsed = parse_args(["https://mangabu.jp/episodes/1"])
     apply_config(parsed, Config(savedir=Path("/manga"), overwrite=True, bulk=True))
-    assert (parsed.savedir, parsed.overwrite, parsed.bulk) == (Path("/manga"), True, True)
+    assert (parsed.savedir, parsed.overwrite, parsed.bulk, parsed.both) == (Path("/manga"), True, True, False)
+
+
+def test_bulk_and_both_rule_each_other_out(capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        parse_args(["-b", "-B", "https://mangabu.jp/episodes/1"])
+    assert excinfo.value.code == 2
+    assert "not allowed with" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("args", "config", "expected"),
+    [
+        # The command line settles both flags, whichever one it names.
+        (["-b"], Config(both=True), (True, False)),
+        (["--no-bulk"], Config(both=True), (False, False)),
+        (["-B"], Config(bulk=True), (False, True)),
+        (["--no-both"], Config(bulk=True), (True, False)),
+        (["--no-both"], Config(both=True), (False, False)),
+        # Otherwise the config file does.
+        ([], Config(both=True), (False, True)),
+        ([], Config(), (False, False)),
+    ],
+)
+def test_apply_config_keeps_bulk_and_both_apart(args, config, expected):
+    parsed = parse_args([*args, "https://mangabu.jp/episodes/1"])
+    apply_config(parsed, config)
+    assert (parsed.bulk, parsed.both) == expected
 
 
 def test_apply_config_falls_back_to_the_built_in_defaults():
@@ -128,8 +155,19 @@ class Recording(Extractor):
             raise NotAnEpisodePageError(msg)
         index = len(self.episodes)
         next_url = f"https://mangabu.jp/episodes/{index}" if index < 3 else None
+        # The previous episode counts down from the URL's own number, unlike the next one.
+        tail = url.rsplit("/", 1)[1]
+        number = int(tail) if tail.isdigit() else 0
+        prev_url = f"https://mangabu.jp/episodes/{number - 1}" if number else None
         pages = () if url in Recording.locked else (Page(url=f"{url}/0.jpg"),)
-        return Episode(url=url, series_title="S", episode_title=f"ep{index}", pages=pages, next_url=next_url)
+        return Episode(
+            url=url,
+            series_title="S",
+            episode_title=f"ep{index}",
+            pages=pages,
+            next_url=next_url,
+            prev_url=prev_url,
+        )
 
     def image(self, page, episode):
         from PIL import Image  # noqa: PLC0415
@@ -172,6 +210,23 @@ def test_bulk_follows_the_next_episode_chain(recording):
     ]
 
 
+def test_both_walks_back_before_going_on(recording):
+    main(["-B", "https://mangabu.jp/episodes/2"])
+    # Back from 2 to 1 to 0; the fake then names episode 1 next, which was seen already.
+    assert recording.instances[0].episodes == [
+        "https://mangabu.jp/episodes/2",
+        "https://mangabu.jp/episodes/1",
+        "https://mangabu.jp/episodes/0",
+    ]
+
+
+def test_both_stops_walking_back_at_a_page_without_a_viewer(recording, capsys):
+    recording.missing = {"https://mangabu.jp/episodes/1"}
+    main(["-B", "https://mangabu.jp/episodes/2"])
+    assert recording.instances[0].episodes == ["https://mangabu.jp/episodes/2", "https://mangabu.jp/episodes/1"]
+    assert "stop: the previous episode is not readable." in capsys.readouterr().err
+
+
 def test_bulk_steps_over_a_locked_episode(recording, capsys):
     recording.locked = {"https://mangabu.jp/episodes/1"}
     main(["-b", "https://mangabu.jp/episodes/0"])
@@ -212,7 +267,7 @@ def test_a_series_skips_what_it_cannot_read_and_warns_about_bulk(recording, caps
     main(["-b", "https://mangabu.jp/series/x"])
 
     err = capsys.readouterr().err
-    assert "-b does nothing for a series" in err
+    assert "-b/-B does nothing for a series" in err
     assert "skip: https://mangabu.jp/episodes/feed1 is not readable." in err
     assert len(recording.instances[0].episodes) == 3
 
@@ -412,6 +467,12 @@ def test_the_config_file_sets_the_flag_defaults(recording, isolated_config, tmp_
     assert (tmp_path / "out" / "mangabu.jp" / "S" / "ep1" / "0.jpg").exists()
 
 
+def test_the_config_file_sets_both(recording, isolated_config):
+    write_config(isolated_config, "both = true\n")
+    main(["https://mangabu.jp/episodes/2"])
+    assert recording.instances[0].episodes[:2] == ["https://mangabu.jp/episodes/2", "https://mangabu.jp/episodes/1"]
+
+
 def test_the_config_file_sets_overwrite(recording, isolated_config, tmp_path):
     write_config(isolated_config, "overwrite = true\n")
     (tmp_path / "mangabu.jp" / "S" / "ep1").mkdir(parents=True)
@@ -530,11 +591,22 @@ def test_config_savedir_expands_the_home_directory(isolated_config):
     assert load_config().savedir == Path.home() / "manga"
 
 
-@pytest.mark.parametrize(("name", "value", "expected"), [("overwrite", "true", True), ("bulk", "false", False)])
+@pytest.mark.parametrize(
+    ("name", "value", "expected"),
+    [("overwrite", "true", True), ("bulk", "false", False), ("both", "true", True)],
+)
 def test_config_flags_take_true_or_false(isolated_config, name, value, expected, capsys):
     main(["c", name, value])
     assert getattr(load_config(), name) is expected
     assert f"saved: {name}" in capsys.readouterr().out
+
+
+def test_config_bulk_and_both_turn_each_other_off(isolated_config):
+    main(["c", "bulk", "true"])
+    main(["c", "both", "true"])
+    assert (load_config().bulk, load_config().both) == (False, True)
+    main(["c", "bulk", "true"])
+    assert (load_config().bulk, load_config().both) == (True, False)
 
 
 def test_config_flags_reject_anything_else(capsys):
@@ -573,6 +645,13 @@ def test_store_stays_at_the_first_locked_episode_of_a_chain(recording, isolated_
     main(["-S", "-b", "https://mangabu.jp/episodes/0"])
     assert len(recording.instances[0].episodes) == 3
     assert load_config().patrol == (Work("https://mangabu.jp/episodes/1", "S"),)
+
+
+def test_store_with_both_stays_at_the_first_locked_episode_in_reading_order(recording, isolated_config):
+    # Episode 0 is read last, walking back, but comes first in reading order.
+    recording.locked = {"https://mangabu.jp/episodes/0"}
+    main(["-S", "-B", "https://mangabu.jp/episodes/2"])
+    assert load_config().patrol == (Work("https://mangabu.jp/episodes/0", "S"),)
 
 
 def test_store_remembers_a_single_episode_as_given(recording, isolated_config):
