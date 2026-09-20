@@ -520,7 +520,13 @@ def test_download_descrambles_and_saves_every_page(client, tmp_path):
     result = Downloader(alphapolis, tmp_path).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "Ｆ級テイマーは数の暴力で世界を裏から支配する" / "第1回『最下級スキルの力』"
+    assert (
+        result.save_dir
+        == tmp_path
+        / "www.alphapolis.co.jp"
+        / "Ｆ級テイマーは数の暴力で世界を裏から支配する"
+        / "第1回『最下級スキルの力』"
+    )
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg"]
     assert session.headers_seen[-1]["Referer"] == EPISODE_URL
 

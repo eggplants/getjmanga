@@ -287,7 +287,7 @@ def test_download_writes_the_pages(tmp_path, client, routes, fake_response):
     result = Downloader(mavo, tmp_path).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "多摩美漫画文化論 優秀作品" / "なす（2021年後期優秀作品）"
+    assert result.save_dir == tmp_path / "mavo.takekuma.jp" / "多摩美漫画文化論 優秀作品" / "なす（2021年後期優秀作品）"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg", "2.jpg"]
     assert Image.open(result.save_dir / "0.jpg").size == (8, 12)
     # The images are fetched with the episode as Referer, as the default does.

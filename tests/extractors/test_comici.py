@@ -445,7 +445,7 @@ def test_download_writes_descrambled_pages_and_metadata(fake_session, fake_respo
 
     assert result.status == "saved"
     assert result.episode.next_url == "https://mangabu.jp/episodes/def456"
-    assert result.save_dir == tmp_path / "IRUKA" / "prologue"
+    assert result.save_dir == tmp_path / "mangabu.jp" / "IRUKA" / "prologue"
     assert (result.save_dir / "0.jpg").exists()
     assert session.headers_seen[-1]["Referer"] == EPISODE_URL
     metadata = json.loads((result.save_dir / "metadata.json").read_text(encoding="utf-8"))

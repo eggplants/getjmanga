@@ -346,7 +346,7 @@ def test_download_writes_the_pages(tmp_path, fake_session, fake_response):
     result = Downloader(Torch(session), tmp_path).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "フェイバリッツ FAVORITES" / "#01"
+    assert result.save_dir == tmp_path / "to-ti.in" / "フェイバリッツ FAVORITES" / "#01"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg", "2.jpg"]
     with Image.open(result.save_dir / "2.jpg") as image:
         assert image.size == (40, 60)

@@ -460,7 +460,7 @@ def test_download_writes_the_pages_as_served(client, tmp_path):
     result = Downloader(crea, tmp_path).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "ごきげんな40歳になりたい" / "第1回　はじめに"
+    assert result.save_dir == tmp_path / "crea.bunshun.jp" / "ごきげんな40歳になりたい" / "第1回　はじめに"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg"]
     with Image.open(result.save_dir / "0.jpg") as saved:
         assert saved.size == (8, 8)

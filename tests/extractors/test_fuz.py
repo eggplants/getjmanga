@@ -224,7 +224,7 @@ def test_download_writes_decrypted_pages(client, tmp_path):
     result = Downloader(fuz, tmp_path).download(CHAPTER_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "氷舞のアウフギーサー" / "1話（1）"
+    assert result.save_dir == tmp_path / "comic-fuz.com" / "氷舞のアウフギーサー" / "1話（1）"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg"]
     with Image.open(result.save_dir / "0.jpg") as saved:
         assert saved.getpixel((4, 4)) == pytest.approx((10, 20, 30), abs=8)

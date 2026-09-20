@@ -698,7 +698,7 @@ def test_download_writes_a_strip_as_served(client, fake_response, tmp_path):
     result = Downloader(saizensen, tmp_path).download(TWI4_EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "徒然チルドレン" / "告白（８）"
+    assert result.save_dir == tmp_path / "sai-zen-sen.jp" / "徒然チルドレン" / "告白（８）"
     written = Image.open(result.save_dir / "0.jpg")
     assert written.size == (6, 8)
     assert written.getpixel((3, 4)) == (128, 128, 128)

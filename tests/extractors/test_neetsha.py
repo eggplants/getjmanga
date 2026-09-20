@@ -322,7 +322,7 @@ def test_download_writes_the_pages_as_served(client, fake_response, tmp_path):
     result = Downloader(neetsha, tmp_path).download(STORY_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "みいたんとヤニカス" / "1、友達"
+    assert result.save_dir == tmp_path / "neetsha.jp" / "みいたんとヤニカス" / "1、友達"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg", "2.jpg"]
     with Image.open(result.save_dir / "0.jpg") as image:
         assert image.size == (30, 40)

@@ -308,7 +308,7 @@ def test_download_writes_the_pages_as_served_and_the_metadata(client, fake_respo
     result = Downloader(mecha, tmp_path, save_metadata=True).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "ELDER ONE" / "第1話 黒腕-②"
+    assert result.save_dir == tmp_path / "creators.mechacomic.jp" / "ELDER ONE" / "第1話 黒腕-②"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg", "2.jpg", "metadata.json"]
     with Image.open(result.save_dir / "0.jpg") as saved:
         assert saved.size == (4, 6)

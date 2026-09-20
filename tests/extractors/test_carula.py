@@ -269,7 +269,7 @@ def test_download_writes_the_pages(tmp_path, fake_session, fake_response, api):
     result = Downloader(Carula(session), tmp_path).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "留学ろっく!!" / "Lesson 1　パパはダイヤモンドチューバー‼"
+    assert result.save_dir == tmp_path / "note.com" / "留学ろっく!!" / "Lesson 1　パパはダイヤモンドチューバー‼"
     assert sorted(p.name for p in result.save_dir.iterdir()) == ["0.jpg", "1.jpg"]
     assert Image.open(result.save_dir / "0.jpg").size == (4, 6)
     assert session.headers_seen[-1]["Referer"] == EPISODE_URL

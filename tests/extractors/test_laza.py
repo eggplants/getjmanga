@@ -552,7 +552,7 @@ def test_download_saves_the_pages(client, mt_routes, fake_response, tmp_path):
     result = Downloader(laza, tmp_path).download(MT_EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "着物ちゃんとロリータちゃん" / "第一話 着物ちゃん"
+    assert result.save_dir == tmp_path / "laza.mandarake.co.jp" / "着物ちゃんとロリータちゃん" / "第一話 着物ちゃん"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg", "2.jpg"]
     assert Image.open(result.save_dir / "0.jpg").size == (6, 9)
     # Images are asked for with the episode as Referer.

@@ -291,6 +291,7 @@ def test_download_writes_the_pages(client, tmp_path):
     assert result.status == "saved"
     assert result.save_dir == (
         tmp_path
+        / "zerosumonline.com"
         / "【お試し読み】身代わり花嫁は、旦那様から溺愛されるようです。アンソロジーコミック　3"
         / "続編？知りません。　前編"
     )

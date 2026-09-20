@@ -433,7 +433,10 @@ def test_download_writes_the_first_page_as_served(client, fake_response, tmp_pat
     assert result.status == "saved"
     assert (
         result.save_dir
-        == tmp_path / "連続怪奇シリーズ　黄色い悪夢" / "黄色い悪夢　第９回『ライクアローリングストーン』前編"
+        == tmp_path
+        / "leedcafe.com"
+        / "連続怪奇シリーズ　黄色い悪夢"
+        / "黄色い悪夢　第９回『ライクアローリングストーン』前編"
     )
     written = Image.open(result.save_dir / "0.jpg")
     assert written.size == (6, 8)

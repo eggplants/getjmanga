@@ -303,7 +303,7 @@ def test_download_writes_the_descrambled_first_page(fake_session, fake_response,
     result = Downloader(Porta(session), tmp_path, only_first=True).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "OLと人魚" / "OLと人魚"
+    assert result.save_dir == tmp_path / "comic-porta.com" / "OLと人魚" / "OLと人魚"
     with Image.open(result.save_dir / "0.jpg") as page:
         assert page.size == (20, 20)
         # JPEG blurs the edges a little; the tile centres are exact enough.

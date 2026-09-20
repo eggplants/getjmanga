@@ -317,7 +317,7 @@ def test_download_writes_the_pages(client, tmp_path):
     result = Downloader(shiori, tmp_path).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "ルンルン" / "1．おしごとのひのあさ"
+    assert result.save_dir == tmp_path / "shiori-on.com" / "ルンルン" / "1．おしごとのひのあさ"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg"]
     with Image.open(result.save_dir / "0.jpg") as image:
         assert image.size == (8, 8)

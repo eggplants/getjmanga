@@ -237,7 +237,7 @@ def test_download_writes_the_page_as_served_and_the_metadata(client, fake_respon
     result = Downloader(gecchan, tmp_path, save_metadata=True).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "ハニカム" / "プロローグの2 誰とでも仲良くできる男"
+    assert result.save_dir == tmp_path / "nikkangecchan.jp" / "ハニカム" / "プロローグの2 誰とでも仲良くできる男"
     with Image.open(result.save_dir / "0.jpg") as saved:
         assert saved.size == (4, 6)
     assert session.calls[-1] == "https://nikkangecchan.jp/comics/hanikamu/2/image"

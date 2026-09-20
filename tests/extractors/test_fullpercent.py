@@ -316,7 +316,7 @@ def test_download_writes_the_first_page(client, fake_response, tmp_path):
     result = Downloader(fullpercent, tmp_path, only_first=True).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / WORK_TITLE / "第１話"
+    assert result.save_dir == tmp_path / "fullpercent.net" / WORK_TITLE / "第１話"
     with Image.open(result.save_dir / "0.jpg") as saved:
         assert saved.size == (6, 9)
         assert saved.getpixel((0, 0)) == (10, 20, 30)

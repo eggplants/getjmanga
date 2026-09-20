@@ -65,7 +65,7 @@ jm -u you@example.com https://piccoma.com/web/viewer/8195/1185884
 | Option | Description |
 | --- | --- |
 | `-b`, `--bulk` | follow every next episode |
-| `-d DIR`, `--savedir DIR` | directory to save into (default: `.`) |
+| `-d DIR`, `--savedir DIR` | directory to save into, as `<DIR>/<host>/<series>/<episode>/` (default: `.`) |
 | `-f`, `--first` | download only the first page |
 | `-o`, `--overwrite` | download again if it exists |
 | `-m`, `--metadata` | save episode metadata as `metadata.json` |

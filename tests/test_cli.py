@@ -133,7 +133,7 @@ def test_main_downloads_a_single_episode(recording, capsys, tmp_path):
     extractor = recording.instances[0]
     assert extractor.episodes == ["https://mangabu.jp/episodes/0"]
     assert extractor.images == 1
-    assert (tmp_path / "S" / "ep1" / "0.jpg").exists()
+    assert (tmp_path / "mangabu.jp" / "S" / "ep1" / "0.jpg").exists()
     out = capsys.readouterr().out
     assert "get: https://mangabu.jp/episodes/0" in out
     assert "saved:" in out
@@ -209,7 +209,7 @@ def test_several_urls_share_one_extractor(recording):
 
 
 def test_an_existing_episode_is_skipped(recording, capsys, tmp_path):
-    (tmp_path / "S" / "ep1").mkdir(parents=True)
+    (tmp_path / "mangabu.jp" / "S" / "ep1").mkdir(parents=True)
     main(["https://mangabu.jp/episodes/0"])
     assert recording.instances[0].images == 0
     assert "skipped (already there):" in capsys.readouterr().out

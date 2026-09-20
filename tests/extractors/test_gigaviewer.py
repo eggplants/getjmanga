@@ -259,7 +259,7 @@ def test_download_writes_transposed_pages(fake_session, fake_response, tmp_path)
     result = Downloader(GigaViewer(session), tmp_path).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "SPY×FAMILY" / "第1話"
+    assert result.save_dir == tmp_path / "shonenjumpplus.com" / "SPY×FAMILY" / "第1話"
     with Image.open(result.save_dir / "0.jpg") as saved:
         # JPEG is lossy, so compare a tile's colour loosely.
         assert saved.getpixel((4, 4)) == pytest.approx((0, 0, 0), abs=8)

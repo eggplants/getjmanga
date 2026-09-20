@@ -399,7 +399,7 @@ def test_download_descrambles_every_page(client, fake_response, tmp_path):
     result = Downloader(yomonga, tmp_path, save_metadata=True).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "きらめきの大和くん☆" / "Chapter.1 1巻_第1話-1"
+    assert result.save_dir == tmp_path / "www.yomonga.com" / "きらめきの大和くん☆" / "Chapter.1 1巻_第1話-1"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg", "metadata.json"]
     page = Image.open(result.save_dir / "0.jpg")
     assert page.size == (392, 392)

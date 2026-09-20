@@ -379,7 +379,7 @@ def test_download_writes_the_pages_as_served(client, tmp_path):
     result = Downloader(sukupara, tmp_path).download(FIRST_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "マダムはあきらめない" / "第1話-老後資金の増やし方を知りたい！"
+    assert result.save_dir == tmp_path / "sukupara.jp" / "マダムはあきらめない" / "第1話-老後資金の増やし方を知りたい！"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg", "2.jpg"]
     with Image.open(result.save_dir / "0.jpg") as saved:
         assert saved.size == (8, 8)

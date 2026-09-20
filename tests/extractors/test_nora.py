@@ -370,7 +370,7 @@ def test_download_writes_the_first_page_descrambled(client, fake_response, tmp_p
     result = Downloader(gakken, tmp_path, only_first=True).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / SERIES_TITLE / "特別予告編"
+    assert result.save_dir == tmp_path / "nora.gakken.jp" / SERIES_TITLE / "特別予告編"
     written = Image.open(result.save_dir / "0.jpg").convert("L")
     expected = tile_image(range(GRID * GRID))
     assert written.size == expected.size

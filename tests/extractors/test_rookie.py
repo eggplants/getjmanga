@@ -302,7 +302,7 @@ def test_download_writes_the_pages_as_served(tmp_path, fake_session, fake_respon
     result = Downloader(Rookie(session), tmp_path).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "毎日4コマ2" / "第31話"
+    assert result.save_dir == tmp_path / "rookie.shonenjump.com" / "毎日4コマ2" / "第31話"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg"]
     with Image.open(result.save_dir / "0.jpg") as image:
         assert image.size == (16, 24)

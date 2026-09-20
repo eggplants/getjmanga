@@ -1,4 +1,4 @@
-"""Save the pages an extractor hands over, one directory per episode."""
+"""Save the pages an extractor hands over, one directory per episode, under one per site."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
+from urllib.parse import urlparse
 
 from pathvalidate import sanitize_filename
 from rich.progress import (
@@ -42,7 +43,7 @@ class Result:
 
 
 class Downloader:
-    """Write episodes to `<save_path>/<series>/<episode>/<page>.jpg`."""
+    """Write episodes to `<save_path>/<host>/<series>/<episode>/<page>.jpg`."""
 
     def __init__(
         self,
@@ -58,7 +59,7 @@ class Downloader:
 
         Args:
             extractor: The extractor to read episodes with.
-            save_path: Directory to build `<series>/<episode>/` under.
+            save_path: Directory to build `<host>/<series>/<episode>/` under.
             overwrite: Download again even if the directory already exists.
             only_first: Stop after the first page.
             save_metadata: Also write `metadata.json` next to the pages.
@@ -81,7 +82,9 @@ class Downloader:
             The episode, the directory it belongs in, and what was done.
         """
         episode = self.extractor.episode(url)
-        save_dir = self.save_path / _dirname(episode.series_title) / _dirname(episode.episode_title)
+        save_dir = (
+            self.save_path / self._site(episode) / _dirname(episode.series_title) / _dirname(episode.episode_title)
+        )
         if save_dir.exists() and not self.overwrite:
             return Result(episode, save_dir, "exists")
         if not episode.readable:
@@ -95,6 +98,10 @@ class Downloader:
             )
         self._save_pages(episode, save_dir)
         return Result(episode, save_dir, "saved")
+
+    def _site(self, episode: Episode) -> str:
+        """The directory a site's episodes go under: its host, or the extractor's name without one."""
+        return urlparse(episode.url).hostname or self.extractor.NAME
 
     def _save_pages(self, episode: Episode, save_dir: Path) -> None:
         wanted = episode.pages[:1] if self.only_first else episode.pages

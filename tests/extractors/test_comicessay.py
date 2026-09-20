@@ -339,7 +339,13 @@ def test_download_writes_the_pages_as_served(client, tmp_path):
     result = Downloader(comicessay, tmp_path).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "ちゃんぺんとママぺんの平凡だけど幸せな日々 4" / "第1話　だって揚げパンだから"
+    assert (
+        result.save_dir
+        == tmp_path
+        / "www.comic-essay.com"
+        / "ちゃんぺんとママぺんの平凡だけど幸せな日々 4"
+        / "第1話　だって揚げパンだから"
+    )
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg"]
     with Image.open(result.save_dir / "0.jpg") as saved:
         assert saved.size == (8, 8)

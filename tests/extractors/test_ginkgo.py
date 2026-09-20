@@ -467,7 +467,7 @@ def test_download_writes_a_gai_episode(client, gai_routes, fake_response, tmp_pa
     result = Downloader(ginkgo, tmp_path).download(GAI_EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "ずったり岩手" / "第735話　昔あそび　の巻"
+    assert result.save_dir == tmp_path / "www.manga-gai.net" / "ずったり岩手" / "第735話　昔あそび　の巻"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg", "2.jpg"]
     assert Image.open(result.save_dir / "2.jpg").getpixel((3, 4)) == (50, 50, 50)
     assert session.headers_seen[-1]["Referer"] == GAI_EPISODE_URL

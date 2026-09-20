@@ -40,12 +40,12 @@ def episode(pages=3, series_title="Series", episode_title="Episode 1"):
     )
 
 
-def test_download_writes_every_page_under_series_and_episode(tmp_path):
+def test_download_writes_every_page_under_site_series_and_episode(tmp_path):
     result = Downloader(Canned(episode()), tmp_path).download("https://example.com/ep/1")
 
     assert result.status == "saved"
     assert result.saved
-    assert result.save_dir == tmp_path / "Series" / "Episode 1"
+    assert result.save_dir == tmp_path / "example.com" / "Series" / "Episode 1"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg", "2.jpg"]
 
 
@@ -64,7 +64,7 @@ def test_download_stops_after_the_first_page_when_asked(tmp_path):
 
 
 def test_download_leaves_an_existing_directory_alone(tmp_path):
-    (tmp_path / "Series" / "Episode 1").mkdir(parents=True)
+    (tmp_path / "example.com" / "Series" / "Episode 1").mkdir(parents=True)
     extractor = Canned(episode())
 
     result = Downloader(extractor, tmp_path).download("u")
@@ -77,7 +77,7 @@ def test_download_leaves_an_existing_directory_alone(tmp_path):
 
 
 def test_download_writes_again_when_told_to(tmp_path):
-    (tmp_path / "Series" / "Episode 1").mkdir(parents=True)
+    (tmp_path / "example.com" / "Series" / "Episode 1").mkdir(parents=True)
     result = Downloader(Canned(episode()), tmp_path, overwrite=True).download("u")
     assert result.status == "saved"
 
@@ -108,9 +108,15 @@ def test_download_saves_any_image_mode_as_jpeg(tmp_path, mode):
 
 def test_titles_are_made_safe_for_the_file_system(tmp_path):
     result = Downloader(Canned(episode(series_title="A/B: C?", episode_title="1/2")), tmp_path).download("u")
-    assert result.save_dir == tmp_path / "A／B C" / "1／2"
+    assert result.save_dir == tmp_path / "example.com" / "A／B C" / "1／2"
+
+
+def test_an_episode_without_a_host_goes_under_the_extractor_name(tmp_path):
+    canned = Canned(Episode(url="ep/1", series_title="Series", episode_title="Episode 1", pages=()))
+    result = Downloader(canned, tmp_path).download("u")
+    assert result.save_dir == tmp_path / "canned" / "Series" / "Episode 1"
 
 
 def test_an_empty_title_still_gets_a_directory(tmp_path):
     result = Downloader(Canned(episode(series_title="", episode_title="?")), tmp_path).download("u")
-    assert result.save_dir == tmp_path / "_" / "_"
+    assert result.save_dir == tmp_path / "example.com" / "_" / "_"

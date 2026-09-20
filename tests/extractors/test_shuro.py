@@ -401,7 +401,10 @@ def test_download_writes_the_first_page_as_served(client, fake_response, tmp_pat
     result = Downloader(shuro, tmp_path, only_first=True).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "カッパのカーティと祟りどもの愛" / "第１話 「割れてますよ、頭の皿」"
+    assert (
+        result.save_dir
+        == tmp_path / "shuro.world" / "カッパのカーティと祟りどもの愛" / "第１話 「割れてますよ、頭の皿」"
+    )
     written = Image.open(result.save_dir / "0.jpg")
     assert written.size == (6, 8)
     assert written.getpixel((3, 4)) == (128, 128, 128)

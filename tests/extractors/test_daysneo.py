@@ -265,7 +265,7 @@ def test_download_writes_the_pages(tmp_path, fake_session, fake_response):
     result = Downloader(DaysNeo(session), tmp_path).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "のじゃロリお稲荷様、バイクを拾う。" / "第1話"
+    assert result.save_dir == tmp_path / "daysneo.com" / "のじゃロリお稲荷様、バイクを拾う。" / "第1話"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg", "2.jpg"]
     assert Image.open(result.save_dir / "0.jpg").size == (12, 16)
     assert session.headers_seen[-1]["Referer"] == EPISODE_URL

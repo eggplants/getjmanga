@@ -323,7 +323,7 @@ def test_download_saves_every_page(client, image_routes, tmp_path):
 
     assert result.status == "saved"
     assert result.episode.next_url == f"{BASE_URL}/web/viewer/8195/1185887"
-    assert result.save_dir == tmp_path / "ひげ(しめさば)" / "第1話 その一"
+    assert result.save_dir == tmp_path / "piccoma.com" / "ひげ(しめさば)" / "第1話 その一"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg"]
     assert session.headers_seen[-1]["Referer"] == VIEWER_URL
 

@@ -429,7 +429,7 @@ def test_download_writes_the_pages(client, tmp_path):
     result = Downloader(comico, tmp_path).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "最悪な鬱小説を書き直してみせます" / "第 1 話"
+    assert result.save_dir == tmp_path / "www.comico.jp" / "最悪な鬱小説を書き直してみせます" / "第 1 話"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg"]
     with Image.open(result.save_dir / "0.jpg") as saved:
         assert saved.getpixel((4, 4)) == pytest.approx((10, 20, 30), abs=8)

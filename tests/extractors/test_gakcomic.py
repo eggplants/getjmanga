@@ -493,7 +493,7 @@ def test_download_writes_the_pages_read_out_of_the_epub(client, tmp_path):
     result = Downloader(gakcomic, tmp_path).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "うまくなる卓球" / "第１章"
+    assert result.save_dir == tmp_path / "gakcomic.gakken.jp" / "うまくなる卓球" / "第１章"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg"]
     with Image.open(result.save_dir / "0.jpg") as saved:
         assert saved.getpixel((4, 4)) == pytest.approx((10, 20, 30), abs=8)

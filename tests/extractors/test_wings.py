@@ -570,7 +570,9 @@ def test_download_writes_a_flipper_u_page(client, fake_response, tmp_path):
     result = Downloader(wings, tmp_path, save_metadata=True).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "リヨンでメルシー！ 〜気ままなフランス旅日記〜" / "第0話"
+    assert (
+        result.save_dir == tmp_path / "www.shinshokan.com" / "リヨンでメルシー！ 〜気ままなフランス旅日記〜" / "第0話"
+    )
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg", "2.jpg", "metadata.json"]
     page = Image.open(result.save_dir / "0.jpg")
     assert page.size == (1268, 1800)

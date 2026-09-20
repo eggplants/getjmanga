@@ -368,7 +368,7 @@ def test_download_writes_the_pages(client, tmp_path):
     result = Downloader(beltoon, tmp_path).download(EPISODE_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "片思い〜報われない恋をした〜" / "1話"
+    assert result.save_dir == tmp_path / "www.beltoon.jp" / "片思い〜報われない恋をした〜" / "1話"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg"]
     with Image.open(result.save_dir / "0.jpg") as saved:
         assert saved.size == (32, 64)

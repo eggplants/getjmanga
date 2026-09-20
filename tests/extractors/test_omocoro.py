@@ -414,7 +414,7 @@ def test_download_writes_the_pages_as_served(client, tmp_path):
     result = Downloader(omocoro, tmp_path).download(KIJI_URL)
 
     assert result.status == "saved"
-    assert result.save_dir == tmp_path / "dollly" / "【漫画】聖剣"
+    assert result.save_dir == tmp_path / "omocoro.jp" / "dollly" / "【漫画】聖剣"
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg", "2.jpg"]
     with Image.open(result.save_dir / "0.jpg") as saved:
         assert saved.size == (8, 8)
