@@ -215,6 +215,25 @@ class Comici(Extractor):
         self._id_tokens: dict[str, str] = {}
 
     @classmethod
+    def suitable(cls, url: str) -> bool:
+        """Report whether `url` is an episode or series URL on a known host.
+
+        The sites hang plenty else off the same domain -- author pages, the
+        catalogue, news -- and `-s` asks about every link, so only the shapes
+        `episode()` and `series_urls()` read are taken.
+
+        Args:
+            url: The URL to check.
+
+        Returns:
+            True for `/episodes/<id>` and the `/series/<id>` shapes `is_series`
+            takes on `HOSTS`, with or without an imprint in front.
+        """
+        if not super().suitable(url):
+            return False
+        return _EPISODE_PATH.match(urlparse(url).path) is not None or cls.is_series(url)
+
+    @classmethod
     def is_series(cls, url: str) -> bool:
         """Report whether `url` names a whole series rather than a single episode.
 

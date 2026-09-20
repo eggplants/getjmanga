@@ -81,6 +81,13 @@ def test_descramble_leaves_the_uneven_edge_alone():
     [
         ("https://mangabu.jp/episodes/71f48a2c352ed", True),
         ("https://younganimal.com/episodes/006a5e6131753", True),
+        ("https://rimacomiplus.jp/digitalmargaret/episodes/9e628415ccfc2", True),
+        ("https://takecomic.jp/series/b167ea507d35f", True),
+        ("https://takecomic.jp/series/b167ea507d35f/rss", True),
+        ("https://comic-ryu.jp/", False),
+        ("https://comic-ryu.jp/series/list/up/1", False),
+        ("https://comic-ryu.jp/authors/1095", False),
+        ("https://comic-ryu.jp/about", False),
         ("http://mangabu.jp/episodes/71f48a2c352ed", False),
         ("https://example.com/episodes/1", False),
     ],
