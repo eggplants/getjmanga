@@ -7,7 +7,7 @@ import pytest
 
 from getjmanga import __version__
 from getjmanga.cli import apply_config, download, extractor_list, main, parse_args
-from getjmanga.config import Config, Credentials, load_config
+from getjmanga.config import Config, Credentials, Work, load_config
 from getjmanga.downloader import Downloader
 from getjmanga.errors import LoginError, NotAnEpisodePageError
 from getjmanga.extractor import Episode, Extractor, Page
@@ -285,13 +285,12 @@ def test_an_unknown_extractor_name_fails(capsys):
 
 def test_download_never_visits_a_url_twice(tmp_path):
     extractor = Recording()
-    parsed = parse_args(["-b", "-q", "https://mangabu.jp/episodes/2"])
     downloader = Downloader(extractor, tmp_path)
 
     # Started at episode 2, the fake names episode 1 next, which names episode 2 again -- a loop.
-    done = download(downloader, ["https://mangabu.jp/episodes/2"], parsed, series=False)
+    done = download(downloader, ["https://mangabu.jp/episodes/2"], series=False, bulk=True, quiet=True)
 
-    assert done == 2
+    assert [result.episode.url for result in done] == ["https://mangabu.jp/episodes/2", "https://mangabu.jp/episodes/1"]
     assert extractor.episodes == ["https://mangabu.jp/episodes/2", "https://mangabu.jp/episodes/1"]
     assert isinstance(downloader.save_path, Path)
 
@@ -558,3 +557,119 @@ def test_config_refuses_a_broken_file(isolated_config, capsys):
         main(["c", "bulk", "true"])
     assert excinfo.value.code == 1
     assert "not valid TOML" in capsys.readouterr().err
+
+
+# --- -S and jm patrol ---------------------------------------------------------------------
+
+
+def test_store_remembers_the_last_episode_of_a_chain(recording, isolated_config, capsys):
+    main(["-S", "-b", "https://mangabu.jp/episodes/0"])
+    assert load_config().patrol == (Work("https://mangabu.jp/episodes/2", "S"),)
+    assert f"stored: https://mangabu.jp/episodes/2 in {isolated_config}" in capsys.readouterr().out
+
+
+def test_store_stays_at_the_first_locked_episode_of_a_chain(recording, isolated_config):
+    recording.locked = {"https://mangabu.jp/episodes/1"}
+    main(["-S", "-b", "https://mangabu.jp/episodes/0"])
+    assert len(recording.instances[0].episodes) == 3
+    assert load_config().patrol == (Work("https://mangabu.jp/episodes/1", "S"),)
+
+
+def test_store_remembers_a_single_episode_as_given(recording, isolated_config):
+    main(["-S", "https://mangabu.jp/episodes/0"])
+    assert load_config().patrol == (Work("https://mangabu.jp/episodes/0", "S"),)
+
+
+def test_store_remembers_a_series_page(recording, isolated_config):
+    main(["-S", "https://mangabu.jp/series/x"])
+    assert load_config().patrol == (Work("https://mangabu.jp/series/x", "S"),)
+
+
+def test_store_remembers_a_searched_page(recording, searched, isolated_config):
+    main(["-S", "-s", "https://example.com/list"])
+    assert load_config().patrol == (Work("https://example.com/list", search=True),)
+
+
+def test_store_keeps_an_entry_once(recording, isolated_config):
+    main(["-S", "https://mangabu.jp/episodes/0"])
+    main(["-S", "https://mangabu.jp/episodes/0"])
+    assert len(load_config().patrol) == 1
+
+
+def test_store_skips_what_was_not_downloaded(recording, isolated_config):
+    recording.locked = {"https://mangabu.jp/episodes/0"}
+    main(["-S", "https://mangabu.jp/episodes/0"])
+    assert not isolated_config.exists()
+
+
+def test_store_keeps_the_rest_of_the_config(recording, isolated_config):
+    write_config(isolated_config, '# mine\nbulk = true\n\n[site."mangabu.jp"]\nusername = "u"\npassword = "p"\n')
+    main(["-S", "https://mangabu.jp/episodes/0"])
+    text = isolated_config.read_text(encoding="utf-8")
+    assert text.startswith("# mine\nbulk = true\n")
+    assert '[site."mangabu.jp"]' in text
+    assert text.endswith('\n\n[[patrol]]\nurl = "https://mangabu.jp/episodes/2"\ntitle = "S"\n')
+
+
+def test_patrol_follows_each_chain_from_where_it_left_off(recording, isolated_config, tmp_path, capsys):
+    write_config(isolated_config, '[[patrol]]\nurl = "https://mangabu.jp/episodes/0"\ntitle = "S"\n')
+    (tmp_path / "mangabu.jp" / "S" / "ep1").mkdir(parents=True)
+    main(["patrol"])
+    extractor = recording.instances[0]
+    assert extractor.episodes == [f"https://mangabu.jp/episodes/{index}" for index in range(3)]
+    assert extractor.images == 2
+    assert load_config().patrol == (Work("https://mangabu.jp/episodes/2", "S"),)
+    out = capsys.readouterr().out
+    assert "patrol: S" in out
+    assert "done." in out
+
+
+def test_patrol_stays_at_the_first_locked_episode(recording, isolated_config):
+    recording.locked = {"https://mangabu.jp/episodes/1"}
+    write_config(isolated_config, '[[patrol]]\nurl = "https://mangabu.jp/episodes/0"\n')
+    main(["p"])
+    assert len(recording.instances[0].episodes) == 3
+    assert load_config().patrol == (Work("https://mangabu.jp/episodes/1", "S"),)
+
+
+def test_patrol_downloads_every_episode_of_a_series(recording, isolated_config):
+    write_config(isolated_config, '[[patrol]]\nurl = "https://mangabu.jp/series/x"\n')
+    main(["p"])
+    assert len(recording.instances[0].episodes) == 3
+    assert load_config().patrol == (Work("https://mangabu.jp/series/x", "S"),)
+
+
+def test_patrol_searches_a_page_again(recording, searched, isolated_config):
+    write_config(isolated_config, '[[patrol]]\nurl = "https://example.com/list"\nsearch = true\n')
+    main(["p"])
+    assert searched == ["https://example.com/list"]
+    assert len(recording.instances[0].episodes) == 2
+
+
+def test_patrol_steps_over_an_entry_that_fails(recording, isolated_config, capsys):
+    recording.missing = {"https://mangabu.jp/episodes/0"}
+    write_config(
+        isolated_config,
+        '[[patrol]]\nurl = "https://mangabu.jp/episodes/0"\n\n[[patrol]]\nurl = "https://mangabu.jp/episodes/9"\n',
+    )
+    main(["p"])
+    assert "skip: https://mangabu.jp/episodes/0: no viewer on" in capsys.readouterr().err
+    assert recording.instances[0].episodes[-1].startswith("https://mangabu.jp/episodes/")
+    assert load_config().patrol[0] == Work("https://mangabu.jp/episodes/0")
+
+
+def test_patrol_with_nothing_stored_fails(isolated_config, capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        main(["p"])
+    assert excinfo.value.code == 1
+    assert "nothing to patrol" in capsys.readouterr().err
+
+
+def test_patrol_takes_the_download_options_but_no_url(recording, isolated_config, tmp_path, capsys):
+    write_config(isolated_config, '[[patrol]]\nurl = "https://mangabu.jp/episodes/0"\n')
+    main(["p", "-q", "-d", str(tmp_path / "out")])
+    assert (tmp_path / "out" / "mangabu.jp" / "S" / "ep1" / "0.jpg").exists()
+    assert capsys.readouterr().out == ""
+    with pytest.raises(SystemExit) as excinfo:
+        main(["p", "https://mangabu.jp/episodes/0"])
+    assert excinfo.value.code == 2

@@ -1,4 +1,4 @@
-"""The config file: `$XDG_CONFIG_HOME/getjmanga/config.toml`, holding site credentials and defaults.
+"""The config file: `$XDG_CONFIG_HOME/getjmanga/config.toml`: defaults, site credentials, what to patrol.
 
 ```toml
 savedir = "~/manga"           # what `-d` defaults to
@@ -16,6 +16,14 @@ password = "..."              # leave it out to be prompted
 [site.piccoma]
 username = "you@example.com"
 password = "..."
+
+[[patrol]]                    # what `jm patrol` goes through; `-S` adds to it
+url = "https://shonenjumpplus.com/episode/1"   # the first episode still locked, or a series page
+title = "SPY FAMILY"          # a reminder, not read
+
+[[patrol]]
+url = "https://shonenjumpplus.com/"
+search = true                 # a page to `-s` again
 ```
 
 A `[site.<key>]` section is looked up by the URL's hostname first, then by the
@@ -23,7 +31,8 @@ extractor's `CONFIG_KEY`, so a per-host section beats the shared one.
 
 `jm config` writes the file: `init` lays down a commented template, `site`
 asks for an account, and `savedir` / `overwrite` / `bulk` set the defaults.
-The writes go through tomlkit so the comments in a hand-edited file survive.
+`-S` and `jm patrol` keep the `[[patrol]]` entries. The writes go through
+tomlkit so the comments in a hand-edited file survive.
 """
 
 from __future__ import annotations
@@ -37,6 +46,7 @@ from urllib.parse import urlparse
 
 import tomlkit
 from tomlkit.exceptions import ParseError
+from tomlkit.items import AoT, Array, InlineTable, Table
 
 from .errors import GetjmangaError
 
@@ -70,6 +80,10 @@ bulk = false
 # [site."shonenjumpplus.com"]
 # username = "you@example.com"
 # password = "..."
+
+# What `jm patrol` goes through: `jm -S <url>` adds an entry here.
+# [[patrol]]
+# url = "https://shonenjumpplus.com/episode/1"
 """
 
 
@@ -99,11 +113,26 @@ class Credentials:
 
 
 @dataclass(frozen=True)
+class Work:
+    """A `[[patrol]]` entry: something to download again for what is new."""
+
+    #: The first episode still locked (else the latest reached), a series page,
+    #: or -- with `search` -- a page to scan.
+    url: str
+    #: The series title, as a reminder when reading the file; nothing reads it.
+    title: str = ""
+    #: Whether `url` is a page to `-s`, rather than to download.
+    search: bool = False
+
+
+@dataclass(frozen=True)
 class Config:
     """The parsed config file."""
 
     #: `[site.<key>]` sections, by key as written.
     sites: Mapping[str, Credentials] = field(default_factory=dict)
+    #: `[[patrol]]` entries, in file order.
+    patrol: tuple[Work, ...] = ()
     #: The file the sections came from, or None when there was none.
     path: Path | None = None
     #: What `-d` defaults to, `~` expanded; None leaves it to the command line.
@@ -160,6 +189,7 @@ def load_config(path: Path | None = None) -> Config:
     savedir = _option(data, "savedir", str, where)
     return Config(
         sites=_sites(data.get("site", {}), where),
+        patrol=_patrol(data.get("patrol", []), where),
         path=where,
         savedir=Path(savedir).expanduser() if savedir else None,
         overwrite=_option(data, "overwrite", bool, where) or False,
@@ -190,6 +220,24 @@ def _sites(table: object, where: Path) -> dict[str, Credentials]:
             raise ConfigError(msg)
         sites[str(key)] = Credentials(username=section["username"], password=password)
     return sites
+
+
+def _patrol(entries: object, where: Path) -> tuple[Work, ...]:
+    if not isinstance(entries, list):
+        msg = f"{where}: patrol must be an array of [[patrol]] tables."
+        raise ConfigError(msg)
+    works: list[Work] = []
+    for entry in entries:
+        if not isinstance(entry, dict) or not isinstance(entry.get("url"), str) or not entry["url"]:
+            msg = f'{where}: every [[patrol]] entry needs a url = "..." line.'
+            raise ConfigError(msg)
+        title = entry.get("title", "")
+        search = entry.get("search", False)
+        if not isinstance(title, str) or not isinstance(search, bool):
+            msg = f"{where}: [[patrol]] title must be a string and search a boolean."
+            raise ConfigError(msg)
+        works.append(Work(url=entry["url"], title=title, search=search))
+    return tuple(works)
 
 
 # --- writing it ----------------------------------------------------------------------
@@ -262,6 +310,55 @@ def set_option(name: Option, value: str | bool, path: Path | None = None) -> Pat
         document[name] = value
 
     return _edit(path, edit)
+
+
+def store_work(work: Work, path: Path | None = None, *, replacing: str | None = None) -> Path:
+    """Add a `[[patrol]]` entry, or bring the one for the same work up to date.
+
+    Args:
+        work: The entry to write.
+        path: The file to edit instead of `default_config_path()`.
+        replacing: The `url` the work was stored under before, when a chain
+            moved on to a later episode.
+
+    Returns:
+        The file written.
+
+    Raises:
+        ConfigError: The file cannot be read, parsed or written.
+    """
+    urls = {work.url, replacing} - {None}
+
+    def edit(document: tomlkit.TOMLDocument) -> None:
+        entries = document.get("patrol")
+        if not isinstance(entries, AoT | Array):
+            entries = document["patrol"] = tomlkit.aot()
+        for entry in entries:
+            if isinstance(entry, Table | InlineTable) and entry.get("url") in urls:
+                _fill(entry, work)
+                return
+        # A hand-written `patrol = [{...}, ...]` keeps its shape; otherwise one `[[patrol]]` per work.
+        if isinstance(entries, Array):
+            entry: Table | InlineTable = tomlkit.inline_table()
+        else:
+            entry = tomlkit.table()
+            # A blank line before the table, unless it is the first thing in the file.
+            if len(entries) or len(document.body) > 1:
+                entry.trivia.indent = "\n"
+        _fill(entry, work)
+        entries.append(entry)
+
+    return _edit(path, edit)
+
+
+def _fill(entry: Table | InlineTable, work: Work) -> None:
+    entry["url"] = work.url
+    if work.title:
+        entry["title"] = work.title
+    if work.search:
+        entry["search"] = True
+    elif "search" in entry:
+        del entry["search"]
 
 
 def _edit(path: Path | None, edit: Callable[[tomlkit.TOMLDocument], None]) -> Path:

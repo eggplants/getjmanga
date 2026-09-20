@@ -63,22 +63,11 @@ jm -u you@example.com https://piccoma.com/web/viewer/8195/1185884
 
 # every link on a page that some extractor takes
 jm -s https://shonenjumpplus.com/
-```
 
-| Option | Description |
-| --- | --- |
-| `-s`, `--search` | treat each url as a web page and download what it links to instead |
-| `-b`, `--bulk`, `--no-bulk` | follow every next episode |
-| `-d DIR`, `--savedir DIR` | directory to save into, as `<DIR>/<host>/<series>/<episode>/` (default: the config's `savedir`, else `.`) |
-| `-f`, `--first` | download only the first page |
-| `-o`, `--overwrite`, `--no-overwrite` | download again if it exists |
-| `-m`, `--metadata` | save episode metadata as `metadata.json` |
-| `-u ID`, `--username ID` | id or email address to log in with |
-| `-p PW`, `--password PW` | password (prompted for if `-u` is given without it) |
-| `-e NAME`, `--extractor NAME` | use this extractor instead of picking one by the url's host |
-| `-c FILE`, `--config FILE` | config file holding site credentials (default: `~/.config/getjmanga/config.toml`) |
-| `-q`, `--quiet` | disable console output |
-| `--list-extractors` | list every extractor, its URL shapes and its hosts |
+# remember the work, then download what is new in every remembered work
+jm -S -b https://shonenjumpplus.com/episode/13932016480028799982
+jm patrol
+```
 
 ### Configuration
 
@@ -94,6 +83,23 @@ jm c site piccoma
 jm c savedir ~/manga
 jm c overwrite true
 jm c bulk false
+```
+
+### Patrol
+
+`jm -S` remembers what it downloaded as a `[[patrol]]` entry in the config file,
+and `jm patrol` / `jm p` goes through them: an episode is followed to the newest
+one and the entry moves along to the first episode still locked (so a wait-to-read
+episode is tried again next time), a series page is listed again, a `-s` page is
+scanned again. Episodes already there are skipped, so only what is new gets
+downloaded. `jm patrol` takes the download options (`-d`, `-o`, `-q`, ...) but no url.
+
+```toml
+patrol = [
+  { url = "https://shonenjumpplus.com/episode/13932016480028799982", title = "SPY×FAMILY" },
+  { url = "https://shonenjumpplus.com/", search = true },
+  ...
+]
 ```
 
 ## Library

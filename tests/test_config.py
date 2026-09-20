@@ -8,11 +8,13 @@ from getjmanga.config import (
     Config,
     ConfigError,
     Credentials,
+    Work,
     default_config_path,
     init_config,
     load_config,
     set_option,
     set_site,
+    store_work,
 )
 from getjmanga.extractors import Comici, Fuz, GigaViewer, Piccoma
 
@@ -90,6 +92,14 @@ def test_load_config_leaves_the_defaults_alone_when_unset(tmp_path):
     assert (config.savedir, config.overwrite, config.bulk) == (None, False, False)
 
 
+def test_load_config_reads_the_patrol_entries(tmp_path):
+    path = write(
+        tmp_path / "c.toml",
+        '[[patrol]]\nurl = "https://a/1"\ntitle = "A"\n\n[[patrol]]\nurl = "https://b/"\nsearch = true\n',
+    )
+    assert load_config(path).patrol == (Work("https://a/1", "A"), Work("https://b/", search=True))
+
+
 def test_load_config_ignores_other_tables(tmp_path):
     path = write(tmp_path / "c.toml", '[other]\nx = 1\n[site.piccoma]\nusername = "u"\n')
     assert list(load_config(path).sites) == ["piccoma"]
@@ -117,6 +127,9 @@ def test_load_config_rejects_a_directory(tmp_path):
         ("savedir = 1\n", "savedir must be a string"),
         ('overwrite = "yes"\n', "overwrite must be a boolean"),
         ("bulk = 1\n", "bulk must be a boolean"),
+        ("patrol = 1\n", "must be an array"),
+        ("[[patrol]]\ntitle = 'x'\n", "needs a url"),
+        ("[[patrol]]\nurl = 'https://a/'\nsearch = 1\n", "search a boolean"),
     ],
 )
 def test_load_config_rejects_a_misshapen_section(tmp_path, text, message):
@@ -227,3 +240,32 @@ def test_writes_refuse_a_broken_file(tmp_path):
 def test_writes_refuse_a_directory(tmp_path):
     with pytest.raises(ConfigError, match="cannot read"):
         set_option("bulk", True, tmp_path)
+
+
+def test_store_work_appends_and_then_updates_in_place(tmp_path):
+    path = write(tmp_path / "c.toml")
+    store_work(Work("https://a/1", "A"), path)
+    store_work(Work("https://b/", search=True), path)
+    store_work(Work("https://a/2", "A"), path, replacing="https://a/1")
+    store_work(Work("https://b/", search=True), path)
+    text = path.read_text(encoding="utf-8")
+    assert text.startswith(CONFIG)
+    assert text.endswith(
+        '\n[[patrol]]\nurl = "https://a/2"\ntitle = "A"\n\n[[patrol]]\nurl = "https://b/"\nsearch = true\n'
+    )
+    assert load_config(path).patrol == (Work("https://a/2", "A"), Work("https://b/", search=True))
+
+
+def test_store_work_keeps_a_hand_written_inline_array(tmp_path):
+    path = write(tmp_path / "c.toml", 'patrol = [\n  { url = "https://a/1", title = "A" },\n]\n')
+    store_work(Work("https://a/2", "A"), path, replacing="https://a/1")
+    store_work(Work("https://b/", search=True), path)
+    text = path.read_text(encoding="utf-8")
+    assert "[[patrol]]" not in text
+    assert load_config(path).patrol == (Work("https://a/2", "A"), Work("https://b/", search=True))
+
+
+def test_store_work_starts_a_missing_file(tmp_path):
+    path = tmp_path / "new" / "c.toml"
+    store_work(Work("https://a/1"), path)
+    assert path.read_text(encoding="utf-8") == '[[patrol]]\nurl = "https://a/1"\n'
