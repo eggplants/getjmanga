@@ -12,3 +12,7 @@ pytest.xml
 pytest-coverage.txt
 TODO.md
 *.swp
+*.jpg
+*.jpeg
+*.png
+*.gif
