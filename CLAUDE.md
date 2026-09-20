@@ -40,17 +40,39 @@ runners (PyInstaller cannot cross-compile), attaches them to a **draft** release
 afterwards -- immutable releases lock the assets of an already published release. `release.yml`
 then reacts to `release: [published]` and does the PyPI and GHCR publish.
 
+## Layout
+
+- `getjmanga/extractors/<site>.py` -- one extractor per site (or per viewer
+  many sites run unchanged, like GigaViewer and Comici+): the URL shapes,
+  the listing, the titles, the login. An extractor imports `extractor`,
+  `errors` and the packages below, never another extractor.
+- `getjmanga/viewers/<viewer>.py` -- what several sites share because they
+  run the same reader: SpeedBinb (`speedbinb`, also its static "PtBinb"
+  export), YONDEMILL's reader on top of it (`yondemill`), PUBLUS (`publus`),
+  the K MANGA viewer family (`kmanga`) and the `shuffle-seed` tile shuffle
+  (`seedrandom`). Pure functions, plus -- where the viewer talks to a server
+  the same way everywhere -- the requests, as functions taking the extractor
+  whose session to use. Nothing in here is an `Extractor`.
+- `getjmanga/extractor.py` -- the `Extractor` base class and what it hands
+  back (`Episode`, `Page`); `getjmanga/errors.py` -- the exception hierarchy.
+  Both sit above `extractors/` because the CLI, the downloader, the config
+  and the viewers all speak in these terms.
+- `getjmanga/cipher.py` -- the two ways page files are hidden in transit
+  (AES-CBC, a repeating XOR key), undone.
+
 ## Testing conventions
 
 Tests live in `tests/` and mirror the module split 1:1 (`tests/extractors/` for
-the extractors). `tests/conftest.py` provides the `fake_session`/`fake_response`
-fixtures -- a `requests.Session` answering by substring match on the URL -- that
-every extractor test scripts its site with. `tests/**` has its own
+the extractors, `tests/viewers/` for the viewers, `tests/test_extractor.py`,
+`tests/test_cipher.py`).
+`tests/conftest.py` provides the `fake_session`/`fake_response` fixtures -- a
+`requests.Session` answering by substring match on the URL -- that every
+extractor test scripts its site with. `tests/**` has its own
 `lint.per-file-ignores` block, so assertions and missing annotations are fine there.
 
 Each extractor test file ends with tests marked `@pytest.mark.network` that
 download the first page of one free episode per known host from the real site,
-from a module-level `TEST_URLS`; `test_common.py::test_every_known_host_has_a_site_test`
+from a module-level `TEST_URLS`; `test_registry.py::test_every_known_host_has_a_site_test`
 reads every module's `TEST_URLS` and keeps their union equal to the `HOSTS` of
 every extractor. CI runs them; locally, `-m "not network"` skips them. A
 site that refuses GitHub's runners (403, 412, or a stand-in page) has its
@@ -59,5 +81,5 @@ skips when `GITHUB_ACTIONS` is set and runs everywhere else.
 
 Keep the offline tests to what the fake session can tell apart: one test per
 observable outcome of `episode()` / `series_urls()` / `image()` / `login()`,
-not per helper function, and nothing that re-checks the base class, the
-downloader, a shared descrambler, a cache, or a constant.
+not per helper function, and nothing that re-checks the base class (`tests/test_extractor.py`), the
+downloader, a shared viewer (tested in `tests/viewers/`), a cache, or a constant.

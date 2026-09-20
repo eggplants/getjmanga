@@ -33,12 +33,21 @@ Then answer these questions. Every one of them maps onto a method of
 
 The existing extractors are a good reference for what a finished
 investigation looks like: `getjmanga/extractors/comici.py` reads an element off
-the HTML *and* falls back to an API, `piccoma.py` re-implements a PRNG the
-viewer shuffles tiles with, `gigaviewer.py` retries a page the site sometimes
-serves without its JSON. And `fuz.py` talks a protobuf API (field numbers read
-out of the site's bundled JS) and decrypts AES-CBC page files with a key the
-API hands over per page. It only gets those files served because the API
-response set a cookie on the shared session.
+the HTML *and* falls back to an API, `piccoma.py` derives a shuffle seed from
+the image URL, `gigaviewer.py` retries a page the site sometimes serves
+without its JSON. And `fuz.py` talks a protobuf API (field numbers read out
+of the site's bundled JS) and decrypts AES-CBC page files with a key the API
+hands over per page. It only gets those files served because the API response
+set a cookie on the shared session.
+
+What is the reader's rather than the site's lives in `getjmanga/viewers/`:
+`speedbinb.py` (Voyager's SpeedBinb, its API dance and its static export),
+`yondemill.py`, `publus.py`, `kmanga.py` and `seedrandom.py`. A site on one of
+those readers writes only the page around it -- how the content id and the API
+endpoint are found, the listing, the titles -- and calls in there for the rest
+(`gaugau.py`, `bloom.py` and `porta.py` show the three SpeedBinb shapes).
+`getjmanga/cipher.py` undoes the AES-CBC and XOR masking several sites put
+their page files under.
 
 When the viewer is a JavaScript app, download its bundles (the `<script src>`
 of an episode page) and grep them: the API path constants, the request builder
@@ -60,7 +69,7 @@ If that already works, the site only needs steps 1 to 4.
    matches the exact hostname, so `www.example.com` and `example.com` are two
    entries if both serve the viewer.
 2. Add one **free** episode of the site to `TEST_URLS` in
-   `tests/extractors/test_<name>.py`. `test_common.py::test_every_known_host_has_a_site_test`
+   `tests/extractors/test_<name>.py`. `test_registry.py::test_every_known_host_has_a_site_test`
    fails until every host has an entry there, and `test_site_download` then
    downloads its first page in CI.
 3. If the site's URLs differ in shape from the others (an imprint prefix, a
@@ -74,9 +83,12 @@ If that already works, the site only needs steps 1 to 4.
 
 ### The module
 
-Create `getjmanga/extractors/<name>.py`. One module per viewer, holding the
+Create `getjmanga/extractors/<name>.py`. One module per site, holding the
 extractor class and any descrambling code as plain functions next to it, so
-you can test the functions on their own.
+you can test the functions on their own. When a second site turns up on the
+same viewer, the viewer's part moves to `getjmanga/viewers/<viewer>.py` and
+both extractors import it from there: an extractor never imports another
+extractor.
 
 ```python
 """<Site name>, and whatever is special about its viewer."""
@@ -87,7 +99,8 @@ import re
 from typing import TYPE_CHECKING, ClassVar
 from urllib.parse import urlparse
 
-from .common import Episode, Extractor, NotAnEpisodePageError, Page, UnsupportedUrlError
+from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -201,8 +214,9 @@ ways the offline tests will not catch.
   instance. Set `CONFIG_KEY` only when one account really works on every
   host in `HOSTS`.
 - **Descrambling is a pure function** `descramble(image, ...) -> Image` next
-  to the class, returning a new image, tested on a synthetic tiled image
-  without touching the network.
+  to the class (or in `getjmanga/viewers/` when the viewer is shared),
+  returning a new image, tested on a synthetic tiled image without touching
+  the network.
 
 ### Registering
 
@@ -258,9 +272,9 @@ Cover at least:
   on, a retry the site needs, a redirect that means "locked".
 
 And leave out what adds nothing: the default `login()` refusing (tested once
-in `test_common.py`), `Downloader` reporting an empty episode as `locked`
-(tested in `test_downloader.py`), a descrambler reused from another module
-(tested there), a parse helper the `episode()` test already drives, a URL
+in `tests/test_extractor.py`), `Downloader` reporting an empty episode as `locked`
+(tested in `test_downloader.py`), a shared viewer's own behaviour (tested in
+`tests/viewers/`), a parse helper the `episode()` test already drives, a URL
 builder the `episode().url` assertion already covers, or a listing being
 fetched once.
 
@@ -303,8 +317,8 @@ that only refuses some networks with a 403.
   extractor reads, and what a series URL downloads.
 - **README `Configuration`.** A `[site.<CONFIG_KEY>]` example when the
   extractor has a shared key.
-- **`CLAUDE.md` Architecture.** One bullet for a new extractor module: which
-  viewer, what its `descramble()` does, any URL quirk.
+- **`CLAUDE.md` Layout.** A new module under `getjmanga/viewers/` gets a
+  mention there; extractors are listed in `docs/SUPPORTED_SITES.md` only.
 - **`--list-extractors`** is generated from `NAME`, `URL_FORMS` and `HOSTS`,
   so keep `URL_FORMS` honest.
 
