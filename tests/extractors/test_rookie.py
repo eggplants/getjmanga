@@ -4,8 +4,8 @@ from http import HTTPStatus
 from io import BytesIO
 
 import pytest
+from httpx import HTTPStatusError
 from PIL import Image
-from requests import HTTPError
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
@@ -232,7 +232,7 @@ def test_a_gone_episode_is_not_an_episode(fake_session, fake_response):
 
 def test_other_failures_still_raise(fake_session, fake_response):
     session = fake_session({"/series/": fake_response(text="", status_code=HTTPStatus.SERVICE_UNAVAILABLE)})
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPStatusError):
         Rookie(session).episode(EPISODE_URL)
 
 

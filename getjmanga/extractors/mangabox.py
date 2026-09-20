@@ -16,7 +16,7 @@ from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlEr
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from requests import Session
+    from httpx import Client
 
 BASE_URL = "https://www.mangabox.me"
 #: The Nuxt app's own backend; the viewer reads everything through it.
@@ -104,7 +104,7 @@ class Mangabox(Extractor):
         "sec-ch-ua-platform": '"Linux"',
     }
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

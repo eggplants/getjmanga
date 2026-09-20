@@ -27,7 +27,7 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from requests import RequestException
+from httpx import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
@@ -35,8 +35,8 @@ from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
 HOST = "michikusacomics.jp"
 
@@ -132,7 +132,7 @@ class Michikusa(Extractor):
         "https://michikusacomics.jp/product/<slug>",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -283,9 +283,9 @@ class Michikusa(Extractor):
             return None, None
         try:
             res = self._session.get(urljoin(url, frame), headers=self.HEADERS, timeout=self.TIMEOUT)
-        except RequestException:
+        except HTTPError:
             return None, None
-        if not res.ok:
+        if not res.is_success:
             return None, None
         soup = BeautifulSoup(res.content, "html.parser")
         base = str(res.url or url)
@@ -306,7 +306,7 @@ class Michikusa(Extractor):
         """Read a work page, or None when the site will not serve it."""
         try:
             return self._listing(work_url)
-        except (RequestException, NotAnEpisodePageError):
+        except (HTTPError, NotAnEpisodePageError):
             return None
 
     def _listing(self, series_url: str) -> Listing:

@@ -49,8 +49,8 @@ from getjmanga.viewers.kmanga import descramble as descramble_v2
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from httpx import Client, Response
     from PIL import Image
-    from requests import Response, Session
 
 BASE_URL = "https://ciao.shogakukan.co.jp"
 API_URL = "https://api.ciao.shogakukan.co.jp"
@@ -155,7 +155,7 @@ class Ciao(Extractor):
         "Referer": f"{BASE_URL}/",
     }
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

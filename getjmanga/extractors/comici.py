@@ -19,8 +19,8 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
 _DOCUMENT_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
@@ -204,7 +204,7 @@ class Comici(Extractor):
         "sec-ch-ua-platform": '"Linux"',
     }
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -505,7 +505,7 @@ class Comici(Extractor):
             headers={**self._headers(url, _API_HEADERS), "Referer": url},
             timeout=self.TIMEOUT,
         )
-        body = res.json() if res.ok else None
+        body = res.json() if res.is_success else None
         episode = body.get("episode") if isinstance(body, dict) else None
         if not isinstance(episode, dict):
             msg = f"no '#{_VIEWER_ID}' element on {url}, and its episode API describes none either."

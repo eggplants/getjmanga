@@ -5,8 +5,8 @@ from http import HTTPStatus
 from io import BytesIO
 
 import pytest
+from httpx import HTTPStatusError
 from PIL import Image
-from requests import HTTPError
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
@@ -298,7 +298,7 @@ def test_login_raises_when_the_site_says_no(fake_session, fake_response):
 def test_site_download(tmp_path, host):
     try:
         result = Downloader(GigaViewer(), tmp_path, only_first=True).download(TEST_URLS[host])
-    except HTTPError as error:
+    except HTTPStatusError as error:
         response = error.response
         if response is not None and response.status_code == HTTPStatus.FORBIDDEN:
             pytest.skip(f"{host} refuses requests from this network ({response.status_code}).")

@@ -40,7 +40,7 @@ from getjmanga.viewers.speedbinb import split_title
 from getjmanga.viewers.yondemill import Content, content_url
 
 if TYPE_CHECKING:
-    from requests import Session
+    from httpx import Client
 
 #: Where the work and story pages are.
 HOST = "comics.pie.co.jp"
@@ -269,7 +269,7 @@ class Pie(Extractor):
         "https://comics.pie.co.jp/series/<slug>/",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -371,7 +371,7 @@ class Pie(Extractor):
         original = page.extra.get("original")
         if original:
             res = self._session.get(original, headers=self.HEADERS, timeout=self.IMAGE_TIMEOUT)
-            if res.ok and str(res.headers.get("content-type", "")).startswith("image/"):
+            if res.is_success and str(res.headers.get("content-type", "")).startswith("image/"):
                 return Image.open(BytesIO(res.content))
         return self._fetch_image(page.url, headers={**self.HEADERS, "Referer": episode.url})
 
@@ -468,7 +468,7 @@ class Pie(Extractor):
                 return None
             # `pie.co.jp/series/<n>/` redirects to the work page; anything else is not one.
             work_res = self._session.get(work_url, headers=self.HEADERS, timeout=self.TIMEOUT)
-            if not work_res.ok or not self.is_series(str(work_res.url or "")):
+            if not work_res.is_success or not self.is_series(str(work_res.url or "")):
                 return None
             work = parse_work(work_res.content, str(work_res.url))
             key = self._remember(work, _work_key(work.url))

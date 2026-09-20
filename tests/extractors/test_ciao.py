@@ -4,8 +4,8 @@ from http import HTTPStatus
 from io import BytesIO
 
 import pytest
+from httpx import HTTPStatusError
 from PIL import Image
-from requests import HTTPError
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
@@ -353,12 +353,12 @@ def test_episode_of_an_unknown_work_still_reads(client, readable_routes, fake_re
 def test_other_api_errors_propagate(client, readable_routes, fake_response):
     readable_routes[EPISODE_API] = api_error(fake_response, 1003, "invalid hash.")
     ciao, _ = client(readable_routes)
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPStatusError):
         ciao.episode(EPISODE_URL)
 
     readable_routes[EPISODE_API] = fake_response(text="", status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
     ciao, _ = client(readable_routes)
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPStatusError):
         ciao.episode(EPISODE_URL)
 
 

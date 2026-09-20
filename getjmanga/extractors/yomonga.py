@@ -32,8 +32,8 @@ from getjmanga.extractor import Episode, Extractor, Page
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
 BASE_URL = "https://www.yomonga.com"
 
@@ -168,7 +168,7 @@ class Yomonga(Extractor):
         "https://www.yomonga.com/titles/<id>/",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

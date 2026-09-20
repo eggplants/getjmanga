@@ -36,7 +36,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from requests import Session
+    from httpx import Client
 
 # An episode page: `/viewer.php?id=<id>`, or its older `/pcviewer.php` spelling.
 _VIEWER_PATH = re.compile(r"^/(?:pc)?viewer\.php$")
@@ -244,7 +244,7 @@ class Mavo(Extractor):
         "http://mavo.takekuma.jp/title.php?title=<id>",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -324,7 +324,7 @@ class Mavo(Extractor):
             raise NotAnEpisodePageError(msg)
         key = urljoin(url, f"viewer.php?id={eid}")
         res = self._get(key)
-        viewer = parse_viewer(res.text, res.url or key)
+        viewer = parse_viewer(res.text, str(res.url or key))
         listing = self._listing(viewer.title_url) if viewer.title_url else Listing("", {})
         # The listing is keyed on the URL the work page links, which may be
         # on another scheme than the one asked for.
@@ -352,5 +352,5 @@ class Mavo(Extractor):
         key = urljoin(url, f"title.php?title={tid}") if tid else url
         if key not in self._listings:
             res = self._get(key)
-            self._listings[key] = parse_listing(res.text, res.url or key)
+            self._listings[key] = parse_listing(res.text, str(res.url or key))
         return self._listings[key]

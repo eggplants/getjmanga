@@ -104,7 +104,7 @@ class DaysNeo(Extractor):
         work_url = _work_url(url, match["work"])
         res = self._get(work_url)
         soup = BeautifulSoup(res.text, "html.parser")
-        if _WORK_PATH.match(urlparse(res.url).path) is None or soup.select_one("ul.ul01") is None:
+        if _WORK_PATH.match(urlparse(str(res.url)).path) is None or soup.select_one("ul.ul01") is None:
             msg = f"no work page at {url}."
             raise NotAnEpisodePageError(msg)
         urls: list[str] = []
@@ -143,7 +143,7 @@ class DaysNeo(Extractor):
         episode_url = _episode_url(url, match["work"], match["episode"])
         res = self._get(episode_url)
         soup = BeautifulSoup(res.text, "html.parser")
-        landed = urlparse(res.url).path
+        landed = urlparse(str(res.url)).path
 
         if _EPISODE_PATH.match(landed) is None or soup.find("body", id="viewer") is None:
             if _WORK_PATH.match(landed) is not None and _editors_only(soup):

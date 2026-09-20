@@ -22,7 +22,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from requests import Response, Session
+    from httpx import Client, Response
 
 BASE_URL = "https://drecomi-plus.jp"
 #: The Next.js app's backend; the work page, the viewer and sign-in all go through it.
@@ -127,7 +127,7 @@ class Drecomi(Extractor):
     )
     CONFIG_KEY = "drecomi"
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -310,7 +310,7 @@ class Drecomi(Extractor):
         )
         answer = _json_or_none(res)
         token = answer.get("access_token") if isinstance(answer, dict) else None
-        if not res.ok or not token:
+        if not res.is_success or not token:
             reason = answer.get("error") if isinstance(answer, dict) else None
             msg = f"drecomi-plus.jp refused the credentials for {username!r}: {reason or f'HTTP {res.status_code}'}."
             raise LoginError(msg)

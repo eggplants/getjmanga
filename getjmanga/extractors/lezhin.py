@@ -23,7 +23,7 @@ from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlEr
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from requests import Response, Session
+    from httpx import Client, Response
 
 BASE_URL = "https://lezhin.jp"
 #: The API the Next.js app talks to; same origin, no token needed for a free chapter.
@@ -104,7 +104,7 @@ class Lezhin(Extractor):
         "sec-ch-ua-platform": '"Linux"',
     }
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

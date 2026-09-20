@@ -4,8 +4,8 @@ from http import HTTPStatus
 from io import BytesIO
 
 import pytest
+from httpx import ReadTimeout
 from PIL import Image
-from requests import ConnectionError as RequestsConnectionError
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
@@ -196,14 +196,12 @@ def page(fake_response):
     def make(text=None, content=b"", status=HTTPStatus.OK, *, stall=False):
         response = fake_response(content, text=text, status_code=status)
 
-        def iter_content(chunk_size=1):
-            body = response.content
-            for start in range(0, len(body), chunk_size):
-                yield body[start : start + chunk_size]
+        def iter_bytes():
+            yield response.content
             if stall:
-                raise RequestsConnectionError("Read timed out.")
+                raise ReadTimeout("Read timed out.")
 
-        response.iter_content = iter_content
+        response.iter_bytes = iter_bytes
         return response
 
     return make
@@ -538,7 +536,7 @@ def test_read_body_keeps_what_arrived_before_the_stall(page):
 
 
 def test_read_body_raises_when_nothing_arrived(page):
-    with pytest.raises(RequestsConnectionError):
+    with pytest.raises(ReadTimeout):
         read_body(page("", stall=True))
 
 

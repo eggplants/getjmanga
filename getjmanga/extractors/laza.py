@@ -36,8 +36,7 @@ from urllib.parse import urljoin, urlparse, urlunparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from requests import ConnectionError as RequestsConnectionError
-from requests.exceptions import ChunkedEncodingError
+from httpx import Timeout, TransportError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
@@ -45,7 +44,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from requests import Response, Session
+    from httpx import Client, Response
 
 #: Seconds to wait for the next byte of a page before taking what arrived as the page.
 STALL_TIMEOUT = 10
@@ -163,21 +162,20 @@ def read_body(res: Response) -> bytes:
     """Read a streamed response, keeping what arrived if the connection stalls.
 
     Args:
-        res: A response fetched with `stream=True`.
+        res: A response opened with `Client.stream()`.
 
     Returns:
         The body, or as much of it as the site sent before hanging.
 
     Raises:
-        requests.ConnectionError: Nothing arrived before the stall.
+        httpx.TransportError: Nothing arrived before the stall.
     """
     body = bytearray()
     try:
-        # One byte at a time: a bigger read blocks until it is filled, and
-        # the last few hundred bytes of a stalled page never fill it.
-        for byte in res.iter_content(chunk_size=1):
-            body += byte
-    except (RequestsConnectionError, ChunkedEncodingError):
+        # Chunks as they arrive, so the stall costs only the read timeout.
+        for chunk in res.iter_bytes():
+            body += chunk
+    except TransportError:
         if not body:
             raise
     return bytes(body)
@@ -371,7 +369,7 @@ class Laza(Extractor):
         "http://laza.mandarake.co.jp/<work>/list.html",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -573,17 +571,16 @@ class Laza(Extractor):
         Returns:
             The body, or None when the page is gone (HTTP 404).
         """
-        res = self._session.get(
+        with self._session.stream(
+            "GET",
             _https(url),
             headers=self.HEADERS,
-            timeout=(self.TIMEOUT, STALL_TIMEOUT),
-            stream=True,
-        )
-        if res.status_code == HTTPStatus.NOT_FOUND:
-            read_body(res)  # drain it, so the connection goes back to the pool
-            return None
-        res.raise_for_status()
-        return read_body(res)
+            timeout=Timeout(self.TIMEOUT, read=STALL_TIMEOUT),
+        ) as res:
+            if res.status_code == HTTPStatus.NOT_FOUND:
+                return None
+            res.raise_for_status()
+            return read_body(res)
 
     @staticmethod
     def _base(url: str) -> str:

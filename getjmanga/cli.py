@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
-from requests import RequestException
+from httpx import HTTPError
 
 from . import __version__
 from .config import Config, Credentials, default_config_path, load_config
@@ -264,7 +264,7 @@ def main(args: list[str] | None = None) -> None:
         runner = Runner(parsed, config, password)
         for url in parsed.urls:
             runner.run(url)
-    except (GetjmangaError, RequestException) as exc:
+    except (GetjmangaError, HTTPError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
 

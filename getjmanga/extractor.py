@@ -22,7 +22,7 @@ from .session import HEADERS, make_session
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from requests import Response, Session
+    from httpx import Client, Response
 
 
 @dataclass(frozen=True)
@@ -79,7 +79,7 @@ class Extractor(ABC):
     #: Seconds to wait for a page image.
     IMAGE_TIMEOUT: ClassVar[int] = 60
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -88,7 +88,7 @@ class Extractor(ABC):
         self._session = session if session is not None else make_session()
 
     @property
-    def session(self) -> Session:
+    def session(self) -> Client:
         """The session requests go through."""
         return self._session
 
@@ -195,7 +195,7 @@ class Extractor(ABC):
             timeout: Seconds to wait instead of `TIMEOUT`.
 
         Returns:
-            The response.
+            The response, after any redirects.
         """
         res = self._session.get(
             url,
@@ -233,7 +233,7 @@ class Extractor(ABC):
         Returns:
             The value, or None when no such cookie applies to the host.
         """
-        for cookie in self._session.cookies:
+        for cookie in self._session.cookies.jar:
             domain = cookie.domain.lstrip(".")
             if cookie.name == name and (host == domain or host.endswith("." + domain)):
                 return cookie.value

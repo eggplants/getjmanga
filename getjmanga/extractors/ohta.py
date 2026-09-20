@@ -29,8 +29,8 @@ from getjmanga.viewers.speedbinb import split_title
 from getjmanga.viewers.yondemill import CONTENT_HOST, Content, content_url
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
 #: Where the publisher's work pages are.
 WORK_HOST = "webcomic.ohtabooks.com"
@@ -104,7 +104,7 @@ class Ohta(Extractor):
         "https://webcomic.ohtabooks.com/<slug>/",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

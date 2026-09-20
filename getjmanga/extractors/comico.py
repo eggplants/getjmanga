@@ -19,7 +19,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from requests import Session
+    from httpx import Client
 
 BASE_URL = "https://www.comico.jp"
 API_URL = "https://api.comico.jp"
@@ -188,7 +188,7 @@ class Comico(Extractor):
     )
     HEADERS: ClassVar[dict[str, str]] = {**Extractor.HEADERS, "Referer": f"{BASE_URL}/"}
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

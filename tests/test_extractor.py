@@ -3,8 +3,8 @@ from __future__ import annotations
 from io import BytesIO
 
 import pytest
+from httpx import HTTPStatusError
 from PIL import Image
-from requests import HTTPError
 
 from getjmanga.errors import LoginError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
@@ -67,7 +67,7 @@ def test_image_sends_the_episode_as_referer_and_decodes(fake_session, fake_respo
 
 def test_get_raises_on_a_failing_status(fake_session, fake_response):
     session = fake_session({"example.com": fake_response(status_code=403)})
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPStatusError):
         Plain(session)._get("https://example.com/")  # noqa: SLF001
 
 

@@ -116,7 +116,7 @@ class InfoResponse:
         self.body = body
         self.item = item
         self.url = None
-        self.ok = True
+        self.is_success = True
 
     def raise_for_status(self):
         pass

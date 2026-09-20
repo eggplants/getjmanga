@@ -4,8 +4,8 @@ from http import HTTPStatus
 from io import BytesIO
 
 import pytest
+from httpx import HTTPStatusError
 from PIL import Image
-from requests import HTTPError
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
@@ -599,7 +599,7 @@ def test_other_http_errors_propagate(client, fake_response):
     saizensen, _ = client(
         {"/karanokyoukai/03/01.html": fake_response(text="", status_code=HTTPStatus.SERVICE_UNAVAILABLE)}
     )
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPStatusError):
         saizensen.episode(READER_EPISODE_URL)
 
 

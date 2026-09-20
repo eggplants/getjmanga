@@ -21,8 +21,8 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
 BASE_URL = "https://manga.line.me"
 #: The episode list a work page loads, in reading order (`rows=1000` is what the site asks for).
@@ -194,7 +194,7 @@ class LineManga(Extractor):
         "https://manga.line.me/indies/product/detail?id=<product>",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -333,9 +333,9 @@ class LineManga(Extractor):
         product_id = self._products.get(book_id)
         if product_id is None and flavour == "periodic":
             res = self._session.get(f"{BASE_URL}/book/detail?id={book_id}", headers=self.HEADERS, timeout=self.TIMEOUT)
-            landed = _kind(res.url)
-            if res.ok and landed == ("series", "periodic"):
-                product_id = _query_id(res.url)
+            landed = _kind(str(res.url))
+            if res.is_success and landed == ("series", "periodic"):
+                product_id = _query_id(str(res.url))
         if product_id is None:
             msg = f"no episode {book_id} on {BASE_URL}."
             raise NotAnEpisodePageError(msg)

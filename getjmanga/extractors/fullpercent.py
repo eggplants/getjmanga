@@ -37,7 +37,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from requests import Session
+    from httpx import Client
 
 BASE_URL = "https://fullpercent.net"
 LOGIN_URL = f"{BASE_URL}/user/login_ajax"
@@ -211,7 +211,7 @@ class FullPercent(Extractor):
     )
     CONFIG_KEY = "fullpercent"
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

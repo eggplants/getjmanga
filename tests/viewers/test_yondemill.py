@@ -4,7 +4,7 @@ import json
 from http import HTTPStatus
 
 import pytest
-from requests import HTTPError
+from httpx import HTTPStatusError
 
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError
 from getjmanga.extractor import Extractor
@@ -81,7 +81,7 @@ class InfoResponse:
         self.body = body
         self.item = item
         self.url = None
-        self.ok = True
+        self.is_success = True
 
     def raise_for_status(self):
         pass
@@ -217,7 +217,7 @@ def test_read_raises_on_a_taken_down_content(client, fake_response):
 
 def test_read_propagates_other_http_errors(client, fake_response):
     reader, _ = client({"/contents/64823": fake_response(text="", status_code=HTTPStatus.SERVICE_UNAVAILABLE)})
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPStatusError):
         read(reader, CONTENT_URL)
 
 

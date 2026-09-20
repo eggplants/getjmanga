@@ -25,8 +25,8 @@ from getjmanga.extractor import Episode, Extractor, Page
 from getjmanga.viewers.seedrandom import descramble as _descramble_tiles
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
 # `/comic/serial/n<serial>/n<story>/<page>`; the site itself redirects a URL
 # without the page number to `/1`, which is the shape used everywhere here.
@@ -176,7 +176,7 @@ class Starts(Extractor):
         "https://novema.jp/comic/serial/n<serial>",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

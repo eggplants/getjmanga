@@ -40,7 +40,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from requests import Response
+    from httpx import Response
 
 BASE_URL = "https://creators.mechacomic.jp"
 

@@ -36,7 +36,7 @@ from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlEr
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from requests import Response
+    from httpx import Response
 
 BASE_URL = "https://vcomi.jp"
 #: `PUBLIC_S3_ENDPOINT`: where the page files are served from.

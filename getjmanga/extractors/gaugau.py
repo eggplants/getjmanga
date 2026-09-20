@@ -22,8 +22,8 @@ from getjmanga.extractor import Episode, Extractor
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
     from getjmanga.extractor import Page
 
@@ -50,7 +50,7 @@ class Gaugau(Extractor):
         "https://gaugau.futabanet.jp/list/work/<work-id>/comics",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

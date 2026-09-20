@@ -4,8 +4,8 @@ from http import HTTPStatus
 from io import BytesIO
 
 import pytest
+from httpx import HTTPStatusError
 from PIL import Image
-from requests import HTTPError
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
@@ -274,7 +274,7 @@ def test_taken_down_episode_answers_404_and_is_not_an_episode(fake_session, fake
 
 def test_other_http_errors_come_through(fake_session, fake_response):
     session = fake_session({"/story/fv_01": fake_response(text="", status_code=HTTPStatus.SERVICE_UNAVAILABLE)})
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPStatusError):
         Torch(session).episode(EPISODE_URL)
 
 

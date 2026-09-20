@@ -33,7 +33,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 from urllib.parse import unquote, urlparse
 
-from requests import HTTPError
+from httpx import HTTPStatusError
 
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
@@ -41,8 +41,8 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from httpx import Client, Response
     from PIL import Image
-    from requests import Response, Session
 
 BASE_URL = "https://manga-no.com"
 #: The GraphQL endpoint every page talks to.
@@ -168,7 +168,7 @@ class MangaNo(Extractor):
     )
     CONFIG_KEY = "mangano"
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -341,7 +341,7 @@ class MangaNo(Extractor):
             return self._fetch_image(page.url, headers=headers)
         try:
             return self._fetch_image(page.url, headers=headers)
-        except HTTPError:
+        except HTTPStatusError:
             return self._fetch_image(fallback, headers=headers)
 
     def login(self, url: str, username: str, password: str) -> None:  # noqa: ARG002 (one Firebase project for the site)

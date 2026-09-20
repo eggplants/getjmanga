@@ -4,8 +4,8 @@ from http import HTTPStatus
 from io import BytesIO
 
 import pytest
+from httpx import HTTPStatusError
 from PIL import Image
-from requests import HTTPError
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
@@ -399,7 +399,7 @@ def test_gai_first_page_without_an_image_is_not_an_episode(client, fake_response
 
 def test_other_errors_still_raise(client, fake_response):
     ginkgo, _ = client({"/zuttari/735/01.html": fake_response(text="", status_code=HTTPStatus.SERVICE_UNAVAILABLE)})
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPStatusError):
         ginkgo.episode(GAI_EPISODE_URL)
 
 

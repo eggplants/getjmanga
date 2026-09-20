@@ -39,8 +39,8 @@ from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
 HOST = "bloom.homesha.co.jp"
 
@@ -119,7 +119,7 @@ class Bloom(Extractor):
         "https://bloom.homesha.co.jp/webcomic/<slug>/",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

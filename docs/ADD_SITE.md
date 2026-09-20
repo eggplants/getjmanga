@@ -205,7 +205,7 @@ ways the offline tests will not catch.
 - **Requests go through `self._get()`** (raises on a failing status, applies
   `HEADERS` and `TIMEOUT`) or `self._session` directly when a non-2xx answer
   is meaningful (an API that says 404 for "no more pages"). Never build a
-  `requests.Session` of your own: the CLI hands every extractor one shared
+  `httpx.Client` of your own: the CLI hands every extractor one shared
   session so cookies from `login()` reach the requests that follow.
 - **The CLI calls `login()` once per site**, with any URL on that site,
   using `-u`/`-p` or the config file's `[site."<host>"]` /

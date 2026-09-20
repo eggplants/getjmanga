@@ -14,7 +14,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from requests import Response
+    from httpx import Response
 
 BASE_URL = "https://www.comic-essay.com"
 
@@ -100,7 +100,7 @@ class ComicEssay(Extractor):
             raise UnsupportedUrlError(msg)
 
         res = self._fetch_page(url, "work")
-        listed = list(reversed(_episode_links(BeautifulSoup(res.content, "html.parser"), res.url or url)))
+        listed = list(reversed(_episode_links(BeautifulSoup(res.content, "html.parser"), str(res.url or url))))
         if not listed:
             msg = f"the work at {url} lists no episode."
             raise NotAnEpisodePageError(msg)
@@ -143,7 +143,7 @@ class ComicEssay(Extractor):
             raise NotAnEpisodePageError(msg)
 
         image_urls = [
-            urljoin(res.url or url, str(img["src"]))
+            urljoin(str(res.url or url), str(img["src"]))
             for holder in detail.find_all("div", class_="episode-comic__image")
             if isinstance(holder, Tag)
             for img in holder.find_all("img")

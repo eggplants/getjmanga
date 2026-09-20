@@ -51,8 +51,8 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from httpx import Client, Response
     from PIL import Image
-    from requests import Response, Session
 
 BASE_URL = "https://comic.pixiv.net"
 API_URL = f"{BASE_URL}/api/app"
@@ -211,7 +211,7 @@ class PixivComic(Extractor):
         "sec-ch-ua-platform": '"Linux"',
     }
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

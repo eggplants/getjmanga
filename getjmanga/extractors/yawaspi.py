@@ -34,7 +34,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from requests import Session
+    from httpx import Client
 
 # A work page, or a one-shot's episode page: `/<work>/`, `/<work>/index.html`, `/<work>/index2.html`.
 _WORK_PATH = re.compile(r"^/(?P<work>[A-Za-z0-9_-]+)/?(?:index\d*\.html)?$")
@@ -171,7 +171,7 @@ class Yawaspi(Extractor):
         "https://yawaspi.com/<work>/",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

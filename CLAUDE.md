@@ -66,7 +66,7 @@ Tests live in `tests/` and mirror the module split 1:1 (`tests/extractors/` for
 the extractors, `tests/viewers/` for the viewers, `tests/test_extractor.py`,
 `tests/test_cipher.py`).
 `tests/conftest.py` provides the `fake_session`/`fake_response` fixtures -- a
-`requests.Session` answering by substring match on the URL -- that every
+an `httpx.Client` answering by substring match on the URL -- that every
 extractor test scripts its site with. `tests/**` has its own
 `lint.per-file-ignores` block, so assertions and missing annotations are fine there.
 

@@ -346,6 +346,6 @@ class Pachikuri(Extractor):
         original = page.extra.get("original")
         if isinstance(original, str) and original:
             res = self._session.get(original, headers=headers, timeout=self.IMAGE_TIMEOUT)
-            if res.ok and res.headers.get("content-type", "").startswith("image/"):
+            if res.is_success and res.headers.get("content-type", "").startswith("image/"):
                 return Image.open(BytesIO(res.content))
         return self._fetch_image(page.url, headers=headers)

@@ -16,8 +16,8 @@ from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlEr
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
 # https://regex101.com/r/j0nUsd/1
 _MAGAZINE_TITLE = re.compile(r"\s*([0-90-9]+年)?([0-90-9]+?(・?[0-90-9]+(合併)?)?月?号|(No|vol).[0-90-9]+)$")
@@ -97,7 +97,7 @@ class GigaViewer(Extractor):
         "https://<host>/rss/series/<id>",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -246,7 +246,7 @@ class GigaViewer(Extractor):
             headers={**self.HEADERS, "x-requested-with": "XMLHttpRequest"},
             timeout=self.TIMEOUT,
         )
-        if not res.ok:
+        if not res.is_success:
             msg = f"{origin} refused the credentials for {username!r} (HTTP {res.status_code})."
             raise LoginError(msg)
         self._logged_in_origins.add(origin)

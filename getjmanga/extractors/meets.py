@@ -27,7 +27,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from requests import Session
+    from httpx import Client
 
 # `/comics/<dir_name>/<sort_volume>`: one episode of a work.
 _EPISODE_PATH = re.compile(r"^/comics/(?P<dir>[A-Za-z0-9_-]+)/(?P<vol>\d+)/?$")
@@ -91,7 +91,7 @@ class Meets(Extractor):
         "sec-ch-ua-platform": '"Linux"',
     }
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

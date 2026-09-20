@@ -21,7 +21,7 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from requests import HTTPError
+from httpx import HTTPStatusError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
@@ -183,7 +183,7 @@ class Fleur(Extractor):
         if served and served != page.url:
             try:
                 return self._fetch_image(page.url, headers=headers)
-            except HTTPError:
+            except HTTPStatusError:
                 return self._fetch_image(served, headers=headers)
         return self._fetch_image(page.url, headers=headers)
 

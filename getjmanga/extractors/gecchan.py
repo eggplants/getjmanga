@@ -200,7 +200,7 @@ class Gecchan(Extractor):
             msg = f"{url} is not there (404)."
             raise NotAnEpisodePageError(msg)
         res.raise_for_status()
-        series_title, entries = parse_work(res.content, res.url or url)
+        series_title, entries = parse_work(res.content, str(res.url or url))
         if not entries and not series_title:
             msg = f"no work on {url}."
             raise NotAnEpisodePageError(msg)

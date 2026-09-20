@@ -35,7 +35,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from requests import Session
+    from httpx import Client
 
 #: What the コミックいわてWEB work pages are episodes of.
 IWATE_SERIES_TITLE = "コミックいわてWEB"
@@ -253,7 +253,7 @@ class Ginkgo(Extractor):
         "http://www.manga-gai.net/manga/<work>/<work>_index/<work>_index.html",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

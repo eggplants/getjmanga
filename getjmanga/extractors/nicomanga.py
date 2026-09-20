@@ -15,7 +15,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from requests import Session
+    from httpx import Client
 
 BASE_URL = "https://manga.nicovideo.jp"
 #: The backend the niconico manga app and `sp.manga.nicovideo.jp` read from.
@@ -97,7 +97,7 @@ class NicoManga(Extractor):
         "Origin": BASE_URL,
     }
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

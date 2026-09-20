@@ -28,7 +28,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from requests import Session
+    from httpx import Client
 
 # A work page or an episode page: WordPress hands both out at `/series/<id>/`.
 _SERIES_PATH = re.compile(r"^/series/(?P<id>\d+)/?$")
@@ -144,7 +144,7 @@ class Splush(Extractor):
     HOSTS = ("splush.jp", "www.splush.jp")
     URL_FORMS = ("https://www.splush.jp/series/<id>",)
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

@@ -191,7 +191,8 @@ class Boost(Extractor):
 
         colophon = parse_colophon(self._get(f"{BASE_URL}/colophon/{product_id}").content)
         res = self._get(canonical)
-        cid = viewer_cid(res.url)
+        landed = str(res.url)
+        cid = viewer_cid(landed)
         if cid is None:
             if colophon is None or _NOT_FOUND in res.text:
                 msg = f"no episode {product_id} on {BASE_URL}."
@@ -204,7 +205,7 @@ class Boost(Extractor):
                 metadata={"colophon": colophon.raw},
             )
 
-        license_ = self._get(LICENSE_URL, params={"cid": cid}, headers={**self.HEADERS, "Referer": res.url}).json()
+        license_ = self._get(LICENSE_URL, params={"cid": cid}, headers={**self.HEADERS, "Referer": landed}).json()
         if not isinstance(license_, dict):
             license_ = {}
         if colophon is None:
@@ -271,7 +272,7 @@ class Boost(Extractor):
             timeout=self.TIMEOUT,
         )
         res.raise_for_status()
-        if urlparse(res.url).path.rstrip("/") != "/login":
+        if urlparse(str(res.url)).path.rstrip("/") != "/login":
             return
         warning = BeautifulSoup(res.content, "html.parser").find(class_="text-warning")
         reason = " ".join(warning.get_text().split()) if isinstance(warning, Tag) else "no reason given"

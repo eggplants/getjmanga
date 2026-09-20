@@ -38,7 +38,7 @@ from getjmanga.protobuf import integer, message, messages, raw, string
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from requests import Response, Session
+    from httpx import Client, Response
 
 MANGAONE_URL = "https://manga-one.com"
 FLOWERCOMICS_URL = "https://flowercomics.jp"
@@ -138,7 +138,7 @@ def flight_object(text: str, key: str) -> dict[str, Any] | None:
 class LinkU(Extractor):
     """What the five sites share: the chapter vocabulary and the page encryption."""
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -501,11 +501,11 @@ class FlowerComics(LinkU):
             raise UnsupportedUrlError(msg)
         chapter_id = int(match["chapter"])
         res = self._session.get(url, headers=self.HEADERS, timeout=self.TIMEOUT)
-        if not res.ok:
+        if not res.is_success:
             msg = f"no chapter at {url} (HTTP {res.status_code})."
             raise NotAnEpisodePageError(msg)
 
-        landed = _FLOWER_TITLE_PATH.match(urlparse(res.url).path)
+        landed = _FLOWER_TITLE_PATH.match(urlparse(str(res.url)).path)
         if landed is not None:
             series_title, chapters = _flower_title(res.text)
             return self._locked(url, int(landed["title"]), series_title, chapters, chapter_id)
@@ -704,10 +704,10 @@ class GanganOnline(LinkU):
         spelled `__N_REDIRECT`.
         """
         res = self._session.get(url, headers=self.HEADERS, timeout=self.TIMEOUT)
-        if not res.ok:
+        if not res.is_success:
             msg = f"no page at {url} (HTTP {res.status_code})."
             raise NotAnEpisodePageError(msg)
-        requested, landed = urlparse(url).path.rstrip("/"), urlparse(res.url).path.rstrip("/")
+        requested, landed = urlparse(url).path.rstrip("/"), urlparse(str(res.url)).path.rstrip("/")
         data = next_data(res.text)
         props = data.get("props", {}).get("pageProps")
         props = props if isinstance(props, dict) else {}
@@ -869,14 +869,14 @@ class MangaPark(LinkU):
             headers={**self.HEADERS, "Referer": url},
             timeout=self.TIMEOUT,
         )
-        if not res.ok and res.status_code != HTTPStatus.UNAUTHORIZED:
+        if not res.is_success and res.status_code != HTTPStatus.UNAUTHORIZED:
             msg = f"no chapter at {url} (HTTP {res.status_code})."
             raise NotAnEpisodePageError(msg)
         payload = _json_or_none(res)
         payload = payload if isinstance(payload, dict) else {}
         data: dict[str, Any] = payload["data"] if isinstance(payload.get("data"), dict) else {}
         # A 401 wants a login; any other `consume_type` wants coins the viewer would ask for first.
-        readable = res.ok and data.get("consume_type") in _PARK_OPEN_TYPES
+        readable = res.is_success and data.get("consume_type") in _PARK_OPEN_TYPES
         locked = self._locked(url, title_id, series_title, chapters, chapter_id)
         return Episode(
             url=url,
@@ -936,7 +936,7 @@ class MangaPark(LinkU):
         """
         if title_id not in self._titles:
             res = self._session.get(f"{MANGAPARK_URL}/title/{title_id}", headers=self.HEADERS, timeout=self.TIMEOUT)
-            if not res.ok:
+            if not res.is_success:
                 msg = f"no title {title_id} on manga-park.com (HTTP {res.status_code})."
                 raise NotAnEpisodePageError(msg)
             self._titles[title_id] = _park_title(res.text)
@@ -1090,7 +1090,7 @@ class MangaLab(LinkU):
         res = self._session.get(
             f"{MANGALAB_URL}/api/title/chapter/{chapter_id}/", headers=self.HEADERS, timeout=self.TIMEOUT
         )
-        if not res.ok:
+        if not res.is_success:
             msg = f"no chapter at {url} (HTTP {res.status_code})."
             raise NotAnEpisodePageError(msg)
         answer = message(res.content)
@@ -1122,7 +1122,7 @@ class MangaLab(LinkU):
         """
         if title_id not in self._titles:
             res = self._session.get(f"{MANGALAB_URL}/api/title/{title_id}/", headers=self.HEADERS, timeout=self.TIMEOUT)
-            if not res.ok:
+            if not res.is_success:
                 msg = f"no title {title_id} on manga-lab.net (HTTP {res.status_code})."
                 raise NotAnEpisodePageError(msg)
             self._titles[title_id] = _lab_title(message(res.content))

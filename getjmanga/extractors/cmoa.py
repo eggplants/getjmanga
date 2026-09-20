@@ -38,8 +38,8 @@ from getjmanga.extractor import Episode, Extractor, Page
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
 HOST = "www.cmoa.jp"
 BASE_URL = f"https://{HOST}"
@@ -206,7 +206,7 @@ class Cmoa(Extractor):
         "https://www.cmoa.jp/title/<title-id>/",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

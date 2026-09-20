@@ -14,7 +14,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from requests import Response
+    from httpx import Response
 
 BASE_URL = "https://crea.bunshun.jp"
 
@@ -138,7 +138,7 @@ class Crea(Extractor):
 
         res = self._fetch_page(url, "article")
         soup = BeautifulSoup(res.content, "html.parser")
-        page_url = res.url or url
+        page_url = str(res.url or url)
 
         body = soup.find("article", class_="article-body")
         if not isinstance(body, Tag):
@@ -187,7 +187,7 @@ class Crea(Extractor):
             seen_pages.add(next_page)
             res = self._fetch_page(next_page, "series")
             soup = BeautifulSoup(res.content, "html.parser")
-            page_url = res.url or next_page
+            page_url = str(res.url or next_page)
             for listing in soup.find_all("div", class_="lists-default"):
                 if isinstance(listing, Tag):
                     _collect_article_links(listing, page_url, newest_first)
@@ -198,7 +198,7 @@ class Crea(Extractor):
         """The article URLs of every series on an author page, each oldest first."""
         res = self._fetch_page(url, "author")
         soup = BeautifulSoup(res.content, "html.parser")
-        page_url = res.url or url
+        page_url = str(res.url or url)
         urls: list[str] = []
         for work in soup.find_all("div", class_="list-authors-work__list"):
             if not isinstance(work, Tag):

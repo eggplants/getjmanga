@@ -33,7 +33,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from requests import Session
+    from httpx import Client
 
 BASE_URL = "https://www.beltoon.jp"
 API_URL = f"{BASE_URL}/api/balcony-api-v2"
@@ -183,7 +183,7 @@ class BeLToon(Extractor):
     CONFIG_KEY = "beltoon"
     HEADERS: ClassVar[dict[str, str]] = {**Extractor.HEADERS, "Referer": f"{BASE_URL}/"}
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -277,7 +277,7 @@ class BeLToon(Extractor):
 
         # The site's age gate sets this and the server reads it back; without
         # it an adult-flagged work answers `ADULT_ONLY_CONTENTS` to everyone.
-        self._session.cookies.set("not-login-adult", "Y", domain=urlparse(BASE_URL).hostname, path="/")
+        self._session.cookies.set("not-login-adult", "Y", domain=urlparse(BASE_URL).hostname or "", path="/")
         page_props = _next_data(self._get(url).text).get("props", {}).get("pageProps", {})
         answer = page_props.get("episodeData") or {}
         result, error = answer.get("result"), answer.get("error")
@@ -384,7 +384,7 @@ class BeLToon(Extractor):
             answer = None
         landing = str(answer.get("url") or "") if isinstance(answer, dict) else ""
         error = parse_qs(urlparse(landing).query).get("error")
-        if not res.ok or not landing or error:
+        if not res.is_success or not landing or error:
             reason = unquote(error[0]).split("&")[0] if error else f"HTTP {res.status_code}"
             msg = f"www.beltoon.jp refused the credentials for {username!r}: {reason}."
             raise LoginError(msg)
@@ -435,7 +435,7 @@ class BeLToon(Extractor):
             timeout=self.TIMEOUT,
         )
         try:
-            answer = res.json() if res.ok else {}
+            answer = res.json() if res.is_success else {}
         except ValueError:
             answer = {}
         key = answer.get("data") if answer.get("result") == "SUCCESS" else None

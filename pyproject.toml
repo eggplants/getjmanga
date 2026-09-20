@@ -38,9 +38,9 @@ dynamic = [ "version" ]
 dependencies = [
   "beautifulsoup4>=4.12",
   "cryptography>=43",
+  "httpx>=0.28",
   "pathvalidate>=3.2",
   "pillow>=10.4",
-  "requests>=2.32",
   "rich>=13.7",
 ]
 urls.Documentation = "https://eggplants.github.io/getjmanga/"
@@ -55,7 +55,6 @@ dev = [
   "pyproject-fmt>=2.11.1",
   "pytest>=9.0.2",
   "pytest-cov>=7",
-  "types-requests>=2.32",
 ]
 docs = [
   "pdoc>=16",
@@ -90,6 +89,10 @@ lint.per-file-ignores."getjmanga/cli.py" = [
 ]
 lint.per-file-ignores."getjmanga/downloader.py" = [
   "PLR0913", # Too many arguments (one keyword per command line flag)
+]
+lint.per-file-ignores."getjmanga/session.py" = [
+  "ANN401",  # `Any` in `**kwargs` (the override hands httpx's own keyword arguments on untouched)
+  "PLC2701", # Private import (httpx keeps its parameter type aliases in `httpx._types`)
 ]
 lint.per-file-ignores."getjmanga/viewers/*.py" = [
   "SLF001", # Private member access (a viewer sends its requests through the extractor's `_get` and `_fetch_image`)

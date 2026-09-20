@@ -11,7 +11,7 @@ from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlEr
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from requests import Session
+    from httpx import Client
 
 BASE_URL = "https://ganma.jp"
 #: The Next.js app's backend. Every query the reader makes goes through here.
@@ -295,7 +295,7 @@ class Ganma(Extractor):
         "sec-ch-ua-platform": '"Linux"',
     }
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -450,7 +450,7 @@ class Ganma(Extractor):
             headers={**self.HEADERS, **_API_HEADERS, "x-from": f"{BASE_URL}/web/signin", "Origin": BASE_URL},
             timeout=self.TIMEOUT,
         )
-        if not res.ok:
+        if not res.is_success:
             try:
                 body = res.json()
             except ValueError:

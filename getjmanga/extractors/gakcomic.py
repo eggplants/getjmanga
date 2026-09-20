@@ -51,7 +51,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from requests import Session
+    from httpx import Client
 
 BASE_URL = "https://gakcomic.gakken.jp"
 LICENSE_URL = "https://license.keyring.net"
@@ -318,7 +318,7 @@ class Gakcomic(Extractor):
         "Referer": f"{BASE_URL}/viewer/",
     }
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

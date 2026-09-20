@@ -13,7 +13,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from requests import Response
+    from httpx import Response
 
 BASE_URL = "https://sukupara.jp"
 
@@ -125,7 +125,7 @@ class Sukupara(Extractor):
         for anchor in soup.find_all("a", href=True):
             if not isinstance(anchor, Tag):
                 continue
-            href = urljoin(res.url or url, str(anchor["href"]))
+            href = urljoin(str(res.url or url), str(anchor["href"]))
             ids = _ids(href)
             if urlparse(href).path == EPISODE_PATH and ids.get("manga_id") == manga_id and "story_id" in ids:
                 story_ids.add(int(ids["story_id"]))
@@ -195,7 +195,7 @@ class _ReadingPage:
     """What one `mag_detail.php` page says: its image, its heading and where its buttons go."""
 
     def __init__(self, res: Response, url: str) -> None:
-        base = res.url or url
+        base = str(res.url or url)
         soup = BeautifulSoup(res.content, "html.parser")
 
         heading = soup.find("h3", id="story_title")

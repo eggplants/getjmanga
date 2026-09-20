@@ -4,8 +4,8 @@ from http import HTTPStatus
 from io import BytesIO
 
 import pytest
+from httpx import HTTPStatusError
 from PIL import Image
-from requests import HTTPError
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
@@ -299,7 +299,7 @@ def test_expired_episode_is_gone(client, fake_response):
 
 def test_other_http_errors_propagate(client, fake_response):
     yawaspi, _ = client({"/comic/001_001.html": fake_response(text="", status_code=HTTPStatus.SERVICE_UNAVAILABLE)})
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPStatusError):
         yawaspi.episode(EPISODE_URL)
 
 

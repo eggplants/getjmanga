@@ -19,7 +19,7 @@ from getjmanga.protobuf import encode_bytes_field, encode_varint_field, integer,
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from requests import Session
+    from httpx import Client
 
 BASE_URL = "https://comic-fuz.com"
 API_URL = "https://api.comic-fuz.com"
@@ -71,7 +71,7 @@ class Fuz(Extractor):
     CONFIG_KEY = "comic-fuz"
     HEADERS: ClassVar[dict[str, str]] = {**Extractor.HEADERS, "Origin": BASE_URL, "Referer": f"{BASE_URL}/"}
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -208,7 +208,7 @@ class Fuz(Extractor):
             LoginError: COMIC FUZ refused the credentials.
         """
         body = self._device_info() + encode_bytes_field(2, username) + encode_bytes_field(3, password)
-        res = self._session.post(f"{API_URL}/v1/sign_in", data=body, headers=self.HEADERS, timeout=self.TIMEOUT)
+        res = self._session.post(f"{API_URL}/v1/sign_in", content=body, headers=self.HEADERS, timeout=self.TIMEOUT)
         res.raise_for_status()
         answer = message(res.content)
         if not integer(answer, 1):
@@ -223,7 +223,7 @@ class Fuz(Extractor):
         """Call `web_manga_viewer_2`; None when the chapter is locked."""
         res = self._session.post(
             f"{API_URL}/v1/web_manga_viewer_2",
-            data=self._device_info() + selector,
+            content=self._device_info() + selector,
             headers=self.HEADERS,
             timeout=self.TIMEOUT,
         )

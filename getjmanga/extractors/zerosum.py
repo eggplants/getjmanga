@@ -26,7 +26,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 from getjmanga.protobuf import integer, message, messages, string
 
 if TYPE_CHECKING:
-    from requests import Session
+    from httpx import Client
 
 BASE_URL = "https://zerosumonline.com"
 API_URL = "https://api.zerosumonline.com/api/v1"
@@ -239,7 +239,7 @@ class ZeroSum(Extractor):
         "sec-ch-ua-platform": '"Linux"',
     }
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

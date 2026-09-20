@@ -4,8 +4,8 @@ import json
 from http import HTTPStatus
 
 import pytest
+from httpx import HTTPStatusError
 from PIL import Image
-from requests import HTTPError
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
@@ -568,7 +568,7 @@ TEST_URLS: dict[str, str] = {
 def test_site_download(tmp_path, host):
     try:
         result = Downloader(Comici(), tmp_path, only_first=True).download(TEST_URLS[host])
-    except HTTPError as error:
+    except HTTPStatusError as error:
         response = error.response
         if response is not None and response.status_code == HTTPStatus.FORBIDDEN:
             # A few sites refuse whole networks -- CI runners among them. That is

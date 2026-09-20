@@ -249,7 +249,7 @@ class Carula(Extractor):
         """The note article key `url` names, following a legacy catalogue redirect."""
         parsed = urlparse(url)
         if parsed.hostname == _CATALOGUE_HOST:
-            landed = self._get(url).url
+            landed = str(self._get(url).url)
             parsed = urlparse(landed)
             url = landed
         match = _NOTE_PATH.match(parsed.path) if parsed.hostname == _NOTE_HOST else None

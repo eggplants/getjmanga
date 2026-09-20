@@ -4,8 +4,8 @@ from http import HTTPStatus
 from io import BytesIO
 
 import pytest
+from httpx import HTTPStatusError
 from PIL import Image
-from requests import HTTPError
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
@@ -368,7 +368,7 @@ def test_episode_raises_when_the_reader_page_has_no_meta(fake_session, fake_resp
 def test_episode_raises_on_a_server_error_from_the_api(fake_session, fake_response):
     routes = open_reader_routes(fake_response)
     routes["/api/reader"] = fake_response(payload={"message": "expired"}, status_code=419)
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPStatusError):
         FireCross(fake_session(routes)).episode(EPISODE_URL)
 
 

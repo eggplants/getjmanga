@@ -1,12 +1,14 @@
-"""Fakes every test file shares: a canned `requests.Session` and its responses."""
+"""Fakes every test file shares: a canned `httpx.Client` and its responses."""
 
 from __future__ import annotations
 
 import os
+from contextlib import nullcontext
 from http import HTTPStatus
+from typing import cast
 
 import pytest
-from requests import HTTPError, Session
+from httpx import Client, HTTPStatusError, Request, Response
 
 
 class FakeResponse:
@@ -26,22 +28,23 @@ class FakeResponse:
         self.text = text if text is not None else content.decode(errors="replace")
         self._payload = payload
         self.status_code = int(status_code)
-        self.ok = self.status_code < HTTPStatus.BAD_REQUEST
+        self.is_success = self.status_code < HTTPStatus.BAD_REQUEST
         # None means "wherever it was asked for"; a value stands for a redirect.
         self.url = url
         self.headers = {"content-type": content_type}
 
     def raise_for_status(self):
-        if not self.ok:
-            error = HTTPError(f"HTTP {self.status_code}")
-            error.response = self  # type: ignore[assignment]  (a fake stands in for the real response)
-            raise error
+        if not self.is_success:
+            request = Request("GET", self.url or "https://fake.invalid/")
+            response = cast("Response", self)  # a fake stands in for the real response
+            raise HTTPStatusError(f"HTTP {self.status_code}", request=request, response=response)
+        return self
 
     def json(self):
         return self._payload
 
 
-class FakeSession(Session):
+class FakeSession(Client):
     """Answers by substring match on the requested URL, first route wins.
 
     A route may hold a list of responses, handed out in order; the last one
@@ -63,14 +66,19 @@ class FakeSession(Session):
         self.headers_seen.append(kwargs.get("headers") or {})
         return self._route(url)
 
-    def post(self, url, data=None, json=None, **_kwargs):
-        self.posts.append((url, data if data is not None else json))
+    def post(self, url, data=None, json=None, content=None, **_kwargs):
+        body = data if data is not None else json
+        self.posts.append((url, body if body is not None else content))
         return self._route(url)
 
     def put(self, url, data=None, **kwargs):
         self.puts.append((url, kwargs.get("params")))
         self.headers_seen.append(kwargs.get("headers") or {})
         return self._route(url)
+
+    def stream(self, method, url, **kwargs):
+        assert method == "GET"
+        return nullcontext(self.get(url, **kwargs))
 
     def _route(self, url):
         for needle, scripted in self.routes.items():

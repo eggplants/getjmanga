@@ -5,8 +5,8 @@ from http import HTTPStatus
 from io import BytesIO
 
 import pytest
+from httpx import HTTPStatusError
 from PIL import Image
-from requests import HTTPError
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
@@ -187,7 +187,7 @@ class InfoResponse:
         self.session = session
         self.url = None
         self.status_code = HTTPStatus.OK
-        self.ok = True
+        self.is_success = True
 
     def raise_for_status(self):
         pass
@@ -376,7 +376,7 @@ def test_missing_story_is_not_an_episode(client, fake_response):
 
 def test_other_http_errors_propagate(client, fake_response):
     pie, _ = client({"/story/alicia": fake_response(text="", status_code=HTTPStatus.SERVICE_UNAVAILABLE)})
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPStatusError):
         pie.episode(STORY_URL)
 
 

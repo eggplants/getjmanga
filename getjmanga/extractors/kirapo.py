@@ -21,7 +21,7 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from requests import RequestException
+from httpx import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
@@ -29,8 +29,8 @@ from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
 # The reader of one episode: the imprint, the work's slug and the episode's id.
 _EPISODE_PATH = re.compile(r"^/pt/(?P<imprint>[a-z0-9_-]+)/(?P<slug>[^/]+)/(?P<id>\d+)/viewer/?$")
@@ -72,7 +72,7 @@ class Kirapo(Extractor):
         "https://kirapo.jp/<imprint>/titles/<slug>",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -218,7 +218,7 @@ class Kirapo(Extractor):
         series_url = f"{self._origin(url)}/{match['imprint']}/titles/{match['slug']}"
         try:
             return self._listing(series_url)
-        except RequestException:
+        except HTTPError:
             return None
 
     def _listing(self, series_url: str) -> Listing:

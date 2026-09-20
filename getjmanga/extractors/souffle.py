@@ -14,7 +14,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from requests import Response
+    from httpx import Response
 
 BASE_URL = "https://souffle.life"
 
@@ -162,7 +162,7 @@ class Souffle(Extractor):
             msg = f"no pages on {url}; is it a Souffle episode page?"
             raise NotAnEpisodePageError(msg)
         image_urls = [
-            urljoin(res.url or url, str(img["src"]))
+            urljoin(str(res.url or url), str(img["src"]))
             for img in container.find_all("img")
             if isinstance(img, Tag) and img.get("src")
         ]
@@ -204,7 +204,7 @@ class Souffle(Extractor):
         seen: set[str] = set()
         for number in range(_MAX_PAGES):
             res = self._ajax_page(url, author, number)
-            body = res.json() if res.ok else None
+            body = res.json() if res.is_success else None
             html = body.get("html") if isinstance(body, dict) else None
             if not html:
                 break

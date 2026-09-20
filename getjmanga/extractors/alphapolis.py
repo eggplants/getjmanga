@@ -30,7 +30,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from requests import Session
+    from httpx import Client
 
 BASE_URL = "https://www.alphapolis.co.jp"
 LOGIN_URL = f"{BASE_URL}/login"
@@ -221,7 +221,7 @@ class AlphaPolis(Extractor):
     CONFIG_KEY = "alphapolis"
     HEADERS: ClassVar[dict[str, str]] = {**Extractor.HEADERS, "Referer": f"{BASE_URL}/"}
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -411,7 +411,7 @@ class AlphaPolis(Extractor):
         # A refusal bounces back to the form with a flash message; a success
         # lands on a page whose header knows the account.
         soup = BeautifulSoup(res.content, "html.parser")
-        if urlparse(res.url).path.rstrip("/") == "/login" or not _signed_in(soup):
+        if urlparse(str(res.url)).path.rstrip("/") == "/login" or not _signed_in(soup):
             flash = soup.find(class_="flash-message")
             reason = " ".join(flash.get_text().split()) if isinstance(flash, Tag) else "no reason given"
             msg = f"{BASE_URL} refused the credentials for {username!r}: {reason}"

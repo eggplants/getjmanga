@@ -6,8 +6,8 @@ from io import BytesIO
 from urllib.parse import parse_qs, urlparse
 
 import pytest
+from httpx import HTTPStatusError
 from PIL import Image
-from requests import HTTPError
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
@@ -133,7 +133,7 @@ class InfoResponse:
         self.item = item
         self.url = None
         self.status_code = HTTPStatus.OK
-        self.ok = True
+        self.is_success = True
 
     def raise_for_status(self):
         pass
@@ -367,7 +367,7 @@ def test_gone_episode_is_not_an_episode(client, fake_response):
 
 def test_other_http_errors_propagate(client, fake_response):
     bloom, _ = client({"/c89-24884/": fake_response(text="", status_code=HTTPStatus.SERVICE_UNAVAILABLE)})
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPStatusError):
         bloom.episode(EPISODE_URL)
 
 

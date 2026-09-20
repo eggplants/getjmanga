@@ -17,8 +17,8 @@ from getjmanga.viewers.seedrandom import descramble as descramble_tiles
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
 BASE_URL = "https://piccoma.com"
 LOGIN_URL = f"{BASE_URL}/web/acc/email/signin"
@@ -137,7 +137,7 @@ class Piccoma(Extractor):
     CONFIG_KEY = "piccoma"
     HEADERS: ClassVar[dict[str, str]] = {**Extractor.HEADERS, "Referer": f"{BASE_URL}/"}
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -256,7 +256,7 @@ class Piccoma(Extractor):
             raise UnsupportedUrlError(msg)
 
         res = self._get(url)
-        if urlparse(res.url).path.startswith(_SIGNIN_PREFIX):
+        if urlparse(str(res.url)).path.startswith(_SIGNIN_PREFIX):
             return self._locked_episode(url, product_id, episode_id)
         html = res.text
 

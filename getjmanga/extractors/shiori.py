@@ -26,7 +26,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from requests import Response
+    from httpx import Response
 
 BASE_URL = "https://shiori-on.com"
 
@@ -99,7 +99,7 @@ class Shiori(Extractor):
             raise UnsupportedUrlError(msg)
 
         res = self._fetch_page(url, "work")
-        urls = _episode_links(BeautifulSoup(res.content, "html.parser"), res.url or url)
+        urls = _episode_links(BeautifulSoup(res.content, "html.parser"), str(res.url or url))
         if not urls:
             msg = f"the work at {url} lists no episode."
             raise NotAnEpisodePageError(msg)
@@ -123,7 +123,7 @@ class Shiori(Extractor):
         episode_id = match["id"] if match else parsed.path.rstrip("/").rsplit("/", 1)[-1]
 
         res = self._fetch_page(url, "episode")
-        page_url = res.url or url
+        page_url = str(res.url or url)
         soup = BeautifulSoup(res.content, "html.parser")
 
         viewer = soup.find(id="storySlide")

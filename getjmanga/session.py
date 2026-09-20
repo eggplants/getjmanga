@@ -1,9 +1,17 @@
-"""The HTTP session every extractor shares."""
+"""The HTTP client every extractor shares."""
 
 from __future__ import annotations
 
-from requests import Session
-from requests.adapters import HTTPAdapter, Retry
+from typing import TYPE_CHECKING, Any
+
+import httpx
+
+if TYPE_CHECKING:
+    from httpx._types import QueryParamTypes
+
+#: How many times a connection that fails to open is tried again.
+RETRIES = 10
+
 
 #: Headers a browser would send, so sites serve what they serve a browser.
 HEADERS = {
@@ -14,14 +22,32 @@ HEADERS = {
 }
 
 
+class Session(httpx.Client):
+    """An `httpx.Client` whose `params` add to a URL's own query instead of replacing it.
+
+    The extractors build URLs like `/api/csr?rq=title/detail` and pass the
+    endpoint's own parameters separately; `httpx` would drop the `rq`, and
+    re-encode it as `title%2Fdetail` if asked to merge. The query the URL
+    carries is sent as written, the way `requests` sent it.
+    """
+
+    def build_request(
+        self, method: str, url: httpx.URL | str, *, params: QueryParamTypes | None = None, **kwargs: Any
+    ) -> httpx.Request:
+        """Build a request, appending `params` to the query `url` already carries."""
+        if params is not None:
+            url = httpx.URL(url)
+            query = str(httpx.QueryParams(params)).encode()
+            if query:
+                url = url.copy_with(query=url.query + b"&" + query if url.query else query)
+            params = None
+        return super().build_request(method, url, params=params, **kwargs)
+
+
 def make_session() -> Session:
-    """Build a session that retries transient failures with a backoff.
+    """Build a session that follows redirects and retries connections that fail to open.
 
     Returns:
-        A session whose https and http mounts retry up to ten times.
+        A session whose connections are retried up to `RETRIES` times.
     """
-    session = Session()
-    adapter = HTTPAdapter(max_retries=Retry(total=10, backoff_factor=1))
-    session.mount("https://", adapter)
-    session.mount("http://", adapter)
-    return session
+    return Session(follow_redirects=True, transport=httpx.HTTPTransport(retries=RETRIES))

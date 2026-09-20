@@ -40,8 +40,8 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
+from httpx import HTTPStatusError
 from PIL import Image
-from requests import HTTPError
 
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
@@ -49,7 +49,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from requests import Response, Session
+    from httpx import Client, Response
 
 HOST = "www.shinshokan.com"
 BASE_URL = f"https://{HOST}/webwings/"
@@ -346,7 +346,7 @@ class Wings(Extractor):
         "https://www.shinshokan.com/webwings/title<NN>.html",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -464,9 +464,9 @@ class Wings(Extractor):
         if not page.extra.get("sliced"):
             try:
                 return self._fetch_image(page.url, headers=headers)
-            except HTTPError as error:
+            except HTTPStatusError as error:
                 # FLIPPER 3 keeps no whole magnified page; its tiles are all there is.
-                if error.response is None or error.response.status_code != HTTPStatus.NOT_FOUND:
+                if error.response.status_code != HTTPStatus.NOT_FOUND:
                     raise
         return stitch(
             [self._fetch_image(tile, headers=headers) for tile in self._tile_urls(page)],
@@ -534,7 +534,7 @@ class Wings(Extractor):
             msg = f"{canonical}xml/data.xml lists no spread."
             raise NotAnEpisodePageError(msg)
         conf_res = self._session.get(f"{canonical}data/book.conf", headers=headers, timeout=self.TIMEOUT)
-        conf = parse_book_conf(_utf8(conf_res)) if conf_res.ok else {}
+        conf = parse_book_conf(_utf8(conf_res)) if conf_res.is_success else {}
         right_to_left = conf.get("DIRECTION", "right").lower() == "right"
 
         self._swfs.clear()
@@ -593,7 +593,7 @@ class Wings(Extractor):
             return None
         try:
             return self._work(f"{BASE_URL}{match['id']}.html")
-        except HTTPError:
+        except HTTPStatusError:
             return None
 
     @staticmethod

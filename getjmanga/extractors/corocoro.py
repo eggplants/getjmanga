@@ -25,7 +25,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 from getjmanga.protobuf import integer, message, messages, raw, string
 
 if TYPE_CHECKING:
-    from requests import Response
+    from httpx import Response
 
 BASE_URL = "https://www.corocoro.jp"
 #: The app's own API route: `?rq=<endpoint>` plus the endpoint's parameters.

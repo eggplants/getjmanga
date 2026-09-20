@@ -35,7 +35,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from requests import Session
+    from httpx import Client
 
 HOST = "leedcafe.com"
 
@@ -252,7 +252,7 @@ class LeedCafe(Extractor):
         "https://leedcafe.com/webcomicinfo/<slug>/",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

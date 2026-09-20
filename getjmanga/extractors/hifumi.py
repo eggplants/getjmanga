@@ -33,7 +33,7 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from requests import RequestException
+from httpx import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
@@ -41,8 +41,8 @@ from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
 #: The one host both imprints live on.
 HOST = "www.123hon.com"
@@ -164,7 +164,7 @@ class Hifumi(Extractor):
         "https://www.123hon.com/nova/web-comic/<slug>/",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -306,9 +306,9 @@ class Hifumi(Extractor):
             return None
         try:
             res = self._session.get(urljoin(url, frame), headers=self.HEADERS, timeout=self.TIMEOUT)
-        except RequestException:
+        except HTTPError:
             return None
-        if not res.ok:
+        if not res.is_success:
             return None
         soup = BeautifulSoup(res.content, "html.parser")
         series_url = next(
@@ -323,7 +323,7 @@ class Hifumi(Extractor):
             return None
         try:
             return self._listing(series_url)
-        except (RequestException, NotAnEpisodePageError):
+        except (HTTPError, NotAnEpisodePageError):
             return None
 
     def _listing(self, canonical: str) -> Listing:

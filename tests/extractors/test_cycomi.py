@@ -3,8 +3,8 @@ from __future__ import annotations
 from io import BytesIO
 
 import pytest
+from httpx import Client
 from PIL import Image
-from requests import Session
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
@@ -119,7 +119,7 @@ def client(fake_session, fake_response):
     return build
 
 
-class RoutedSession(Session):
+class RoutedSession(Client):
     """Answers `chapter/detail` by its `chapterId` parameter and `page/list` by its JSON body."""
 
     def __init__(self, session, details, pages):

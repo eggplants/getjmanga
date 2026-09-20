@@ -53,7 +53,7 @@ from getjmanga.viewers.publus import pages as publus_pages
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
 
-    from requests import Response
+    from httpx import Response
 
 BASE_URL = "https://manga-5.com"
 #: The viewer's license call; the `cid` of the viewer URL goes in decoded.
@@ -503,10 +503,12 @@ class Manga5(Extractor):
         if data is None:
             msg = f"no episode data on the viewer page of {canonical}."
             raise NotAnEpisodePageError(msg)
-        cid = viewer_cid(viewer.url)
+        cid = viewer_cid(str(viewer.url))
         license_: dict[str, Any] = {}
         if cid is not None:
-            answer = self._get(LICENSE_URL, params={"cid": cid}, headers={**self.HEADERS, "Referer": viewer.url}).json()
+            answer = self._get(
+                LICENSE_URL, params={"cid": cid}, headers={**self.HEADERS, "Referer": str(viewer.url)}
+            ).json()
             license_ = answer if isinstance(answer, dict) else {}
         base = str(license_.get("url") or "")
         auth_info = license_.get("auth_info")
@@ -553,7 +555,7 @@ class Manga5(Extractor):
 
     def _viewer_page(self, res: Response) -> Response | None:
         """The viewer page a product page led to, or None when it led nowhere."""
-        path = urlparse(res.url).path
+        path = urlparse(str(res.url)).path
         if path == VIEWER_PATH:
             return res
         if path != ADS_PATH:
@@ -561,7 +563,7 @@ class Manga5(Extractor):
         viewer_url = ads_viewer_url(res.content)
         if viewer_url is None:
             return None
-        return self._get(viewer_url, headers={**self.HEADERS, "Referer": res.url})
+        return self._get(viewer_url, headers={**self.HEADERS, "Referer": str(res.url)})
 
     def _pages(self, base: str, auth: Mapping[str, str], cty: str) -> tuple[list[Page], dict[str, Any]]:
         """The pages of a licensed content directory, and what described them."""

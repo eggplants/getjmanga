@@ -43,7 +43,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
-    from requests import Response, Session
+    from httpx import Client, Response
 
 # A ツイ4 strip page, or the `-all` page of a 座談会 entry.
 _TWI4_EPISODE = re.compile(r"^/comics/twi4/(?P<work>[^/]+)/(?P<number>\d{4})(?P<all>-all)?\.html$")
@@ -299,7 +299,7 @@ class Saizensen(Extractor):
         "https://sai-zen-sen.jp/special/4pages-comics/<work>/",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -478,7 +478,7 @@ class Saizensen(Extractor):
         """Which strips a ツイ4 work's `index.js` says are open, fetched once per work; None when it cannot tell."""
         if work_url not in self._flags:
             res = self._session.get(urljoin(work_url, "index.js"), headers=self.HEADERS, timeout=self.TIMEOUT)
-            self._flags[work_url] = parse_twi4_index(res.text) if res.ok else None
+            self._flags[work_url] = parse_twi4_index(res.text) if res.is_success else None
         return self._flags[work_url]
 
     @staticmethod
@@ -527,7 +527,7 @@ class Saizensen(Extractor):
         if work_url not in self._indexes:
             res = self._session.get(urljoin(work_url, "meta.json"), headers=self.HEADERS, timeout=self.TIMEOUT)
             index = ""
-            if res.ok:
+            if res.is_success:
                 try:
                     payload: Any = res.json()
                     index = str(payload["sai-zen-sen"]["index"])

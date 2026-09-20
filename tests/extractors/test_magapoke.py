@@ -4,8 +4,8 @@ from http import HTTPStatus
 from io import BytesIO
 
 import pytest
+from httpx import HTTPStatusError
 from PIL import Image
-from requests import HTTPError
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
@@ -335,7 +335,7 @@ def test_other_api_errors_propagate(client, fake_response):
             VIEWER_API: fake_response(text="", status_code=HTTPStatus.INTERNAL_SERVER_ERROR),
         },
     )
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPStatusError):
         magapoke.episode(EPISODE_URL)
 
 

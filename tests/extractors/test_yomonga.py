@@ -122,7 +122,7 @@ class InfoResponse:
         self.item = item
         self.url = None
         self.status_code = HTTPStatus.OK
-        self.ok = True
+        self.is_success = True
 
     def raise_for_status(self):
         pass

@@ -21,8 +21,8 @@ from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlEr
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
 BASE_URL = "https://ynjn.jp"
 #: The Nuxt app's `baseApiUrl`; `credentials: include` on every call.
@@ -93,7 +93,7 @@ class YanJan(Extractor):
     CONFIG_KEY = "ynjn"
     HEADERS: ClassVar[dict[str, str]] = {**Extractor.HEADERS, **_API_HEADERS}
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:

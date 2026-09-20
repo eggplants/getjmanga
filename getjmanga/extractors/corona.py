@@ -9,12 +9,14 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlparse
 
+from httpx import HTTPError
+
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
+    from httpx import Client, Response
     from PIL import Image
-    from requests import Response, Session
 
 BASE_URL = "https://to-corona-ex.com"
 #: The site's own backend; the work page and the viewer read everything through it.
@@ -144,7 +146,7 @@ class Corona(Extractor):
         "sec-ch-ua-platform": '"Linux"',
     }
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -336,7 +338,7 @@ class Corona(Extractor):
         except ValueError:
             answer = {}
         token = answer.get("idToken") if isinstance(answer, dict) else None
-        if not res.ok or not token:
+        if not res.is_success or not token:
             error = answer.get("error") if isinstance(answer, dict) else None
             reason = error.get("message") if isinstance(error, dict) else None
             msg = f"{BASE_URL} refused the credentials for {username!r}: {reason or f'HTTP {res.status_code}'}."
@@ -375,7 +377,7 @@ class Corona(Extractor):
             if bundle is None:
                 return None
             match = _ENVIRONMENT_KEY.search(self._get(f"{BASE_URL}{bundle['src']}").text)
-        except OSError:  # requests' errors are IOErrors; the baked key is then kept.
+        except HTTPError:  # the baked key is then kept.
             return None
         return match["key"] if match is not None else None
 

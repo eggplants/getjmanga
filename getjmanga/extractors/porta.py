@@ -18,7 +18,7 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from requests import RequestException
+from httpx import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
@@ -26,8 +26,8 @@ from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
-    from requests import Session
 
 # An episode: the directory of one SpeedBinb export.
 _EPISODE_PATH = re.compile(r"^/p_data/(?P<slug>[^/]+)/?$")
@@ -65,7 +65,7 @@ class Porta(Extractor):
         "https://comic-porta.com/series/<id>",
     )
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
 
         Args:
@@ -207,12 +207,12 @@ class Porta(Extractor):
         if not frame:
             return None
         res = self._session.get(urljoin(url, frame), headers=self.HEADERS, timeout=self.TIMEOUT)
-        if not res.ok:
+        if not res.is_success:
             return None
         soup = BeautifulSoup(res.content, "html.parser")
         series_url = next(
             (
-                urljoin(res.url or url, str(anchor["href"]))
+                urljoin(str(res.url or url), str(anchor["href"]))
                 for anchor in soup.find_all("a", href=True)
                 if isinstance(anchor, Tag) and anchor.get_text(strip=True) == _DETAIL_LINK_TEXT
             ),
@@ -222,7 +222,7 @@ class Porta(Extractor):
             return None
         try:
             return self._listing(series_url)
-        except RequestException:
+        except HTTPError:
             return None
 
     def _listing(self, series_url: str) -> Listing:
