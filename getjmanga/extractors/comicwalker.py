@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 
 from PIL import Image
 
+from getjmanga.cipher import xor_unmask
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
@@ -33,28 +34,6 @@ _API_HEADERS = {
     "Sec-Fetch-Mode": "cors",
     "Sec-Fetch-Site": "same-origin",
 }
-
-
-def unmask(data: bytes, drm_hash: str) -> bytes:
-    """Undo the viewer's masking of a page file.
-
-    The CDN serves every page as a WebP whose bytes are XORed with the
-    page's `drmHash` -- a hex string, applied as a repeating key from the
-    first byte on. The viewer only does this for `drmMode` `xor`; a `raw`
-    page is served as-is and never reaches this function.
-
-    Args:
-        data: The file exactly as the CDN serves it.
-        drm_hash: The page's `drmHash`, hex.
-
-    Returns:
-        The WebP file.
-    """
-    key = bytes.fromhex(drm_hash)
-    if not key or not data:
-        return data
-    stream = (key * (len(data) // len(key) + 1))[: len(data)]
-    return (int.from_bytes(data, "big") ^ int.from_bytes(stream, "big")).to_bytes(len(data), "big")
 
 
 def episode_url(work_code: str, episode_code: str) -> str:
@@ -244,7 +223,7 @@ class ComicWalker(Extractor):
         )
         data = res.content
         if page.extra.get("drm_mode") == "xor":
-            data = unmask(data, str(page.extra.get("drm_hash") or ""))
+            data = xor_unmask(data, str(page.extra.get("drm_hash") or ""))
         return Image.open(BytesIO(data))
 
     @staticmethod

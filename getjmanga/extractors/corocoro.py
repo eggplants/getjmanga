@@ -5,8 +5,8 @@ goes through `/api/csr?rq=<endpoint>&<params>`, a Next.js route that
 proxies to the site's backend and answers in protobuf; the message shapes
 below come from the protobufjs classes in the site's bundle. A chapter's
 pages are `.webp.enc` files on a signed CDN URL, AES-CBC encrypted with a
-key and iv the viewer answer carries -- the same scheme COMIC FUZ uses, so
-its `decrypt()` is reused.
+key and iv the viewer answer carries -- the same scheme COMIC FUZ uses,
+undone by `cipher.aes_cbc_decrypt()`.
 """
 
 from __future__ import annotations
@@ -19,11 +19,10 @@ from urllib.parse import urlparse
 
 from PIL import Image
 
+from getjmanga.cipher import aes_cbc_decrypt
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 from getjmanga.protobuf import integer, message, messages, raw, string
-
-from .fuz import decrypt
 
 if TYPE_CHECKING:
     from requests import Response
@@ -356,7 +355,7 @@ class Corocoro(Extractor):
         key, iv = str(page.extra.get("key") or ""), str(page.extra.get("iv") or "")
         # The viewer only decrypts when it was handed both; a page without them is served plain.
         if key and iv:
-            data = decrypt(data, key, iv)
+            data = aes_cbc_decrypt(data, key, iv)
         return Image.open(BytesIO(data))
 
 

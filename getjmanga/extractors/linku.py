@@ -30,12 +30,10 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from PIL import Image
 
+from getjmanga.cipher import aes_cbc_decrypt, xor_unmask
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 from getjmanga.protobuf import integer, message, messages, raw, string
-
-from .comicwalker import unmask
-from .fuz import decrypt
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -176,7 +174,7 @@ class LinkU(Extractor):
         """
         res = self._get(page.url, headers={**self.HEADERS, "Referer": episode.url}, timeout=self.IMAGE_TIMEOUT)
         key, iv = str(page.extra.get("key") or ""), str(page.extra.get("iv") or "")
-        data = decrypt(res.content, key, iv) if key and iv else res.content
+        data = aes_cbc_decrypt(res.content, key, iv) if key and iv else res.content
         return Image.open(BytesIO(data))
 
     @classmethod
@@ -906,7 +904,7 @@ class MangaPark(LinkU):
         """
         res = self._get(page.url, headers={**self.HEADERS, "Referer": episode.url}, timeout=self.IMAGE_TIMEOUT)
         key = str(page.extra.get("key") or "")
-        data = unmask(res.content, base64.b64decode(key).hex()) if key else res.content
+        data = xor_unmask(res.content, base64.b64decode(key).hex()) if key else res.content
         return Image.open(BytesIO(data))
 
     def login(self, url: str, username: str, password: str) -> None:

@@ -18,10 +18,9 @@ from urllib.parse import urljoin, urlparse
 
 from PIL import Image
 
+from getjmanga.cipher import xor_unmask
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .comicwalker import unmask
 
 if TYPE_CHECKING:
     from requests import Response, Session
@@ -260,10 +259,10 @@ class Lezhin(Extractor):
             The page image.
         """
         res = self._get(page.url, headers={**self.HEADERS, "Referer": episode.url}, timeout=self.IMAGE_TIMEOUT)
-        data = unmask(res.content, str(page.extra.get("key") or self._key))
+        data = xor_unmask(res.content, str(page.extra.get("key") or self._key))
         if not looks_like_image(data):
             self._key = self._discover_key(episode.url)
-            data = unmask(res.content, self._key)
+            data = xor_unmask(res.content, self._key)
         return Image.open(BytesIO(data))
 
     def login(self, url: str, username: str, password: str) -> None:  # noqa: ARG002 (one site, one login endpoint)

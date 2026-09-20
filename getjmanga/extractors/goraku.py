@@ -11,10 +11,9 @@ from urllib.parse import urljoin, urlparse
 
 from PIL import Image
 
+from getjmanga.cipher import aes_cbc_decrypt
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .fuz import decrypt
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -256,7 +255,7 @@ class Goraku(Extractor):
         data = res.content
         key, iv = page.extra.get("key"), page.extra.get("iv")
         if key and iv:
-            data = decrypt(data, str(key), str(iv))
+            data = aes_cbc_decrypt(data, str(key), str(iv))
         return Image.open(BytesIO(data))
 
     def _props(self, url: str) -> dict[str, Any]:

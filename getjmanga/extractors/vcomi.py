@@ -10,8 +10,8 @@ An episode page's server data (`/episodes/<id>/__data.json`) names the
 episode, its series and the episode after it; the viewer then asks
 `episode.getPages` for the page list, which comes with a per-episode
 `secret` (an AES-256 key) and a per-page `iv`, both base64url. The page
-files sit on `images.vcomi.jp` unprotected but AES-CBC encrypted, so the
-same `decrypt()` as F comic's puts them back. A locked episode -- one past
+files sit on `images.vcomi.jp` unprotected but AES-CBC encrypted, which
+`cipher.aes_cbc_decrypt()` puts back, the same as F comic's. A locked episode -- one past
 the free run, or one the account does not own -- answers `getPages` with
 no `episode`, only `readOptions` (the purchase offer). Sign-in is the
 `user.login` mutation, which sets a session cookie; the site locks an
@@ -31,10 +31,9 @@ from urllib.parse import urlparse
 
 from PIL import Image
 
+from getjmanga.cipher import aes_cbc_decrypt
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .fuz import decrypt
 
 if TYPE_CHECKING:
     from requests import Response
@@ -336,7 +335,7 @@ class Vcomi(Extractor):
         data = res.content
         iv, secret = str(page.extra.get("iv") or ""), str(page.extra.get("secret") or "")
         if iv and secret:
-            data = decrypt(data, urlsafe_b64decode(secret).hex(), urlsafe_b64decode(iv).hex())
+            data = aes_cbc_decrypt(data, urlsafe_b64decode(secret).hex(), urlsafe_b64decode(iv).hex())
         return Image.open(BytesIO(data))
 
     def login(self, url: str, username: str, password: str) -> None:

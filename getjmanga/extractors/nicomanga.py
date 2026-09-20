@@ -10,10 +10,9 @@ from urllib.parse import urlparse
 
 from PIL import Image
 
+from getjmanga.cipher import xor_unmask
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
-
-from .comicwalker import unmask as _xor_unmask
 
 if TYPE_CHECKING:
     from requests import Session
@@ -66,7 +65,7 @@ def unmask(data: bytes, drm_hash: str) -> bytes:
     Returns:
         The WebP (or JPEG) file.
     """
-    return _xor_unmask(data, drm_key(drm_hash))
+    return xor_unmask(data, drm_key(drm_hash))
 
 
 def episode_url(episode_id: str | int) -> str:

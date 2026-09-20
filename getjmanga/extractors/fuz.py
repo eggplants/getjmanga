@@ -9,10 +9,10 @@ from io import BytesIO
 from typing import TYPE_CHECKING, ClassVar
 from urllib.parse import urlparse
 
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from PIL import Image
 
-from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.cipher import aes_cbc_decrypt
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 from getjmanga.protobuf import encode_bytes_field, encode_varint_field, integer, message, messages, raw, string
 
@@ -42,32 +42,6 @@ _POSITION_DETAIL = 2
 # ---------------------------------------------------------------------------
 # Pages
 # ---------------------------------------------------------------------------
-
-
-def decrypt(data: bytes, key: str, iv: str) -> bytes:
-    """Undo the AES-CBC the CDN serves page images under.
-
-    Args:
-        data: The `.enc` file exactly as served.
-        key: The page's `encryptionKey`, hex.
-        iv: The page's `iv`, hex.
-
-    Returns:
-        The image file.
-
-    Raises:
-        GetjmangaError: The data is not a whole number of blocks, or the padding is off.
-    """
-    if len(data) % 16 or not data:
-        msg = "the encrypted image is not a whole number of AES blocks."
-        raise GetjmangaError(msg)
-    decryptor = Cipher(algorithms.AES(bytes.fromhex(key)), modes.CBC(bytes.fromhex(iv))).decryptor()
-    plain = decryptor.update(data) + decryptor.finalize()
-    padding = plain[-1]
-    if not 1 <= padding <= 16 or plain[-padding:] != bytes([padding]) * padding:  # noqa: PLR2004 (PKCS#7 block)
-        msg = "the decrypted image carries no PKCS#7 padding; wrong key or iv?"
-        raise GetjmangaError(msg)
-    return plain[:-padding]
 
 
 @dataclass(frozen=True)
@@ -219,7 +193,7 @@ class Fuz(Extractor):
         """
         res = self._get(page.url, headers={**self.HEADERS, "Referer": episode.url}, timeout=self.IMAGE_TIMEOUT)
         key, iv = str(page.extra.get("key") or ""), str(page.extra.get("iv") or "")
-        data = decrypt(res.content, key, iv) if key and iv else res.content
+        data = aes_cbc_decrypt(res.content, key, iv) if key and iv else res.content
         return Image.open(BytesIO(data))
 
     def login(self, url: str, username: str, password: str) -> None:  # noqa: ARG002 (one sign-in endpoint)

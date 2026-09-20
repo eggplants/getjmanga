@@ -6,9 +6,9 @@ from io import BytesIO
 import pytest
 from PIL import Image
 
+from getjmanga.cipher import xor_unmask
 from getjmanga.downloader import Downloader
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractors.comicwalker import unmask
 from getjmanga.extractors.lezhin import (
     API_URL,
     BASE_URL,
@@ -98,7 +98,7 @@ def all_chapters(chapters, *, page, last_page):
 def masked_png(color, key=XOR_KEY):
     raw = BytesIO()
     Image.new("RGB", (8, 8), color).save(raw, "PNG")
-    return unmask(raw.getvalue(), key)
+    return xor_unmask(raw.getvalue(), key)
 
 
 @pytest.fixture

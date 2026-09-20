@@ -8,8 +8,8 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from PIL import Image
 
 from getjmanga.downloader import Downloader
-from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractors.fuz import BASE_URL, Fuz, decrypt
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractors.fuz import BASE_URL, Fuz
 from getjmanga.protobuf import decode_fields, encode_bytes_field, encode_varint_field
 
 KEY = "3ac550b62b4734c8411b5076b748a9c8bd6af1e87117d012789d5cc8ae1563a7"
@@ -78,26 +78,6 @@ def client(fake_session, fake_response):
 
 
 # --- the wire format ----------------------------------------------------------
-
-
-# --- decryption -----------------------------------------------------------------
-
-
-def test_decrypt_recovers_the_image():
-    data = decrypt(encrypted_png(), KEY, IV)
-    with Image.open(BytesIO(data)) as image:
-        assert image.size == (8, 8)
-        assert image.getpixel((0, 0)) == (10, 20, 30)
-
-
-def test_decrypt_rejects_a_partial_block():
-    with pytest.raises(GetjmangaError, match="whole number"):
-        decrypt(b"\x00" * 17, KEY, IV)
-
-
-def test_decrypt_rejects_the_wrong_key():
-    with pytest.raises(GetjmangaError, match="padding"):
-        decrypt(encrypted_png(), "00" * 32, IV)
 
 
 # --- urls -----------------------------------------------------------------------

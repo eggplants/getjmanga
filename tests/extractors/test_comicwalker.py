@@ -4,8 +4,9 @@ from http import HTTPStatus
 from io import BytesIO
 
 import pytest
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 
+from getjmanga.cipher import xor_unmask
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractors.comicwalker import (
@@ -14,7 +15,6 @@ from getjmanga.extractors.comicwalker import (
     IMAGE_SIZE,
     ComicWalker,
     episode_title,
-    unmask,
 )
 
 WORK_URL = f"{BASE_URL}/detail/KC_001981_S"
@@ -113,8 +113,10 @@ def client(fake_session, fake_response):
             f"{API_URL}/viewer?episodeId={ENTRIES[0]['id']}": fake_response(payload=VIEWER),
             f"{API_URL}/viewer?episodeId={ENTRIES[1]['id']}": fake_response(payload=VIEWER),
             f"{API_URL}/viewer?episodeId={ENTRIES[2]['id']}": fake_response(payload=LOCKED_VIEWER),
-            f"{CDN}/1_": fake_response(unmask(webp_bytes(), "62e07285b272877b"), content_type="image/webp"),
-            f"{CDN}/2_": fake_response(unmask(webp_bytes((4, 5, 6)), "d8114042de6da1a4"), content_type="image/webp"),
+            f"{CDN}/1_": fake_response(xor_unmask(webp_bytes(), "62e07285b272877b"), content_type="image/webp"),
+            f"{CDN}/2_": fake_response(
+                xor_unmask(webp_bytes((4, 5, 6)), "d8114042de6da1a4"), content_type="image/webp"
+            ),
         }
         session = QuerySession({**routes, **(extra or {})})
         return ComicWalker(session), session
@@ -176,16 +178,6 @@ def test_is_series(url, expected):
 )
 def test_episode_title(data, expected):
     assert episode_title(data) == expected
-
-
-# --- unmasking -------------------------------------------------------------------------
-
-
-def test_unmask_restores_a_decodable_image():
-    masked = unmask(webp_bytes((10, 20, 30)), "62e07285b272877b")
-    with pytest.raises(UnidentifiedImageError):
-        Image.open(BytesIO(masked))
-    assert Image.open(BytesIO(unmask(masked, "62e07285b272877b"))).convert("RGB").getpixel((0, 0)) == (10, 20, 30)
 
 
 # --- episodes --------------------------------------------------------------------------
