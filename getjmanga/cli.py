@@ -5,7 +5,14 @@ from __future__ import annotations
 import getpass
 import shutil
 import sys
-from argparse import Action, ArgumentDefaultsHelpFormatter, ArgumentParser, Namespace, RawDescriptionHelpFormatter
+from argparse import (
+    Action,
+    ArgumentDefaultsHelpFormatter,
+    ArgumentParser,
+    BooleanOptionalAction,
+    Namespace,
+    RawDescriptionHelpFormatter,
+)
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
@@ -13,7 +20,15 @@ from urllib.parse import urlparse
 from httpx import HTTPError
 
 from . import __version__
-from .config import Config, Credentials, default_config_path, load_config
+from .config import (
+    Config,
+    Credentials,
+    default_config_path,
+    init_config,
+    load_config,
+    set_option,
+    set_site,
+)
 from .downloader import Downloader
 from .errors import GetjmangaError, NotAnEpisodePageError
 from .extractors import EXTRACTORS, find_extractor, get_extractor
@@ -21,6 +36,10 @@ from .session import make_session
 
 if TYPE_CHECKING:
     from .extractor import Extractor
+
+
+#: What `jm config` answers to on the command line.
+CONFIG_COMMANDS = ("config", "c")
 
 
 class HelpFormatter(ArgumentDefaultsHelpFormatter, RawDescriptionHelpFormatter):
@@ -31,6 +50,20 @@ class HelpFormatter(ArgumentDefaultsHelpFormatter, RawDescriptionHelpFormatter):
         if not action.option_strings or action.default is None:
             return action.help
         return super()._get_help_string(action)
+
+
+def make_parser(prog: str, description: str, epilog: str | None = None) -> ArgumentParser:
+    """An `ArgumentParser` laid out the way every command here is."""
+    return ArgumentParser(
+        prog=prog,
+        description=description,
+        epilog=epilog,
+        formatter_class=lambda prog: HelpFormatter(
+            prog,
+            width=shutil.get_terminal_size(fallback=(120, 50)).columns,
+            max_help_position=40,
+        ),
+    )
 
 
 def extractor_list() -> str:
@@ -56,21 +89,21 @@ def parse_args(args: list[str] | None = None) -> Namespace:
     Returns:
         The parsed arguments.
     """
-    parser = ArgumentParser(
-        prog="getjmanga",
-        description="Retrieve and save images from japanese web comic sites",
-        epilog="extractors: " + ", ".join(extractor.NAME for extractor in EXTRACTORS),
-        formatter_class=lambda prog: HelpFormatter(
-            prog,
-            width=shutil.get_terminal_size(fallback=(120, 50)).columns,
-            max_help_position=40,
-        ),
+    parser = make_parser(
+        "getjmanga",
+        "Retrieve and save images from japanese web comic sites",
+        epilog="extractors: "
+        + ", ".join(extractor.NAME for extractor in EXTRACTORS)
+        + "\n\nconfig: `%(prog)s config --help` sets up the config file",
     )
     parser.add_argument("urls", metavar="url", nargs="*", help="episode url, or a series url to take every episode of")
-    parser.add_argument("-b", "--bulk", action="store_true", help="follow every next episode")
-    parser.add_argument("-d", "--savedir", metavar="DIR", default=".", help="directory to save into")
+    # `-b`, `-d` and `-o` default to None so that the config file can fill them in.
+    parser.add_argument("-b", "--bulk", action=BooleanOptionalAction, help="follow every next episode")
+    parser.add_argument(
+        "-d", "--savedir", metavar="DIR", help="directory to save into (default: the config's savedir, else .)"
+    )
     parser.add_argument("-f", "--first", action="store_true", help="download only the first page")
-    parser.add_argument("-o", "--overwrite", action="store_true", help="download again if it exists")
+    parser.add_argument("-o", "--overwrite", action=BooleanOptionalAction, help="download again if it exists")
     parser.add_argument("-m", "--metadata", action="store_true", help="save episode metadata as json")
     parser.add_argument("-u", "--username", metavar="ID", help="id or email address to log in with")
     parser.add_argument("-p", "--password", metavar="PW", help="password (prompted for if -u is given without it)")
@@ -90,10 +123,117 @@ def parse_args(args: list[str] | None = None) -> Namespace:
     parser.add_argument("-q", "--quiet", action="store_true", help="disable console output")
     parser.add_argument("--list-extractors", action="store_true", help="list every extractor and exit")
     parser.add_argument("-V", "--version", action="version", version=f"%(prog)s {__version__}")
+    if not args:
+        parser.print_help()
+        raise SystemExit(0)
     parsed = parser.parse_args(args)
     if not parsed.urls and not parsed.list_extractors:
         parser.error("the following arguments are required: url")
     return parsed
+
+
+def apply_config(parsed: Namespace, config: Config) -> None:
+    """Fill in the flags the command line left out from the config file.
+
+    Args:
+        parsed: The parsed command line, updated in place.
+        config: The config file.
+    """
+    if parsed.savedir is None:
+        parsed.savedir = config.savedir if config.savedir is not None else "."
+    if parsed.overwrite is None:
+        parsed.overwrite = config.overwrite
+    if parsed.bulk is None:
+        parsed.bulk = config.bulk
+
+
+def parse_config_args(args: list[str]) -> Namespace:
+    """Parse `jm config ...`.
+
+    Args:
+        args: What came after `config`.
+
+    Returns:
+        The parsed arguments; `command` names the subcommand.
+    """
+    parser = make_parser("getjmanga config", "Set up the config file")
+    parser.add_argument(
+        "-c",
+        "--config",
+        metavar="FILE",
+        type=Path,
+        help=f"config file to edit (default: {default_config_path()})",
+    )
+    commands = parser.add_subparsers(dest="command", metavar="command", required=True)
+    commands.add_parser("init", help="create the file from a commented template")
+    site = commands.add_parser("site", help="set an account, asking for the username and password")
+    site.add_argument("key", help="the site's host, or the key `getjmanga --list-extractors` prints")
+    savedir = commands.add_parser("savedir", help="set what -d defaults to")
+    savedir.add_argument("dir", type=Path, help="directory to save into")
+    for name in ("overwrite", "bulk"):
+        flag = commands.add_parser(name, help=f"set whether -{name[0]} is on by default")
+        flag.add_argument("value", choices=("true", "false"))
+    if not args:
+        parser.print_help()
+        raise SystemExit(0)
+    return parser.parse_args(args)
+
+
+def known_site_keys() -> set[str]:
+    """Every `[site.<key>]` key some extractor reads: its hosts and its `CONFIG_KEY`."""
+    keys: set[str] = set()
+    for extractor in EXTRACTORS:
+        keys.update(extractor.HOSTS)
+        if extractor.CONFIG_KEY:
+            keys.add(extractor.CONFIG_KEY)
+    return keys
+
+
+def ask_credentials(key: str) -> Credentials:
+    """Prompt for the account to write under `[site.<key>]`.
+
+    Raises:
+        SystemExit: No extractor reads the key, no username was typed, or the input ended.
+    """
+    if key not in known_site_keys():
+        print(f"error: no extractor reads [site.{key}]; see `getjmanga --list-extractors`.", file=sys.stderr)
+        raise SystemExit(1)
+    try:
+        username = input(f"username for {key}: ").strip()
+        if not username:
+            print("error: a username is needed.", file=sys.stderr)
+            raise SystemExit(1)
+        password = getpass.getpass("password (leave empty to be prompted for it each run): ")
+    except EOFError:
+        print("error: aborted.", file=sys.stderr)
+        raise SystemExit(1) from None
+    # An empty password means "ask at run time", the way a section without one does.
+    return Credentials(username, password or None)
+
+
+def config_main(args: list[str]) -> None:
+    """Run `jm config ...`.
+
+    Raises:
+        SystemExit: The file could not be written, or no username was typed.
+    """
+    parsed = parse_config_args(args)
+    try:
+        if parsed.command == "init":
+            path = init_config(parsed.config)
+            print("created:", path)
+        elif parsed.command == "site":
+            path = set_site(parsed.key, ask_credentials(parsed.key), parsed.config)
+            print(f"saved: [site.{parsed.key}] in {path}")
+        elif parsed.command == "savedir":
+            path = set_option("savedir", str(parsed.dir.expanduser().absolute()), parsed.config)
+            print(f"saved: savedir in {path}")
+        else:
+            path = set_option(parsed.command, parsed.value == "true", parsed.config)
+            print(f"saved: {parsed.command} in {path}")
+    except GetjmangaError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
 
 
 def episode_urls(extractor: Extractor, url: str, *, quiet: bool) -> list[str]:
@@ -248,7 +388,11 @@ class Runner:
 
 def main(args: list[str] | None = None) -> None:
     """Run the command."""
-    parsed = parse_args(args)
+    argv = sys.argv[1:] if args is None else args
+    if argv and argv[0] in CONFIG_COMMANDS:
+        config_main(argv[1:])
+        return
+    parsed = parse_args(argv)
     if parsed.list_extractors:
         print(extractor_list())
         return
@@ -261,6 +405,7 @@ def main(args: list[str] | None = None) -> None:
 
     try:
         config = load_config(parsed.config)
+        apply_config(parsed, config)
         runner = Runner(parsed, config, password)
         for url in parsed.urls:
             runner.run(url)

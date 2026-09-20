@@ -64,10 +64,10 @@ jm -u you@example.com https://piccoma.com/web/viewer/8195/1185884
 
 | Option | Description |
 | --- | --- |
-| `-b`, `--bulk` | follow every next episode |
-| `-d DIR`, `--savedir DIR` | directory to save into, as `<DIR>/<host>/<series>/<episode>/` (default: `.`) |
+| `-b`, `--bulk`, `--no-bulk` | follow every next episode |
+| `-d DIR`, `--savedir DIR` | directory to save into, as `<DIR>/<host>/<series>/<episode>/` (default: the config's `savedir`, else `.`) |
 | `-f`, `--first` | download only the first page |
-| `-o`, `--overwrite` | download again if it exists |
+| `-o`, `--overwrite`, `--no-overwrite` | download again if it exists |
 | `-m`, `--metadata` | save episode metadata as `metadata.json` |
 | `-u ID`, `--username ID` | id or email address to log in with |
 | `-p PW`, `--password PW` | password (prompted for if `-u` is given without it) |
@@ -78,20 +78,18 @@ jm -u you@example.com https://piccoma.com/web/viewer/8195/1185884
 
 ### Configuration
 
-```toml
-# site.<host>
-[site."shonenjumpplus.com"]
-username = "you@example.com"
-password = "..."
+Use `jm config` / `jm c`.
 
-# site.<extractor>
-[site.comici-plus]
-username = "comici-id"
-password = "..."
+```shellsession
+jm c init
 
-[site.piccoma]
-username = "you@example.com"
-# no password: it is prompted for once per run
+# asks for the username and password
+jm c site shonenjumpplus.com
+jm c site piccoma
+
+jm c savedir ~/manga
+jm c overwrite true
+jm c bulk false
 ```
 
 ## Library

@@ -4,7 +4,16 @@ from pathlib import Path
 
 import pytest
 
-from getjmanga.config import Config, ConfigError, Credentials, default_config_path, load_config
+from getjmanga.config import (
+    Config,
+    ConfigError,
+    Credentials,
+    default_config_path,
+    init_config,
+    load_config,
+    set_option,
+    set_site,
+)
 from getjmanga.extractors import Comici, Fuz, GigaViewer, Piccoma
 
 CONFIG = """
@@ -70,6 +79,17 @@ def test_load_config_is_empty_without_a_file(tmp_path):
     assert config.path is None
 
 
+def test_load_config_reads_the_defaults(tmp_path):
+    path = write(tmp_path / "c.toml", 'savedir = "~/manga"\noverwrite = true\nbulk = true\n')
+    config = load_config(path)
+    assert (config.savedir, config.overwrite, config.bulk) == (Path.home() / "manga", True, True)
+
+
+def test_load_config_leaves_the_defaults_alone_when_unset(tmp_path):
+    config = load_config(write(tmp_path / "c.toml", ""))
+    assert (config.savedir, config.overwrite, config.bulk) == (None, False, False)
+
+
 def test_load_config_ignores_other_tables(tmp_path):
     path = write(tmp_path / "c.toml", '[other]\nx = 1\n[site.piccoma]\nusername = "u"\n')
     assert list(load_config(path).sites) == ["piccoma"]
@@ -94,6 +114,9 @@ def test_load_config_rejects_a_directory(tmp_path):
         ('[site.piccoma]\npassword = "x"\n', "needs a username"),
         ('[site.piccoma]\nusername = ""\n', "needs a username"),
         ('[site.piccoma]\nusername = "u"\npassword = 1\n', "password must be a string"),
+        ("savedir = 1\n", "savedir must be a string"),
+        ('overwrite = "yes"\n', "overwrite must be a boolean"),
+        ("bulk = 1\n", "bulk must be a boolean"),
     ],
 )
 def test_load_config_rejects_a_misshapen_section(tmp_path, text, message):
@@ -137,3 +160,70 @@ def test_single_site_extractors_have_a_shared_key(config):
 
 def test_an_empty_config_yields_nothing():
     assert Config().credentials(Comici, "https://mangabu.jp/episodes/1") is None
+
+
+# --- writing it ------------------------------------------------------------------------
+
+
+def test_init_config_writes_a_readable_template_owner_only(isolated_config):
+    assert init_config() == isolated_config
+    assert isolated_config.stat().st_mode & 0o777 == 0o600
+    config = load_config()
+    assert (config.savedir, config.overwrite, config.bulk, dict(config.sites)) == (Path(), False, False, {})
+
+
+def test_init_config_refuses_an_existing_file(tmp_path):
+    path = write(tmp_path / "c.toml")
+    with pytest.raises(ConfigError, match="already exists"):
+        init_config(path)
+    assert path.read_text(encoding="utf-8") == CONFIG
+
+
+def test_set_site_creates_the_file(tmp_path):
+    path = tmp_path / "new" / "c.toml"
+    assert set_site("piccoma", Credentials("me", "pw"), path) == path
+    assert load_config(path).sites == {"piccoma": Credentials("me", "pw")}
+
+
+def test_set_site_keeps_the_other_sections_and_comments(tmp_path):
+    path = write(tmp_path / "c.toml", "# keep me\n" + CONFIG)
+    set_site("piccoma", Credentials("new", None), path)
+    text = path.read_text(encoding="utf-8")
+    assert text.startswith("# keep me\n")
+    sites = load_config(path).sites
+    assert sites["piccoma"] == Credentials("new", None)
+    assert sites["shonenjumpplus.com"] == Credentials("jump@example.com", "jump-pw")
+
+
+def test_set_site_quotes_a_host_key(tmp_path):
+    path = set_site("shonenjumpplus.com", Credentials("me", "pw"), tmp_path / "c.toml")
+    assert '[site."shonenjumpplus.com"]' in path.read_text(encoding="utf-8")
+
+
+def test_set_option_replaces_the_template_line_in_place(isolated_config):
+    init_config()
+    set_option("savedir", "/manga")
+    set_option("bulk", True)
+    text = isolated_config.read_text(encoding="utf-8")
+    assert text.index('savedir = "/manga"') < text.index("bulk = true") < text.index("# [site.")
+    config = load_config()
+    assert (config.savedir, config.bulk) == (Path("/manga"), True)
+
+
+def test_set_option_goes_before_the_site_sections(tmp_path):
+    path = write(tmp_path / "c.toml")
+    set_option("overwrite", True, path)
+    text = path.read_text(encoding="utf-8")
+    assert text.index("overwrite = true") < text.index("[site.")
+    assert load_config(path).overwrite is True
+
+
+def test_writes_refuse_a_broken_file(tmp_path):
+    path = write(tmp_path / "c.toml", "[site\n")
+    with pytest.raises(ConfigError, match="not valid TOML"):
+        set_option("bulk", True, path)
+
+
+def test_writes_refuse_a_directory(tmp_path):
+    with pytest.raises(ConfigError, match="cannot read"):
+        set_option("bulk", True, tmp_path)

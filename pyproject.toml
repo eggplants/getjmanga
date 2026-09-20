@@ -42,6 +42,7 @@ dependencies = [
   "pathvalidate>=3.2",
   "pillow>=10.4",
   "rich>=13.7",
+  "tomlkit>=0.13",
   "ua-generator>=2",
 ]
 urls.Documentation = "https://eggplants.github.io/getjmanga/"
@@ -88,6 +89,9 @@ lint.ignore = [
 lint.per-file-ignores."getjmanga/cli.py" = [
   "T201", # `print` found
 ]
+lint.per-file-ignores."getjmanga/config.py" = [
+  "FBT001", # Boolean positional argument (`set_option` takes the value `overwrite = true` is set to)
+]
 lint.per-file-ignores."getjmanga/downloader.py" = [
   "PLR0913", # Too many arguments (one keyword per command line flag)
 ]
@@ -115,6 +119,7 @@ lint.per-file-ignores."tests/**" = [
   "ANN",     # Missing type annotations (tests/fixtures)
   "ARG",     # Unused arguments (pytest fixtures, lambda stubs)
   "EM",      # Exception message literals (fakes raise inline)
+  "FBT003",  # Boolean positional value in a call (the value a config key is set to)
   "INP001",  # Implicit namespace package (no __init__ in tests)
   "PLR0913", # Too many arguments (a fake response takes one per field)
   "PLR2004", # Magic value used in comparison

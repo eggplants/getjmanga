@@ -6,7 +6,8 @@ from typing import ClassVar
 import pytest
 
 from getjmanga import __version__
-from getjmanga.cli import download, extractor_list, main, parse_args
+from getjmanga.cli import apply_config, download, extractor_list, main, parse_args
+from getjmanga.config import Config, Credentials, load_config
 from getjmanga.downloader import Downloader
 from getjmanga.errors import LoginError, NotAnEpisodePageError
 from getjmanga.extractor import Episode, Extractor, Page
@@ -15,15 +16,28 @@ from getjmanga.extractor import Episode, Extractor, Page
 def test_parse_args_defaults():
     parsed = parse_args(["https://mangabu.jp/episodes/1"])
     assert parsed.urls == ["https://mangabu.jp/episodes/1"]
-    assert parsed.savedir == "."
     assert parsed.extractor is None
-    assert (parsed.bulk, parsed.first, parsed.overwrite, parsed.metadata, parsed.quiet) == (
-        False,
-        False,
-        False,
-        False,
-        False,
-    )
+    # -b, -d and -o are left to the config file until `apply_config` settles them.
+    assert (parsed.bulk, parsed.savedir, parsed.overwrite) == (None, None, None)
+    assert (parsed.first, parsed.metadata, parsed.quiet) == (False, False, False)
+
+
+def test_apply_config_fills_in_what_the_command_line_left_out():
+    parsed = parse_args(["https://mangabu.jp/episodes/1"])
+    apply_config(parsed, Config(savedir=Path("/manga"), overwrite=True, bulk=True))
+    assert (parsed.savedir, parsed.overwrite, parsed.bulk) == (Path("/manga"), True, True)
+
+
+def test_apply_config_falls_back_to_the_built_in_defaults():
+    parsed = parse_args(["https://mangabu.jp/episodes/1"])
+    apply_config(parsed, Config())
+    assert (parsed.savedir, parsed.overwrite, parsed.bulk) == (".", False, False)
+
+
+def test_the_command_line_beats_the_config_defaults():
+    parsed = parse_args(["-d", "here", "--no-overwrite", "--no-bulk", "https://mangabu.jp/episodes/1"])
+    apply_config(parsed, Config(savedir=Path("/manga"), overwrite=True, bulk=True))
+    assert (parsed.savedir, parsed.overwrite, parsed.bulk) == ("here", False, False)
 
 
 def test_parse_args_takes_several_urls():
@@ -32,9 +46,16 @@ def test_parse_args_takes_several_urls():
     assert parsed.extractor == "comici"
 
 
+def test_no_arguments_print_the_help(capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        main([])
+    assert excinfo.value.code == 0
+    assert "usage: getjmanga" in capsys.readouterr().out
+
+
 def test_parse_args_wants_a_url_unless_listing(capsys):
     with pytest.raises(SystemExit) as excinfo:
-        parse_args([])
+        parse_args(["-q"])
     assert excinfo.value.code == 2
     assert "required: url" in capsys.readouterr().err
 
@@ -46,7 +67,9 @@ def test_help_prints_defaults_for_options_only(capsys):
     out = capsys.readouterr().out
     assert "(default: None)" not in out
     assert "--savedir DIR" in out
-    assert "(default: .)" in out
+    assert "--no-overwrite" in out
+    assert "--quiet" in out
+    assert "(default: False)" in out
 
 
 def test_version_flag_prints_the_version(capsys):
@@ -330,3 +353,157 @@ def test_a_broken_config_file_fails(recording, isolated_config, capsys):
     assert excinfo.value.code == 1
     assert "not valid TOML" in capsys.readouterr().err
     assert recording.instances == []
+
+
+def test_the_config_file_sets_the_flag_defaults(recording, isolated_config, tmp_path):
+    write_config(isolated_config, f'savedir = "{tmp_path / "out"}"\nbulk = true\n')
+    main(["https://mangabu.jp/episodes/0"])
+    assert len(recording.instances[0].episodes) == 3
+    assert (tmp_path / "out" / "mangabu.jp" / "S" / "ep1" / "0.jpg").exists()
+
+
+def test_the_config_file_sets_overwrite(recording, isolated_config, tmp_path):
+    write_config(isolated_config, "overwrite = true\n")
+    (tmp_path / "mangabu.jp" / "S" / "ep1").mkdir(parents=True)
+    main(["https://mangabu.jp/episodes/0"])
+    assert recording.instances[0].images == 1
+
+
+def test_no_bulk_turns_the_config_default_off(recording, isolated_config):
+    write_config(isolated_config, "bulk = true\n")
+    main(["--no-bulk", "https://mangabu.jp/episodes/0"])
+    assert recording.instances[0].episodes == ["https://mangabu.jp/episodes/0"]
+
+
+# --- jm config -----------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("word", ["config", "c"])
+def test_config_init_writes_the_template(word, isolated_config, capsys):
+    main([word, "init"])
+    assert isolated_config.exists()
+    assert f"created: {isolated_config}" in capsys.readouterr().out
+    config = load_config()
+    assert (config.savedir, config.overwrite, config.bulk, dict(config.sites)) == (Path(), False, False, {})
+
+
+def test_config_init_refuses_to_overwrite(isolated_config, capsys):
+    write_config(isolated_config, "bulk = true\n")
+    with pytest.raises(SystemExit) as excinfo:
+        main(["config", "init"])
+    assert excinfo.value.code == 1
+    assert "already exists" in capsys.readouterr().err
+    assert load_config().bulk is True
+
+
+@pytest.mark.parametrize("word", ["config", "c"])
+def test_config_alone_prints_the_help(word, capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        main([word])
+    assert excinfo.value.code == 0
+    assert "usage: getjmanga config" in capsys.readouterr().out
+
+
+def test_config_with_only_an_option_needs_a_subcommand(capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        main(["config", "-c", "x.toml"])
+    assert excinfo.value.code == 2
+    assert "required: command" in capsys.readouterr().err
+
+
+def test_config_site_asks_for_the_account(isolated_config, monkeypatch, capsys):
+    monkeypatch.setattr("builtins.input", lambda prompt: " me@example.com ")
+    monkeypatch.setattr("getjmanga.cli.getpass.getpass", lambda prompt: "pw")
+    main(["c", "site", "piccoma"])
+    assert load_config().sites == {"piccoma": Credentials("me@example.com", "pw")}
+    out, err = capsys.readouterr()
+    assert "saved: [site.piccoma]" in out
+    assert err == ""
+
+
+def test_config_site_leaves_an_empty_password_out(isolated_config, monkeypatch):
+    monkeypatch.setattr("builtins.input", lambda prompt: "me")
+    monkeypatch.setattr("getjmanga.cli.getpass.getpass", lambda prompt: "")
+    main(["c", "site", "shonenjumpplus.com"])
+    assert load_config().sites == {"shonenjumpplus.com": Credentials("me", None)}
+
+
+def test_config_site_replaces_the_section_and_keeps_the_rest(isolated_config, monkeypatch):
+    write_config(isolated_config, '# mine\nbulk = true\n\n[site.piccoma]\nusername = "old"\npassword = "old-pw"\n')
+    monkeypatch.setattr("builtins.input", lambda prompt: "new")
+    monkeypatch.setattr("getjmanga.cli.getpass.getpass", lambda prompt: "")
+    main(["c", "site", "piccoma"])
+    text = isolated_config.read_text(encoding="utf-8")
+    assert text.startswith("# mine\nbulk = true\n")
+    assert "old" not in text
+    assert load_config().sites == {"piccoma": Credentials("new", None)}
+
+
+@pytest.mark.parametrize("key", ["nowhere.example", "nope"])
+def test_config_site_rejects_an_unknown_key(isolated_config, monkeypatch, capsys, key):
+    monkeypatch.setattr("builtins.input", lambda prompt: "me")
+    with pytest.raises(SystemExit) as excinfo:
+        main(["c", "site", key])
+    assert excinfo.value.code == 1
+    assert f"no extractor reads [site.{key}]" in capsys.readouterr().err
+    assert not isolated_config.exists()
+
+
+def test_config_site_needs_a_username(isolated_config, monkeypatch, capsys):
+    monkeypatch.setattr("builtins.input", lambda prompt: "  ")
+    with pytest.raises(SystemExit) as excinfo:
+        main(["c", "site", "piccoma"])
+    assert excinfo.value.code == 1
+    assert "a username is needed" in capsys.readouterr().err
+    assert not isolated_config.exists()
+
+
+def test_config_site_stops_when_the_input_ends(isolated_config, monkeypatch, capsys):
+    def eof(prompt):
+        raise EOFError
+
+    monkeypatch.setattr("builtins.input", eof)
+    with pytest.raises(SystemExit) as excinfo:
+        main(["c", "site", "piccoma"])
+    assert excinfo.value.code == 1
+    assert "aborted" in capsys.readouterr().err
+
+
+def test_config_savedir_stores_an_absolute_path(isolated_config, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    main(["c", "savedir", "manga"])
+    assert load_config().savedir == tmp_path / "manga"
+
+
+def test_config_savedir_expands_the_home_directory(isolated_config):
+    main(["c", "savedir", "~/manga"])
+    assert load_config().savedir == Path.home() / "manga"
+
+
+@pytest.mark.parametrize(("name", "value", "expected"), [("overwrite", "true", True), ("bulk", "false", False)])
+def test_config_flags_take_true_or_false(isolated_config, name, value, expected, capsys):
+    main(["c", name, value])
+    assert getattr(load_config(), name) is expected
+    assert f"saved: {name}" in capsys.readouterr().out
+
+
+def test_config_flags_reject_anything_else(capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        main(["c", "bulk", "yes"])
+    assert excinfo.value.code == 2
+    assert "invalid choice" in capsys.readouterr().err
+
+
+def test_config_dash_c_edits_another_file(tmp_path, isolated_config):
+    path = tmp_path / "alt.toml"
+    main(["c", "-c", str(path), "bulk", "true"])
+    assert load_config(path).bulk is True
+    assert not isolated_config.exists()
+
+
+def test_config_refuses_a_broken_file(isolated_config, capsys):
+    write_config(isolated_config, "[site\n")
+    with pytest.raises(SystemExit) as excinfo:
+        main(["c", "bulk", "true"])
+    assert excinfo.value.code == 1
+    assert "not valid TOML" in capsys.readouterr().err
