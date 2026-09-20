@@ -32,7 +32,7 @@ from PIL import Image
 
 from getjmanga.cipher import aes_cbc_decrypt, xor_unmask
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.protobuf import integer, message, messages, raw, string
 
 if TYPE_CHECKING:
@@ -178,14 +178,16 @@ class LinkU(Extractor):
         return Image.open(BytesIO(data))
 
     @classmethod
-    def _next_url(cls, title_id: int, chapters: list[Chapter], chapter_id: int) -> str | None:
-        """The chapter after `chapter_id` in an oldest-first list, or None at the end."""
-        ids = [chapter.id for chapter in chapters]
-        try:
-            position = ids.index(chapter_id)
-        except ValueError:
-            return None
-        return cls.chapter_url(title_id, chapters[position + 1].id) if position + 1 < len(chapters) else None
+    def _neighbour_urls(cls, title_id: int, chapters: list[Chapter], chapter_id: int) -> tuple[str | None, str | None]:
+        """The chapters either side of `chapter_id` in an oldest-first list, None at either end."""
+        chapter = next((chapter for chapter in chapters if chapter.id == chapter_id), None)
+        if chapter is None:
+            return None, None
+        before, after = neighbours(chapters, chapter)
+        return (
+            cls.chapter_url(title_id, before.id) if before else None,
+            cls.chapter_url(title_id, after.id) if after else None,
+        )
 
     @classmethod
     def _locked(cls, url: str, title_id: int, series_title: str, chapters: list[Chapter], chapter_id: int) -> Episode:
@@ -195,7 +197,8 @@ class LinkU(Extractor):
             url=url,
             series_title=series_title or str(title_id),
             episode_title=title,
-            next_url=cls._next_url(title_id, chapters, chapter_id),
+            prev_url=cls._neighbour_urls(title_id, chapters, chapter_id)[0],
+            next_url=cls._neighbour_urls(title_id, chapters, chapter_id)[1],
             metadata={
                 "title_id": title_id,
                 "chapter_id": chapter_id,
@@ -343,6 +346,10 @@ class MangaOne(LinkU):
             series_title=string(title, 2) or str(title_id),
             episode_title=string(current, 2) or str(chapter_id),
             pages=tuple(self._pages(viewer, key, iv)),
+            # The viewer names the next chapter and lists only the newest few; the title lists them all.
+            prev_url=self._listed_neighbours(
+                f"{MANGAONE_URL}/manga/{title_id}", self.chapter_url(title_id, chapter_id)
+            )[0],
             next_url=self.chapter_url(title_id, integer(following, 1)) if integer(following, 1) else None,
             metadata={
                 "title_id": title_id,
@@ -359,10 +366,10 @@ class MangaOne(LinkU):
         chapters: list[Chapter] = []
         page = 1
         while True:
+            # `rq` sits in the URL so that the call can be told from the viewer's (also `/api/client`).
             res = self._get(
-                f"{MANGAONE_URL}/api/client",
+                f"{MANGAONE_URL}/api/client?rq=viewer/chapter_list",
                 params={
-                    "rq": "viewer/chapter_list",
                     "title_id": title_id,
                     "type": "chapter",
                     "sort_type": "asc",
@@ -517,11 +524,14 @@ class FlowerComics(LinkU):
         title_id = int(viewer.get("titleID") or 0)
         following = viewer.get("nextChapter")
         next_id = int(following.get("id") or 0) if isinstance(following, dict) else 0
+        # The viewer names the next chapter only; the page's chapter list has the one before.
+        _, chapters = _flower_title(res.text)
         return Episode(
             url=url,
             series_title=str(viewer.get("titleName") or title_id),
             episode_title=str(viewer.get("currentChapterName") or chapter_id),
             pages=tuple(self._pages(viewer)),
+            prev_url=self._neighbour_urls(title_id, chapters, chapter_id)[0],
             next_url=self.chapter_url(title_id, next_id) if next_id else None,
             metadata={
                 "title_id": title_id,
@@ -682,11 +692,16 @@ class GanganOnline(LinkU):
             raise NotAnEpisodePageError(msg)
         last_page = data.get("lastPage") if isinstance(data.get("lastPage"), dict) else {}
         next_id = int(last_page.get("nextChapterId") or 0)
+        # The page names the next chapter only; the title page lists the one before.
+        prev_url = self._listed_neighbours(
+            f"{GANGANONLINE_URL}/title/{title_id}", self.chapter_url(title_id, chapter_id)
+        )[0]
         return Episode(
             url=url,
             series_title=str(data.get("titleName") or title_id),
             episode_title=str(data.get("chapterName") or chapter_id),
             pages=tuple(self._pages(data)),
+            prev_url=prev_url,
             next_url=self.chapter_url(title_id, next_id) if next_id else None,
             metadata={
                 "title_id": title_id,
@@ -883,6 +898,7 @@ class MangaPark(LinkU):
             series_title=locked.series_title,
             episode_title=locked.episode_title,
             pages=tuple(self._pages(data)) if readable else (),
+            prev_url=locked.prev_url,
             next_url=locked.next_url,
             metadata={
                 **locked.metadata,
@@ -1103,7 +1119,8 @@ class MangaLab(LinkU):
             series_title=string(answer, 1) or series_title or str(title_id),
             episode_title=string(chapter, 2) or _lab_chapter_name(number, chapter_id),
             pages=tuple(Page(url=value.decode()) for value in messages(chapter, 4) if value),
-            next_url=self._next_url(title_id, chapters, chapter_id),
+            prev_url=self._neighbour_urls(title_id, chapters, chapter_id)[0],
+            next_url=self._neighbour_urls(title_id, chapters, chapter_id)[1],
             metadata={
                 "title_id": title_id,
                 "chapter_id": chapter_id,

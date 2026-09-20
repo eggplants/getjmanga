@@ -280,7 +280,10 @@ def test_locked_episode_has_no_pages_and_walks_the_work_listing_for_the_next(cli
     assert episode.url == LOCKED_URL
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == "【第9話】危険な情事"
-    assert episode.next_url == f"{HOST}/title/03251/episode/439330"
+    assert (episode.prev_url, episode.next_url) == (
+        f"{HOST}/title/03251/episode/439322",
+        f"{HOST}/title/03251/episode/439330",
+    )
     assert episode.metadata["viewer"] == UNPURCHASED
     assert session.calls[-1] == TITLE_API
     assert session.params_seen[-1] == {"title_id": "3251"}
@@ -296,7 +299,7 @@ def test_locked_last_episode_has_no_next_url(client, fake_response):
     )
     episode = magapoke.episode(f"{HOST}/title/03251/episode/439330")
     assert episode.pages == ()
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (LOCKED_URL, None)
 
 
 def test_locked_episode_the_work_does_not_list_has_no_next_url(client, fake_response):

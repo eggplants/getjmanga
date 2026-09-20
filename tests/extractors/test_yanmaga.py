@@ -414,7 +414,7 @@ def test_the_last_locked_episode_has_no_next(client):
     episode = yanmaga.episode(f"https://yanmaga.jp/comics/{TITLE}/{LAST_ID}")
     assert episode.pages == ()
     assert episode.episode_title == "第８９話 本気の男"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (LOCKED_URL, None)
 
 
 def test_a_locked_episode_the_listing_does_not_know_is_titled_off_the_page(client, fake_response):

@@ -80,6 +80,7 @@ class Viewer:
     series_title: str
     episode_title: str
     next_url: str | None
+    prev_url: str | None = None
     member_jwt: str = ""
     # `data-content-id`, which sites that serve several imprints off one domain
     # (rimacomiplus.jp) set. `contentsInfo` answers `bad contentId` without it;
@@ -272,6 +273,7 @@ class Comici(Extractor):
                 )
                 for page in raw
             ),
+            prev_url=viewer.prev_url,
             next_url=viewer.next_url,
             metadata={"viewer_id": viewer.viewer_id, "api_base": viewer.api_base, "pages": raw},
         )
@@ -371,8 +373,8 @@ class Comici(Extractor):
 
         series_title, episode_title = self._titles(soup, element, viewer_id)
 
+        prev_id = str(element.attrs.get("data-prev-episode-id", ""))
         next_id = str(element.attrs.get("data-next-episode-id", ""))
-        next_url = urljoin(url, next_id) if next_id else None
 
         return Viewer(
             url=url,
@@ -382,7 +384,8 @@ class Comici(Extractor):
             api_base=api_base,
             series_title=series_title,
             episode_title=episode_title,
-            next_url=next_url,
+            prev_url=urljoin(url, prev_id) if prev_id else None,
+            next_url=urljoin(url, next_id) if next_id else None,
         )
 
     def pages(self, viewer: Viewer, member_jwt: str | None = None) -> list[dict[str, Any]]:
@@ -513,6 +516,7 @@ class Comici(Extractor):
 
         series = episode.get("series") or {}
         summary = episode.get("summary") or {}
+        prev_id = str(episode.get("previousEpisodeId") or "")
         next_id = str(episode.get("nextEpisodeId") or "")
         viewer_id = self._viewer_block_id(episode)
         return Viewer(
@@ -521,6 +525,7 @@ class Comici(Extractor):
             api_base=api_base,
             series_title=str(series.get("name") or "").strip() or episode_id,
             episode_title=str(summary.get("title") or "").strip() or episode_id,
+            prev_url=urljoin(url, prev_id) if prev_id else None,
             next_url=urljoin(url, next_id) if next_id else None,
             content_id=str(episode.get("contentId") or "") if viewer_id else "",
             inline_pages=None if viewer_id else self._inline_pages(episode),

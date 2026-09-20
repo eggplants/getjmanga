@@ -292,7 +292,7 @@ def test_last_listed_episode_has_no_next(client, fake_response):
     episode = starts.episode(f"{ORIGIN}/comic/serial/n53/n33/1")
 
     assert not episode.readable
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (f"{ORIGIN}/comic/serial/n53/n25/1", None)
 
 
 def test_episode_the_series_does_not_list_is_not_an_episode(client):

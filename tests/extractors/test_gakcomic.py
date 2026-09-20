@@ -298,7 +298,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     ]
     assert episode.pages[0].extra == {"key": HEX_KEY}
     assert (episode.pages[0].width, episode.pages[0].height) == (1566, 1912)
-    assert episode.next_url == f"{WORK_URL}#episode-17833"
+    assert (episode.prev_url, episode.next_url) == (None, f"{WORK_URL}#episode-17833")
     assert episode.metadata["content_id"] == CID_1
     assert episode.metadata["episode_id"] == 17830
     assert episode.metadata["title"] == "うまくなる卓球　第１章"
@@ -335,7 +335,8 @@ def test_episode_reads_the_api_key_off_custom_js_or_falls_back(client, fake_resp
 
 def test_episode_stops_at_the_last_episode(client):
     gakcomic, _ = client()
-    assert gakcomic.episode(f"{WORK_URL}#episode-17832").next_url is None
+    episode = gakcomic.episode(f"{WORK_URL}#episode-17832")
+    assert (episode.prev_url, episode.next_url) == (f"{WORK_URL}#episode-17833", None)
 
 
 def test_a_refused_token_makes_a_locked_episode(client, fake_response):

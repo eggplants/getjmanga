@@ -357,7 +357,7 @@ def test_mt_last_episode_has_no_next_and_ignores_the_page_mark(client, mt_routes
     assert episode.url == f"{HOST}/kimono-lolita/manga/005.html"
     assert episode.episode_title == "第二話 ロリータちゃん"
     assert len(episode.pages) == 2
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (f"{HOST}/kimono-lolita/manga/001.html", None)
 
 
 def test_mt_announcement_in_the_chain_is_an_episode_of_its_own(client, mt_routes):
@@ -501,7 +501,7 @@ def test_old_update_falls_back_to_its_own_arrow_without_an_index(client, old_rou
     laza, _ = client(old_routes)
     episode = laza.episode(OLD_EPISODE_URL)
 
-    assert episode.next_url == f"{HOST}/comic001/p37.html"
+    assert (episode.prev_url, episode.next_url) == (f"{HOST}/comic001/p35.html", f"{HOST}/comic001/p37.html")
     assert episode.metadata["date"] == ""
 
 

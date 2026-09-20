@@ -241,6 +241,7 @@ def client(fake_session, fake_response):
             f"{BASE_URL}/book/detail?id=Z9999999": fake_response(text=NOT_FOUND_HTML, status_code=HTTPStatus.NOT_FOUND),
             f"{PERIODIC_LIST_URL}Z0001684": fake_response(payload=LISTING),
             f"{PERIODIC_LIST_URL}Z9999999": fake_response(payload={}, status_code=HTTPStatus.NOT_FOUND),
+            f"{PERIODIC_LIST_URL}S113701": fake_response(payload={}, status_code=HTTPStatus.NOT_FOUND),
             f"{INDIES_LIST_URL}20421": fake_response(payload=INDIES_LISTING),
             "/0hW4gfhTuu": fake_response(jpeg_bytes(tiled_image()), content_type="image/jpeg"),
             "/router/": fake_response(jpeg_bytes(Image.new("RGB", (8, 8), (1, 2, 3))), content_type="image/jpeg"),
@@ -348,11 +349,11 @@ def test_episode_reads_a_webtoon(client):
     assert episode.episode_title == "プロローグ. すべての始まり"
     assert len(episode.pages) == 2
     assert episode.pages[0].url.endswith("FFeZ7qqIlvhe4o8usLAUlGac.jpg")
-    assert episode.next_url == f"{BASE_URL}/book/viewer?id=Z0090128"
+    assert (episode.prev_url, episode.next_url) == (None, f"{BASE_URL}/book/viewer?id=Z0090128")
     assert episode.metadata["option"]["bookId"] == "Z0090127"
     assert json.dumps(episode.metadata)
-    # Only the viewer page was fetched.
-    assert session.calls == [EPISODE_URL]
+    # The viewer page names the next episode; the previous one comes off the work's listing.
+    assert session.calls == [EPISODE_URL, f"{PERIODIC_LIST_URL}Z0001684"]
 
 
 def test_episode_reads_a_print_comic_with_its_blocks(client):
@@ -361,7 +362,8 @@ def test_episode_reads_a_print_comic_with_its_blocks(client):
     assert episode.series_title == "フルーツバスケット"
     assert episode.episode_title == "第1話 第1話(1)"
     assert episode.pages[0].extra["blocks"] == ["3", "2", "1", "0"]
-    assert episode.next_url == f"{BASE_URL}/book/viewer?id=B00163114128"
+    # A print comic has no work listing, so nothing is known to come before it.
+    assert (episode.prev_url, episode.next_url) == (None, f"{BASE_URL}/book/viewer?id=B00163114128")
 
 
 def test_episode_reads_an_indies_work(client):
@@ -378,7 +380,7 @@ def test_episode_canonicalises_the_url(client):
     linemanga, session = client()
     episode = linemanga.episode("https://manga.line.me/book/viewer/?id=Z0090127&from=list")
     assert episode.url == EPISODE_URL
-    assert session.calls == [EPISODE_URL]
+    assert session.calls[0] == EPISODE_URL
 
 
 def test_locked_episode_has_no_pages_but_keeps_its_titles_and_the_next(client):
@@ -389,7 +391,10 @@ def test_locked_episode_has_no_pages_but_keeps_its_titles_and_the_next(client):
     assert not episode.readable
     assert episode.series_title == "俺だけレベルMAXなビギナー"
     assert episode.episode_title == "国立中央博物館（２）"
-    assert episode.next_url == f"{BASE_URL}/book/viewer?id=Z0090136"
+    assert (episode.prev_url, episode.next_url) == (
+        f"{BASE_URL}/book/viewer?id=Z0090128",
+        f"{BASE_URL}/book/viewer?id=Z0090136",
+    )
     assert episode.metadata["book"]["selling_price"] == 67
     # The viewer said 404, `/book/detail` named the work, and its listing was read with a Referer.
     assert session.calls == [LOCKED_URL, f"{BASE_URL}/book/detail?id=Z0090134", f"{PERIODIC_LIST_URL}Z0001684"]
@@ -401,7 +406,7 @@ def test_last_locked_episode_has_no_next(client):
     linemanga, _ = client()
     episode = linemanga.episode(f"{BASE_URL}/book/viewer?id=Z0090136")
     assert not episode.readable
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (LOCKED_URL, None)
 
 
 def test_unknown_episode_is_not_an_episode_page(client):

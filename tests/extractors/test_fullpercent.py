@@ -178,7 +178,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert episode.series_title == WORK_TITLE
     assert episode.episode_title == "第１話"
     assert [page.url for page in episode.pages] == [PAGE_1, PAGE_2, PAGE_3]
-    assert episode.next_url == NEXT_URL
+    assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert episode.metadata["author"] == "作者名"
     assert episode.metadata["index"] == 0
     assert episode.metadata["episode_count"] == 3
@@ -203,8 +203,12 @@ def test_episode_reads_the_work_page_once_per_work(client, fake_response):
     second = fullpercent.episode(first.next_url)
     third = fullpercent.episode(second.next_url)
 
-    assert (second.episode_title, second.next_url) == ("第２話", "https://fullpercent.net/comic/view/2/12000")
-    assert (third.episode_title, third.next_url) == ("第３話", None)
+    assert (second.episode_title, second.prev_url, second.next_url) == (
+        "第２話",
+        EPISODE_URL,
+        "https://fullpercent.net/comic/view/2/12000",
+    )
+    assert (third.episode_title, third.prev_url, third.next_url) == ("第３話", NEXT_URL, None)
     assert session.calls.count(WORK_URL) == 1
 
 

@@ -30,7 +30,7 @@ from bs4.element import Tag
 from httpx import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
@@ -239,7 +239,7 @@ class Michikusa(Extractor):
             series_title, episode_title = split_title(title, listing.title if listing else "")
         # The work page orders the episodes; the frame's own "next" button
         # only stands in when the page is unavailable or does not list this one.
-        next_url = _after(listing.urls, canonical) if listing else None
+        prev_url, next_url = neighbours(listing.urls, canonical) if listing else (None, None)
         if next_url is None and (listing is None or canonical not in listing.episodes):
             next_url = frame_next
         return Episode(
@@ -247,6 +247,7 @@ class Michikusa(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=tuple(Page(url=ptimg, extra={"spread": spread}) for ptimg, spread in pages),
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 "title": title,
@@ -326,11 +327,3 @@ class Michikusa(Extractor):
 def _in_next_button(anchor: Tag) -> bool:
     """Whether `anchor` sits in the frame's `next_story` button."""
     return anchor.find_parent(class_="next_story") is not None
-
-
-def _after(urls: tuple[str, ...], url: str) -> str | None:
-    """The URL that follows `url` in `urls`, or None when it is the last or not listed."""
-    if url not in urls:
-        return None
-    index = urls.index(url) + 1
-    return urls[index] if index < len(urls) else None

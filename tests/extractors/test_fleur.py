@@ -213,7 +213,7 @@ def test_episode_at_the_end_of_the_work_has_no_next_url(client, fake_response):
     episode = fleur.episode(f"{ORIGIN}/manga/cb264_02_02.html")
 
     assert episode.episode_title == "第2話後編"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (EPISODE_URL, None)
     assert episode.metadata["prev_url"] == EPISODE_URL
 
 

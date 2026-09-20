@@ -251,11 +251,15 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert [page.url for page in episode.pages] == PAGE_URLS
     assert [(page.width, page.height) for page in episode.pages] == [(844, 1200), (844, 1200)]
     assert [page.extra["page_number"] for page in episode.pages] == [1, 2]
-    assert episode.next_url == NEXT_URL
+    assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert episode.metadata == VIEWER["data"]
 
-    # One call to the viewer API with the ids as query parameters, from the site's origin.
-    assert session.calls == [f"{API_URL}/viewer?title_id=931&episode_id=63568"]
+    # The viewer API with the ids as query parameters, from the site's origin, then the
+    # listing for the previous episode, which the viewer never names.
+    assert session.calls == [
+        f"{API_URL}/viewer?title_id=931&episode_id=63568",
+        f"{API_URL}/title/931/episode?is_get_all=true",
+    ]
     assert session.params_seen[0] is None
     assert session.headers_seen[0]["Origin"] == BASE_URL
     assert session.headers_seen[0]["Accept"] == "application/json"
@@ -274,7 +278,7 @@ def test_locked_episode_has_no_pages_and_the_next_from_the_listing(client):
     assert not episode.readable
     assert episode.series_title == "シャドーハウス"
     assert episode.episode_title == "第63話 集められる生き人形"
-    assert episode.next_url == f"{BASE_URL}/viewer/931/63568"
+    assert (episode.prev_url, episode.next_url) == (NEXT_URL, f"{BASE_URL}/viewer/931/63568")
     assert episode.metadata["action_sheet"]["shortage_gold"] == 50
     assert session.calls == [
         f"{API_URL}/viewer?title_id=931&episode_id=80142",
@@ -286,7 +290,7 @@ def test_last_locked_episode_has_no_next(client):
     ynjn, _ = client()
     episode = ynjn.episode(LAST_URL)
     assert episode.pages == ()
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (EPISODE_URL, None)
     assert episode.series_title == "シャドーハウス"
 
 

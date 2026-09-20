@@ -36,7 +36,7 @@ from bs4.element import Tag
 from httpx import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
@@ -268,7 +268,8 @@ class Hifumi(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=tuple(Page(url=ptimg, extra={"spread": spread}) for ptimg, spread in pages),
-            next_url=_after(listing, canonical),
+            prev_url=_either_side(listing, canonical)[0],
+            next_url=_either_side(listing, canonical)[1],
             metadata={
                 "title": title,
                 "slug": slug,
@@ -364,12 +365,6 @@ def _titles(title: str, listing: Listing | None, canonical: str, *, slug: str, v
     return series or slug, episode
 
 
-def _after(listing: Listing | None, canonical: str) -> str | None:
-    """The listing's episode after `canonical`, or None when it is the last one (or unlisted)."""
-    if listing is None:
-        return None
-    urls = list(listing.episodes)
-    if canonical not in urls:
-        return None
-    index = urls.index(canonical) + 1
-    return urls[index] if index < len(urls) else None
+def _either_side(listing: Listing | None, canonical: str) -> tuple[str | None, str | None]:
+    """The listing's episodes before and after `canonical`, None at either end (or both when unlisted)."""
+    return neighbours(list(listing.episodes), canonical) if listing is not None else (None, None)

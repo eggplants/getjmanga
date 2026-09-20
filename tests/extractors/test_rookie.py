@@ -179,7 +179,10 @@ def test_is_series_means_a_work_page():
 
 
 def test_episode_reads_the_titles_the_pages_and_the_next_url(fake_session, fake_response):
-    session = fake_session({"/series/": fake_response(text=EPISODE_HTML)})
+    # The episode page, then -- for the previous episode, which only the series page lists -- that page.
+    session = fake_session(
+        {"/OmkvmYUadZs": fake_response(text=EPISODE_HTML), "/series/": fake_response(text=SERIES_HTML)}
+    )
     episode = Rookie(session).episode(EPISODE_URL)
 
     assert episode.series_title == "毎日4コマ2"
@@ -190,12 +193,12 @@ def test_episode_reads_the_titles_the_pages_and_the_next_url(fake_session, fake_
     ]
     assert (episode.pages[0].width, episode.pages[0].height) == (990, 2145)
     assert episode.pages[0].extra == {}
-    assert episode.next_url == NEXT_URL
+    assert (episode.prev_url, episode.next_url) == (f"{SERIES_URL}/OmkvmYUVcfQ", NEXT_URL)
     assert episode.metadata["episode_id"] == "4208947663164044699"
     assert episode.metadata["author"] == "ハルル"
     assert episode.metadata["published"] == "2026年05月20日"
     assert episode.metadata["page_structure"]["single"][0]["type"] == "main"
-    assert session.calls == [EPISODE_URL]
+    assert session.calls == [EPISODE_URL, SERIES_URL]
     assert session.headers_seen[-1]["User-Agent"]
 
 

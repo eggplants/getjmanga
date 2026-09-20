@@ -245,7 +245,7 @@ def test_latest_episode_has_no_next(client, fake_response):
     pachikuri, _ = client({EPISODE_URL: fake_response(text=LATEST_HTML)})
     episode = pachikuri.episode(EPISODE_URL)
 
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (PREV_SHORT_URL, None)
     assert episode.metadata["prev_url"] == PREV_SHORT_URL
 
 

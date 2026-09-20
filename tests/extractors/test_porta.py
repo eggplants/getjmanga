@@ -189,7 +189,7 @@ def test_last_episode_has_no_next(fake_session, fake_response):
         **{"/series/7981/": fake_response(text=html), "/p_data/ol_ningyo002ns/": fake_response(text=EPISODE_HTML)},
     )
     episode = Porta(session).episode("https://comic-porta.com/p_data/ol_ningyo002ns/")
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (EPISODE_URL, None)
 
 
 def test_episode_without_a_recommend_frame_still_reads(fake_session, fake_response):

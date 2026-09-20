@@ -346,7 +346,7 @@ def test_gai_index_is_read_once_per_work(client, gai_routes, fake_response):
     latest = ginkgo.episode("http://www.manga-gai.net/manga/zuttari/736/01.html")
 
     assert latest.episode_title == "第736話　初プリマ　の巻"
-    assert latest.next_url is None
+    assert (latest.prev_url, latest.next_url) == (GAI_EPISODE_URL, None)
     assert session.calls.count(GAI_INDEX_URL) == 1
 
 

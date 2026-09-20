@@ -114,7 +114,9 @@ def client(fake_session, fake_response):
             ),
             f"{API_URL}/comic/{TITLE}/chapter/{LOCKED}/general-info": fake_response(
                 payload=general_info(
-                    "第 4 話", following=item("01kwe89f6dhvx56wdvxxahwdp6", "第 5 話", 5, "bonus_point")
+                    "第 4 話",
+                    previous=item(SECOND, "第 2 話", 2),
+                    following=item("01kwe89f6dhvx56wdvxxahwdp6", "第 5 話", 5, "bonus_point"),
                 ),
                 content_type="application/json",
             ),
@@ -238,7 +240,7 @@ def test_episode_is_locked_when_the_viewer_wants_a_purchase(client):
     assert episode.pages == ()
     assert not episode.readable
     assert episode.episode_title == "第 4 話"
-    assert episode.next_url == episode_url(TITLE, "01kwe89f6dhvx56wdvxxahwdp6")
+    assert (episode.prev_url, episode.next_url) == (SECOND_URL, episode_url(TITLE, "01kwe89f6dhvx56wdvxxahwdp6"))
     assert episode.metadata["error"] == "not_purchased"
 
 

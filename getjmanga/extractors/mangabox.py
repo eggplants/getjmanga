@@ -13,7 +13,7 @@ from bs4.element import Tag
 from PIL import Image
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -202,9 +202,9 @@ class Mangabox(Extractor):
             raise NotAnEpisodePageError(msg)
 
         entry = entries[index] if index is not None else {}
-        next_url = None
-        if index is not None and index + 1 < len(entries):
-            next_url = episode_url(manga_id, entries[index + 1]["id"])
+        before, after = neighbours(entries, entry) if index is not None else (None, None)
+        prev_url = episode_url(manga_id, before["id"]) if before else None
+        next_url = episode_url(manga_id, after["id"]) if after else None
 
         described = images or entry
         manga = (images or {}).get("manga") or {}
@@ -218,6 +218,7 @@ class Mangabox(Extractor):
             series_title=series_title,
             episode_title=format_volume(described),
             pages=pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={"episode": entry, "images": images},
         )

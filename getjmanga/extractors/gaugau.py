@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor
+from getjmanga.extractor import Episode, Extractor, neighbours
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
@@ -142,7 +142,7 @@ class Gaugau(Extractor):
         series_title = _series_title(soup, work_id)
         episode_title = _episode_title(soup)
         viewer = soup.select_one(f"#{_VIEWER_ID}[data-ptbinb][data-ptbinb-cid]")
-        next_url = self._next_url(url, work_id, kind)
+        prev_url, next_url = self._neighbours(url, work_id, kind)
 
         if not isinstance(viewer, Tag):
             if not episode_title:
@@ -152,6 +152,7 @@ class Gaugau(Extractor):
                 url=url,
                 series_title=series_title,
                 episode_title=episode_title,
+                prev_url=prev_url,
                 next_url=next_url,
                 metadata={"work_id": work_id, "locked": True},
             )
@@ -175,6 +176,7 @@ class Gaugau(Extractor):
             series_title=series_title,
             episode_title=episode_title or content_id,
             pages=book.pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 "work_id": work_id,
@@ -229,14 +231,12 @@ class Gaugau(Extractor):
         self._listings[work_id, kind] = urls
         return urls
 
-    def _next_url(self, url: str, work_id: str, kind: str) -> str | None:
-        """The listing entry after `url`, or None when it is the last (or unlisted)."""
+    def _neighbours(self, url: str, work_id: str, kind: str) -> tuple[str | None, str | None]:
+        """The listing entries either side of `url`, None at either end (or both when unlisted)."""
         urls = self.listing(work_id, kind)
         key = url.rstrip("/")
-        for index, candidate in enumerate(urls):
-            if candidate.rstrip("/") == key:
-                return urls[index + 1] if index + 1 < len(urls) else None
-        return None
+        listed = next((candidate for candidate in urls if candidate.rstrip("/") == key), None)
+        return neighbours(urls, listed) if listed is not None else (None, None)
 
 
 def _series_title(soup: BeautifulSoup, work_id: str) -> str:

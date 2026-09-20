@@ -292,7 +292,7 @@ def test_the_newest_episode_has_no_next(client):
     episode = yomonga.episode(f"{SERIES_URL}?episode=7&cid=10794")
     assert episode.readable
     assert episode.metadata["publish_end"] == "2026/10/01に公開終了"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (f"{SERIES_URL}?episode=6&cid=10793", None)
 
 
 def test_an_episode_whose_free_run_is_over_is_locked_but_still_has_a_next(client):
@@ -304,7 +304,8 @@ def test_an_episode_whose_free_run_is_over_is_locked_but_still_has_a_next(client
     assert episode.url == f"{SERIES_URL}?episode=4&cid=10791"
     assert episode.series_title == "きらめきの大和くん☆"
     assert episode.episode_title == "Chapter.4"
-    assert episode.next_url == f"{SERIES_URL}?episode=6&cid=10793"
+    # Episodes 3 and 5 are not listed any more, so the neighbours are 2 and 6.
+    assert (episode.prev_url, episode.next_url) == (NEXT_URL, f"{SERIES_URL}?episode=6&cid=10793")
     assert episode.metadata == {"title_id": TITLE_ID, "episode_no": 4, "locked": True}
     # No viewer handshake for an episode the site did not show.
     assert session.calls == [f"{SERIES_URL}?episode=4&cid=10791"]

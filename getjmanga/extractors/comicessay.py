@@ -160,6 +160,7 @@ class ComicEssay(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=tuple(Page(url=src) for src in image_urls),
+            prev_url=_pager_link(detail, "_btn-pager-left", url),
             next_url=_pager_link(detail, "_btn-pager-right", url),
             metadata={
                 "series_id": series_id,

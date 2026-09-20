@@ -121,7 +121,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_chapter(client):
     ]
     assert episode.pages[0].extra == {"key": KEY, "iv": IV}
     assert episode.pages[0].width == 8
-    assert episode.next_url == f"{BASE_URL}/manga/viewer/79235"
+    assert (episode.prev_url, episode.next_url) == (None, f"{BASE_URL}/manga/viewer/79235")
     assert episode.metadata["manga_id"] == 4066
     assert [c["id"] for c in episode.metadata["chapters"]] == [79232, 79235, 79238]
     assert episode.metadata["chapters"][2]["points"] == 30
@@ -144,7 +144,8 @@ def test_episode_skips_extra_pages(client, fake_response):
 
 def test_episode_stops_at_the_last_chapter(client, fake_response):
     fuz, _ = client({"web_manga_viewer_2": fake_response(viewer_response(chapter_id=79238))})
-    assert fuz.episode(f"{BASE_URL}/manga/viewer/79238").next_url is None
+    episode = fuz.episode(f"{BASE_URL}/manga/viewer/79238")
+    assert (episode.prev_url, episode.next_url) == (f"{BASE_URL}/manga/viewer/79235", None)
 
 
 @pytest.mark.parametrize("status", [HTTPStatus.UNAUTHORIZED, HTTPStatus.PAYMENT_REQUIRED])
@@ -174,7 +175,7 @@ def test_a_locked_chapter_is_named_from_a_list_seen_earlier(client, fake_respons
     assert episode.pages == ()
     assert episode.series_title == "氷舞のアウフギーサー"
     assert episode.episode_title == "1話（2）"
-    assert episode.next_url == f"{BASE_URL}/manga/viewer/79238"
+    assert (episode.prev_url, episode.next_url) == (f"{BASE_URL}/manga/viewer/79232", f"{BASE_URL}/manga/viewer/79238")
 
 
 def test_episode_refuses_a_manga_page(client):

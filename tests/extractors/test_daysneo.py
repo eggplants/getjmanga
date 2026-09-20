@@ -142,23 +142,28 @@ def test_is_series(url, series):
 
 
 def test_episode_reads_a_horizontal_viewer(fake_session, fake_response):
-    session = fake_session({"/episode/": fake_response(text=horizontal_episode())})
+    session = fake_session(
+        {"/episode/": fake_response(text=horizontal_episode()), "/works/": fake_response(text=work_page())}
+    )
     episode = DaysNeo(session).episode(EPISODE_URL)
 
     assert episode.series_title == "のじゃロリお稲荷様、バイクを拾う。"
     assert episode.episode_title == "第1話"
     assert [page.url for page in episode.pages] == [PAGE_1, PAGE_2, PAGE_3]
-    assert episode.next_url == NEXT_URL
+    assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert episode.metadata["direction"] == "horizontal"
     assert episode.metadata["author"] == "きわみらい"
     assert episode.metadata["published"] == "2026年08月20日 公開"
     assert episode.metadata["page_count"] == 3
-    assert session.calls == [EPISODE_URL]
-    assert session.params_seen == [None]
+    # The page, then the work page for the episode before this one, which the page does not link.
+    assert session.calls == [EPISODE_URL, WORK_URL]
+    assert session.params_seen == [None, None]
 
 
 def test_episode_reads_a_vertical_viewer(fake_session, fake_response):
-    session = fake_session({"/episode/": fake_response(text=VERTICAL_EPISODE)})
+    session = fake_session(
+        {"/episode/": fake_response(text=VERTICAL_EPISODE), "/works/": fake_response(text=work_page())}
+    )
     episode = DaysNeo(session).episode(EPISODE_URL)
 
     assert [page.url for page in episode.pages] == [PAGE_1, PAGE_2, PAGE_3]
@@ -168,24 +173,37 @@ def test_episode_reads_a_vertical_viewer(fake_session, fake_response):
 
 
 def test_episode_has_no_next_on_the_last_one(fake_session, fake_response):
-    session = fake_session({"/episode/": fake_response(text=horizontal_episode(next_link=""))})
+    session = fake_session(
+        {"/episode/": fake_response(text=horizontal_episode(next_link="")), "/works/": fake_response(text=work_page())}
+    )
     episode = DaysNeo(session).episode(EPISODE_URL)
 
     assert episode.readable
     assert episode.next_url is None
 
 
+def test_episode_takes_the_previous_one_off_the_work_page(fake_session, fake_response):
+    session = fake_session(
+        {"/episode/": fake_response(text=horizontal_episode()), "/works/": fake_response(text=work_page())}
+    )
+    episode = DaysNeo(session).episode(NEXT_URL)
+    assert episode.prev_url == EPISODE_URL
+    assert session.calls == [NEXT_URL, WORK_URL]
+
+
 def test_episode_folds_a_mobile_url_into_the_desktop_one(fake_session, fake_response):
-    session = fake_session({"/episode/": fake_response(text=horizontal_episode())})
+    session = fake_session(
+        {"/episode/": fake_response(text=horizontal_episode()), "/works/": fake_response(text=work_page())}
+    )
     episode = DaysNeo(session).episode(f"https://daysneo.com/sp/works/{WORK_ID}/episode/{EPISODE_ID}.html")
 
     assert episode.url == EPISODE_URL
-    assert session.calls == [EPISODE_URL]
+    assert session.calls[0] == EPISODE_URL
 
 
 def test_episode_falls_back_to_the_header_title(fake_session, fake_response):
     html = horizontal_episode().replace('<p class="b f140">第1話</p>', "").replace('<h1 class="f160">', "<h2>")
-    session = fake_session({"/episode/": fake_response(text=html)})
+    session = fake_session({"/episode/": fake_response(text=html), "/works/": fake_response(text=work_page())})
     episode = DaysNeo(session).episode(EPISODE_URL)
 
     assert episode.series_title == "のじゃロリお稲荷様、バイクを拾う。"
@@ -260,6 +278,7 @@ def test_download_writes_the_pages(tmp_path, fake_session, fake_response):
         {
             "/episode/": fake_response(text=horizontal_episode()),
             "img.daysneo.com/work/": fake_response(buffer.getvalue(), content_type="image/png"),
+            "/works/": fake_response(text=work_page()),
         }
     )
     result = Downloader(DaysNeo(session), tmp_path).download(EPISODE_URL)

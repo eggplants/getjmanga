@@ -24,7 +24,7 @@ from bs4.element import Tag
 from httpx import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
@@ -171,16 +171,17 @@ class Kirapo(Extractor):
         title = soup.title.get_text() if soup.title else ""
         listing = self._listing_of(url)
         series_title, episode_title = split_title(title, listing.title if listing else "")
-        next_url = None
+        prev_url = next_url = None
         if listing:
             episode_title = listing.episodes.get(_reader_key(url)) or episode_title
-            next_url = _after(listing.episodes, url)
+            prev_url, next_url = neighbours(list(listing.episodes), _reader_key(url))
         match = _EPISODE_PATH.match(urlparse(url).path)
         return Episode(
             url=url,
             series_title=series_title,
             episode_title=episode_title,
             pages=tuple(Page(url=ptimg, extra={"spread": spread}) for ptimg, spread in pages),
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 "title": title.strip(),
@@ -260,13 +261,3 @@ def _episode_entries(soup: BeautifulSoup, url: str) -> dict[str, str]:
 def _reader_key(url: str) -> str:
     """`url` as the listing spells it: without a trailing slash."""
     return url.rstrip("/")
-
-
-def _after(episodes: dict[str, str], url: str) -> str | None:
-    """The reader URL that follows `url` in `episodes`, trailing slash or not, or None."""
-    urls = list(episodes)
-    wanted = _reader_key(url)
-    if wanted not in episodes:
-        return None
-    index = urls.index(wanted) + 1
-    return urls[index] if index < len(urls) else None

@@ -235,7 +235,7 @@ def test_finished_episode_is_locked_and_named_by_a_cached_listing(client):
     assert walked.pages == ()
     assert walked.series_title == "異世界のんびり農家"
     assert walked.episode_title == "告知イラスト⑭"
-    assert walked.next_url is None
+    assert (walked.prev_url, walked.next_url) == (LOCKED_URL, None)
 
 
 def test_last_episode_has_no_next(client, fake_response):

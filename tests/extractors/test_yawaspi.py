@@ -246,7 +246,7 @@ def test_last_episode_has_no_next(client, fake_response):
     episode = yawaspi.episode(LAST_URL)
 
     assert episode.episode_title == "第24話"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == ("https://yawaspi.com/hajisef/comic/sp003_001.html", None)
     assert episode.metadata["prev_url"] == "https://yawaspi.com/hajisef/comic/sp003_001.html"
 
 

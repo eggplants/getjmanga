@@ -11,18 +11,39 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 from urllib.parse import urlparse
 
 from PIL import Image
 
-from .errors import LoginError, UnsupportedUrlError
+from .errors import GetjmangaError, LoginError, UnsupportedUrlError
 from .session import HEADERS, make_session
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
 
     from httpx import Client, Response
+
+T = TypeVar("T")
+
+
+def neighbours(items: Sequence[T], current: T) -> tuple[T | None, T | None]:
+    """The items before and after `current` in `items`, for `prev_url` and `next_url`.
+
+    Args:
+        items: A listing in reading order.
+        current: The item to look either side of.
+
+    Returns:
+        `(before, after)`; None at either end, or both when `current` is not listed.
+    """
+    try:
+        position = items.index(current)
+    except ValueError:
+        return None, None
+    before = items[position - 1] if position else None
+    after = items[position + 1] if position + 1 < len(items) else None
+    return before, after
 
 
 @dataclass(frozen=True)
@@ -50,6 +71,8 @@ class Episode:
     pages: tuple[Page, ...] = ()
     #: The episode that follows this one, for a bulk run to walk to.
     next_url: str | None = None
+    #: The episode before this one, for `-B` to walk back to.
+    prev_url: str | None = None
     #: The episode as the site described it, written out by `--metadata`.
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
@@ -86,6 +109,8 @@ class Extractor(ABC):
             session: A session to reuse. A retrying one is made when omitted.
         """
         self._session = session if session is not None else make_session()
+        #: `series_urls()` answers, by series URL, for `_listed_neighbours()`.
+        self._series_listings: dict[str, list[str]] = {}
 
     @property
     def session(self) -> Client:
@@ -134,6 +159,27 @@ class Extractor(ABC):
         """
         msg = f"{self.NAME} cannot list a series from {url}."
         raise UnsupportedUrlError(msg)
+
+    def _listed_neighbours(self, series_url: str, episode_url: str) -> tuple[str | None, str | None]:
+        """The episodes `series_urls(series_url)` lists either side of `episode_url`.
+
+        For a site whose episode page names the next episode but not the
+        previous one: the listing is fetched once per series and kept.
+
+        Args:
+            series_url: The series `episode_url` belongs to.
+            episode_url: The episode, spelled the way `series_urls()` spells it.
+
+        Returns:
+            `(before, after)`; None at either end, or both when the series
+            cannot be listed or does not list the episode.
+        """
+        if series_url not in self._series_listings:
+            try:
+                self._series_listings[series_url] = self.series_urls(series_url)
+            except GetjmangaError:
+                self._series_listings[series_url] = []
+        return neighbours(self._series_listings[series_url], episode_url)
 
     @abstractmethod
     def episode(self, url: str) -> Episode:

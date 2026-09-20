@@ -250,7 +250,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == "#001（前編）"
-    assert episode.next_url == NEXT_URL
+    assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert [page.url for page in episode.pages] == [
         f"{CONTENT_URL}item/xhtml/p-cover.xhtml/0.jpeg",
         f"{CONTENT_URL}item/xhtml/p-000.xhtml/0.jpeg",
@@ -262,11 +262,13 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.metadata["license"] == LICENSE
     assert episode.metadata["configuration"] == PACK_JSON["configuration"]
 
-    # The viewer's API calls carry the cid as a parameter and the viewer as Referer.
-    assert session.calls[:5] == [
+    # The viewer's API calls carry the cid as a parameter and the viewer as Referer. The work page
+    # is read twice: for the titles, and walked for the episode before this one.
+    assert session.calls[:6] == [
         f"{LICENSE_URL}?cid={CID}",
         f"{LAST_PAGE_URL}?cid={CID}",
         f"{BASE_URL}/colophon?book_content_id=1",
+        f"{BASE_URL}/book/1?sort_type=priority_asc&page=1",
         f"{BASE_URL}/book/1?sort_type=priority_asc&page=1",
         f"{CONTENT_URL}configuration_pack.json",
     ]

@@ -43,7 +43,7 @@ from __future__ import annotations
 import re
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
-from urllib.parse import unquote, urlencode, urlparse
+from urllib.parse import unquote, urlencode, urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
@@ -210,6 +210,9 @@ class FireCross(Extractor):
         series_title, episode_title = _titles(colophon, episode_id)
         next_id = _next_id(colophon)
         home = colophon.select_one("a.colophonBtn__home[href]")
+        series_url = urljoin(origin, str(home["href"])) if isinstance(home, Tag) else None
+        # The colophon points forward only; the work page lists the episode before.
+        prev_url = self._listed_neighbours(series_url, episode_url)[0] if series_url else None
         metadata: dict[str, Any] = {
             "ebook_id": int(episode_id),
             "series_url": str(home["href"]) if isinstance(home, Tag) else None,
@@ -222,6 +225,7 @@ class FireCross(Extractor):
                 url=episode_url,
                 series_title=series_title,
                 episode_title=episode_title,
+                prev_url=prev_url,
                 next_url=_reader_url(origin, next_id) if next_id is not None else None,
                 metadata={**metadata, "locked": True},
             )
@@ -253,6 +257,7 @@ class FireCross(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=tuple(pages),
+            prev_url=prev_url,
             next_url=_reader_url(origin, next_id) if next_id is not None else None,
             metadata=metadata,
         )

@@ -39,7 +39,7 @@ from bs4.element import Tag
 from httpx import Timeout, TransportError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -111,11 +111,9 @@ class MtListing:
         ]
         return max(candidates)[1] if candidates else None
 
-    def next_of(self, start: str) -> str | None:
-        """The first page of the episode after the one starting at `start`, or None."""
-        if start not in self.starts or self.starts.index(start) + 1 >= len(self.starts):
-            return None
-        return self.starts[self.starts.index(start) + 1]
+    def neighbours_of(self, start: str) -> tuple[str | None, str | None]:
+        """The first pages of the episodes either side of the one starting at `start`, None at either end."""
+        return neighbours(self.starts, start)
 
 
 @dataclass(frozen=True)
@@ -124,6 +122,8 @@ class OldEpisodePage:
 
     #: The strip frames, https, in reading order.
     frames: tuple[str, ...]
+    #: The previous update the arrow points at, or None.
+    prev_url: str | None
     #: The work's title, from the `<title>`.
     series_title: str
     #: The next update the page itself links, https, or None.
@@ -151,11 +151,9 @@ class OldListing:
     #: Update page -> the date the index shows for it.
     dates: Mapping[str, str] = field(default_factory=dict)
 
-    def next_of(self, url: str) -> str | None:
-        """The update after `url`, or None."""
-        if url not in self.urls or self.urls.index(url) + 1 >= len(self.urls):
-            return None
-        return self.urls[self.urls.index(url) + 1]
+    def neighbours_of(self, url: str) -> tuple[str | None, str | None]:
+        """The updates either side of `url`, None at either end."""
+        return neighbours(self.urls, url)
 
 
 def read_body(res: Response) -> bytes:
@@ -274,9 +272,11 @@ def parse_old_episode(html: str | bytes, url: str) -> OldEpisodePage:
         if urlparse(src).hostname == urlparse(url).hostname:
             frames[src] = None
     title_match = _OLD_SERIES_TITLE.search(_text(soup.title))
+    prev_anchor = soup.select_one(".arrow .prev a[href]")
     next_anchor = soup.select_one(".arrow .next a[href]")
     return OldEpisodePage(
         frames=tuple(frames),
+        prev_url=_https(urljoin(url, str(prev_anchor["href"]))) if isinstance(prev_anchor, Tag) else None,
         series_title=title_match["title"].strip() if title_match else _text(soup.title).split("|", 1)[0].strip(),
         next_url=_https(urljoin(url, str(next_anchor["href"]))) if isinstance(next_anchor, Tag) else None,
     )
@@ -470,7 +470,8 @@ class Laza(Extractor):
             series_title=first.series_title or _work_of(url),
             episode_title=first.episode_title or first.title,
             pages=tuple(Page(url=src) for page in pages for src in page.images),
-            next_url=listing.next_of(start) or stop_url,
+            prev_url=listing.neighbours_of(start)[0],
+            next_url=listing.neighbours_of(start)[1] or stop_url,
             metadata={
                 "site": "laza",
                 "work": _work_of(url),
@@ -539,7 +540,8 @@ class Laza(Extractor):
             series_title=page.series_title or _work_of(url),
             episode_title=strips[0].caption or f"p{number}",
             pages=tuple(Page(url=src) for strip in strips for src in strip.images),
-            next_url=listing.next_of(url) or page.next_url,
+            prev_url=listing.neighbours_of(url)[0] or page.prev_url,
+            next_url=listing.neighbours_of(url)[1] or page.next_url,
             metadata={
                 "site": "laza",
                 "work": _work_of(url),

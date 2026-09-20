@@ -256,7 +256,10 @@ class Cycomi(Extractor):
                 )
             )
 
-        following = pages_data.get("next")
+        preceding, following = pages_data.get("prev"), pages_data.get("next")
+        prev_url = None
+        if isinstance(preceding, dict) and preceding.get("chapterId") is not None:
+            prev_url = episode_url(preceding["chapterId"])
         next_url = None
         if isinstance(following, dict) and following.get("chapterId") is not None:
             next_url = episode_url(following["chapterId"])
@@ -266,6 +269,7 @@ class Cycomi(Extractor):
             series_title=str(chapter.get("titleName") or title_id or ""),
             episode_title=episode_title(chapter),
             pages=tuple(pages),
+            prev_url=prev_url,
             next_url=next_url,
             metadata={"chapter": chapter, "pages": pages_data},
         )

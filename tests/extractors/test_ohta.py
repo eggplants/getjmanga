@@ -340,7 +340,7 @@ def test_last_episode_has_no_next(client, fake_response):
     )
     episode = ohta.episode(NEXT_URL)
     assert episode.episode_title == "第9話　50歳のもらい泣き"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (EPISODE_URL, None)
 
 
 def test_episode_the_work_page_does_not_list_splits_the_content_title(client, fake_response):

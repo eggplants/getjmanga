@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urlparse
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -297,13 +297,13 @@ class LineManga(Extractor):
             msg = f"no viewer on {canonical}."
             raise NotAnEpisodePageError(msg)
 
-        next_book = option.get("next_book") or {}
-        next_id = next_book.get("id")
+        next_id = (option.get("next_book") or {}).get("id")
         return Episode(
             url=canonical,
             series_title=str(option.get("productName") or option.get("productId") or ""),
             episode_title=str(option.get("title") or book_id),
             pages=parse_pages(res.text),
+            prev_url=self._listed_before(flavour, str(option.get("productId") or ""), book_id, canonical),
             next_url=episode_url(str(next_id), indies=flavour == "indies") if next_id else None,
             metadata={"option": option},
         )
@@ -346,16 +346,31 @@ class LineManga(Extractor):
             msg = f"no episode {book_id} in the series {product_id} on {BASE_URL}."
             raise NotAnEpisodePageError(msg)
         entry = entries[index]
-        next_url = None
-        if index + 1 < len(entries):
-            next_url = episode_url(str(entries[index + 1]["id"]), indies=flavour == "indies")
+        before, after = neighbours(entries, entry)
         return Episode(
             url=url,
             series_title=str(entry.get("product_name") or self._names.get((flavour, product_id)) or product_id),
             episode_title=str(entry.get("name") or book_id),
-            next_url=next_url,
+            prev_url=episode_url(str(before["id"]), indies=flavour == "indies") if before else None,
+            next_url=episode_url(str(after["id"]), indies=flavour == "indies") if after else None,
             metadata={"book": entry},
         )
+
+    def _listed_before(self, flavour: str, product_id: str, book_id: str, referer: str) -> str | None:
+        """The episode the work lists before `book_id`: the viewer only names the next one.
+
+        None at the start of the work, and for a work the API has no list of
+        (a print comic, say).
+        """
+        if not product_id:
+            return None
+        try:
+            entries = self._listing(flavour, product_id, referer)
+        except NotAnEpisodePageError:
+            return None
+        entry = next((entry for entry in entries if str(entry.get("id")) == book_id), None)
+        before = neighbours(entries, entry)[0] if entry is not None else None
+        return episode_url(str(before["id"]), indies=flavour == "indies") if before else None
 
     def _listing(self, flavour: str, product_id: str, referer: str) -> list[dict[str, Any]]:
         """The episodes of a work in reading order, fetched once per work.

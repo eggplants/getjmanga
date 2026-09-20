@@ -232,7 +232,7 @@ def test_episode_takes_the_episode_name_from_the_work_page(fake_session, fake_re
     episode = Kirapo(session).episode(f"{SPECIAL_URL}/")
 
     assert (episode.series_title, episode.episode_title) == (SERIES_TITLE, "第11巻発売直前スペシャル")
-    assert episode.next_url == NEWEST_URL
+    assert (episode.prev_url, episode.next_url) == (EPISODE_URL, NEWEST_URL)
 
 
 def test_last_episode_has_no_next(fake_session, fake_response):
@@ -240,7 +240,7 @@ def test_last_episode_has_no_next(fake_session, fake_response):
     episode = Kirapo(session).episode(NEWEST_URL)
 
     assert episode.episode_title == "第45話"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (SPECIAL_URL, None)
 
 
 def test_episode_survives_a_broken_work_page(fake_session, fake_response):

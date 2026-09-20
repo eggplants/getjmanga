@@ -205,6 +205,7 @@ class GigaViewer(Extractor):
             series_title=series_title.strip(),
             episode_title=episode_title.strip(),
             pages=pages,
+            prev_url=product.get("prevReadableProductUri"),
             next_url=product.get("nextReadableProductUri"),
             metadata=episode_json,
         )

@@ -267,6 +267,7 @@ class Yawaspi(Extractor):
             series_title=document.series_title,
             episode_title=document.episode_title or document.series_title,
             pages=tuple(Page(url=src) for src in document.images),
+            prev_url=document.prev_url,
             next_url=document.next_url,
             metadata={
                 "title": document.title,

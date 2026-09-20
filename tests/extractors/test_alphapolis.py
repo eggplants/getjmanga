@@ -376,7 +376,7 @@ def test_episode_reads_the_titles_and_the_pages(client):
     assert episode.pages[0].extra == {"puzzle": TABLE.hex()}
     assert episode.pages[1].extra == {"puzzle": ""}
     assert (episode.pages[0].width, episode.pages[0].height) == (16, 9)
-    assert episode.next_url == NEXT_URL
+    assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert episode.metadata["episode"]["episodeNo"] == 12255
     json.dumps(episode.metadata)
 
@@ -420,7 +420,7 @@ def test_episode_is_the_last_of_its_work(client, fake_response):
         {NEXT_URL: fake_response(text=viewer_html({**OFFICIAL_CONFIG, "episode": {"episodeNo": 12480}}))}
     )
     episode = alphapolis.episode(NEXT_URL)
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (EPISODE_URL, None)
 
 
 def test_a_forbidden_episode_is_locked_and_still_names_the_next(client, fake_response):

@@ -237,7 +237,8 @@ def test_episode_keeps_the_sample_flag_and_normalises_the_url(client):
 
 def test_episode_stops_at_the_last_episode(client, fake_response):
     beltoon, _ = client({"/viewer/": fake_response(text=viewer_html({"result": viewer_result(episodeAlias="3")}))})
-    assert beltoon.episode(f"{BASE_URL}/viewer/12s1/3").next_url is None
+    episode = beltoon.episode(f"{BASE_URL}/viewer/12s1/3")
+    assert (episode.prev_url, episode.next_url) == (LOCKED_URL, None)
 
 
 def test_episode_skips_rows_without_an_image(client, fake_response):
@@ -293,7 +294,7 @@ def test_a_locked_episode_has_no_pages_but_a_next_url(client, fake_response):
     assert episode.pages == ()
     assert episode.series_title == "片思い〜報われない恋をした〜"
     assert episode.episode_title == "2話"
-    assert episode.next_url == f"{BASE_URL}/viewer/12s1/3"
+    assert (episode.prev_url, episode.next_url) == (EPISODE_URL, f"{BASE_URL}/viewer/12s1/3")
     assert episode.metadata["error"] == error
     json.dumps(episode.metadata)
 

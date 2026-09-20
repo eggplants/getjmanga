@@ -178,6 +178,8 @@ class Sukupara(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=tuple(Page(url=src) for src in image_urls),
+            # The first page points back at the story before, the last page on to the one after.
+            prev_url=first.prev_story,
             next_url=page.next_story,
             metadata={
                 "manga_id": manga_id,

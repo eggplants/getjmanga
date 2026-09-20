@@ -41,7 +41,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.viewers.kmanga import descramble, service_hash
 
 if TYPE_CHECKING:
@@ -206,11 +206,12 @@ class MagaPoke(Extractor):
         metadata: dict[str, Any] = {"title_id": title_id, "episode_id": episode_id, "episode": detail}
         if status != HTTPStatus.OK or viewer.get("status") != "success":
             # Wants a ticket, points, a subscription, or is not released yet.
-            next_id = self._next_listed(title_id, episode_id)
+            prev_id, next_id = self._listed_ids(title_id, episode_id)
             return Episode(
                 url=episode_url,
                 series_title=series_title,
                 episode_title=episode_title,
+                prev_url=_episode_url(title_id, prev_id) if prev_id is not None else None,
                 next_url=_episode_url(title_id, next_id) if next_id is not None else None,
                 metadata={**metadata, "viewer": viewer},
             )
@@ -218,7 +219,9 @@ class MagaPoke(Extractor):
         raw_seed = viewer.get("scramble_seed")
         seed = scramble_seed(title_id, episode_id, str(raw_seed)) if raw_seed is not None else None
         extra = {"seed": seed} if seed is not None and _SEED_MIN <= seed <= _SEED_MAX else {}
-        following = viewer.get("next_episode")
+        preceding, following = viewer.get("previous_episode"), viewer.get("next_episode")
+        prev_id = preceding.get("episode_id") if isinstance(preceding, dict) else None
+        prev_title = preceding.get("title_id") if isinstance(preceding, dict) else None
         next_id = following.get("episode_id") if isinstance(following, dict) else None
         next_title = following.get("title_id") if isinstance(following, dict) else None
         return Episode(
@@ -226,6 +229,7 @@ class MagaPoke(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=tuple(Page(url=str(src), extra=extra) for src in viewer.get("page_list") or []),
+            prev_url=_episode_url(int(prev_title or title_id), int(prev_id)) if prev_id is not None else None,
             next_url=_episode_url(int(next_title or title_id), int(next_id)) if next_id is not None else None,
             metadata={**metadata, "viewer": viewer},
         )
@@ -252,14 +256,10 @@ class MagaPoke(Extractor):
         title = data.get("web_title")
         return title if isinstance(title, dict) else None
 
-    def _next_listed(self, title_id: int, episode_id: int) -> int | None:
-        """The id the work lists after `episode_id`, or None at the end or when unlisted."""
+    def _listed_ids(self, title_id: int, episode_id: int) -> tuple[int | None, int | None]:
+        """The ids the work lists either side of `episode_id`, None at either end (or both when unlisted)."""
         title = self._title(title_id)
-        ids = [int(value) for value in (title or {}).get("episode_id_list") or []]
-        if episode_id not in ids:
-            return None
-        index = ids.index(episode_id) + 1
-        return ids[index] if index < len(ids) else None
+        return neighbours([int(value) for value in (title or {}).get("episode_id_list") or []], episode_id)
 
     def _api(self, path: str, params: Mapping[str, str | int]) -> tuple[int, dict[str, Any]]:
         """GET one API path, signed the viewer's way.

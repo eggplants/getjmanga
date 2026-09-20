@@ -194,7 +194,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert [page.url for page in episode.pages] == [MANUSCRIPTS[1]["drmImageUrl"], MANUSCRIPTS[0]["drmImageUrl"]]
     assert episode.pages[0].extra == {"drm_mode": "xor", "drm_hash": "62e07285b272877b"}
     assert (episode.pages[0].width, episode.pages[0].height) == (1114, 1600)
-    assert episode.next_url == SECOND_URL
+    assert (episode.prev_url, episode.next_url) == (None, SECOND_URL)
     assert episode.metadata["episode"]["code"] == "KC_0019810000100011_E"
     assert episode.metadata["viewer"] == VIEWER
     assert episode.metadata["work"]["title"] == "月華国奇医伝"
@@ -222,7 +222,7 @@ def test_locked_episode_has_no_pages_but_keeps_its_titles(client):
     assert not episode.readable
     assert episode.series_title == "月華国奇医伝"
     assert episode.episode_title == "第三話"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (SECOND_URL, None)
     assert episode.metadata["viewer"] == LOCKED_VIEWER
 
 
@@ -230,7 +230,7 @@ def test_last_readable_episode_names_the_locked_one_next(client):
     comicwalker, _ = client()
     episode = comicwalker.episode(SECOND_URL)
     assert episode.episode_title == "第二話"
-    assert episode.next_url == LOCKED_URL
+    assert (episode.prev_url, episode.next_url) == (EPISODE_URL, LOCKED_URL)
 
 
 def test_viewer_answering_404_means_locked(client, fake_response):

@@ -6,8 +6,8 @@ import pytest
 from httpx import HTTPStatusError
 from PIL import Image
 
-from getjmanga.errors import LoginError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 
 class Plain(Extractor):
@@ -68,7 +68,7 @@ def test_image_sends_the_episode_as_referer_and_decodes(fake_session, fake_respo
 def test_get_raises_on_a_failing_status(fake_session, fake_response):
     session = fake_session({"example.com": fake_response(status_code=403)})
     with pytest.raises(HTTPStatusError):
-        Plain(session)._get("https://example.com/")  # noqa: SLF001
+        Plain(session)._get("https://example.com/")
 
 
 def test_a_default_extractor_brings_its_own_session():
@@ -86,7 +86,59 @@ def test_cookie_picks_the_one_for_the_host(fake_session):
     plain.session.cookies.set("XSRF-TOKEN", "b", domain=".other.example")
     plain.session.cookies.set("other", "c", domain="example.com")
 
-    assert plain._cookie("XSRF-TOKEN", "example.com") == "a"  # noqa: SLF001
-    assert plain._cookie("XSRF-TOKEN", "www.other.example") == "b"  # noqa: SLF001
-    assert plain._cookie("XSRF-TOKEN", "nowhere.example") is None  # noqa: SLF001
-    assert plain._cookie("missing", "example.com") is None  # noqa: SLF001
+    assert plain._cookie("XSRF-TOKEN", "example.com") == "a"
+    assert plain._cookie("XSRF-TOKEN", "www.other.example") == "b"
+    assert plain._cookie("XSRF-TOKEN", "nowhere.example") is None
+    assert plain._cookie("missing", "example.com") is None
+
+
+def test_neighbours_looks_either_side_of_an_item():
+    assert neighbours(["a", "b", "c"], "b") == ("a", "c")
+    assert neighbours(["a", "b", "c"], "a") == (None, "b")
+    assert neighbours(["a", "b", "c"], "c") == ("b", None)
+    assert neighbours(["a"], "a") == (None, None)
+    assert neighbours(["a", "b"], "x") == (None, None)
+
+
+class Listing(Extractor):
+    """Lists three episodes, counting how often it was asked."""
+
+    NAME = "listing"
+    HOSTS = ("example.com",)
+
+    def __init__(self):
+        super().__init__()
+        self.listed = 0
+
+    def series_urls(self, url):
+        self.listed += 1
+        if url.endswith("/gone"):
+            raise NotAnEpisodePageError("gone")
+        return [f"https://example.com/ep/{n}" for n in (1, 2, 3)]
+
+    def episode(self, url):
+        raise NotImplementedError
+
+    def image(self, page, episode):
+        raise NotImplementedError
+
+
+def test_listed_neighbours_reads_the_series_once():
+    extractor = Listing()
+    assert extractor._listed_neighbours("https://example.com/s", "https://example.com/ep/2") == (
+        "https://example.com/ep/1",
+        "https://example.com/ep/3",
+    )
+    assert extractor._listed_neighbours("https://example.com/s", "https://example.com/ep/1") == (
+        None,
+        "https://example.com/ep/2",
+    )
+    assert extractor._listed_neighbours("https://example.com/s", "https://example.com/ep/9") == (None, None)
+    assert extractor.listed == 1
+
+
+def test_listed_neighbours_shrugs_at_a_series_it_cannot_list():
+    extractor = Listing()
+    assert extractor._listed_neighbours("https://example.com/gone", "https://example.com/ep/2") == (None, None)
+    assert extractor._listed_neighbours("https://example.com/gone", "https://example.com/ep/2") == (None, None)
+    assert extractor.listed == 1

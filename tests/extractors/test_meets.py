@@ -242,7 +242,7 @@ def test_viewer_without_pages_means_locked_and_the_last_has_no_next(client):
     episode = meets.episode(LAST_URL)
 
     assert episode.pages == ()
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (LOCKED_URL, None)
 
 
 def test_unknown_episode_is_not_an_episode_page(client):

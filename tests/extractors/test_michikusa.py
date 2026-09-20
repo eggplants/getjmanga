@@ -231,7 +231,7 @@ def test_last_episode_has_no_next(fake_session, fake_response):
     episode = Michikusa(session).episode(LAST_URL)
 
     assert episode.episode_title == "その３"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (NEXT_URL, None)
 
 
 def test_unlisted_episode_falls_back_to_the_reader_title_and_the_frame_button(fake_session, fake_response):

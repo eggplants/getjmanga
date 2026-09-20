@@ -8,7 +8,7 @@ from PIL import Image
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractors.carula import Carula, is_locked, next_key, split_title
+from getjmanga.extractors.carula import Carula, is_locked, neighbour_keys, split_title
 
 EPISODE_URL = "https://note.com/carula/n/nb016b73d0f1d"
 NEXT_URL = "https://note.com/carula/n/n596c41e8118a"
@@ -83,7 +83,7 @@ def test_next_key_ignores_links_to_other_creators():
         '<a href="https://note.com/carula/n/nb016b73d0f1d">1</a>'
         '<a href="https://example.com/carula/n/n596c41e8118a">2</a></p>'
     )
-    assert next_key(body, "nb016b73d0f1d") is None
+    assert neighbour_keys(body, "nb016b73d0f1d") == (None, None)
 
 
 @pytest.mark.parametrize(
@@ -145,7 +145,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, a
     assert episode.series_title == "留学ろっく!!"
     assert episode.episode_title == "Lesson 1　パパはダイヤモンドチューバー‼"
     assert [page.url for page in episode.pages] == [PAGE_1, PAGE_2]
-    assert episode.next_url == NEXT_URL
+    assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert episode.metadata["key"] == "nb016b73d0f1d"
     assert session.calls == ["https://note.com/api/v3/notes/nb016b73d0f1d"]
     assert session.headers_seen[-1]["Accept"].startswith("application/json")
@@ -186,7 +186,8 @@ def test_paid_episode_is_locked_but_still_names_the_next_one(fake_session, api):
 
 def test_last_episode_has_no_next(fake_session, api):
     session = fake_session({"/api/v3/notes/na3813b19fd66": api({"data": note(key="na3813b19fd66")})})
-    assert Carula(session).episode("https://note.com/carula/n/na3813b19fd66").next_url is None
+    episode = Carula(session).episode("https://note.com/carula/n/na3813b19fd66")
+    assert (episode.prev_url, episode.next_url) == (NEXT_URL, None)
 
 
 def test_article_without_pages_is_not_an_episode(fake_session, api):
@@ -298,7 +299,7 @@ def test_site_download(tmp_path, host):
 def test_site_paid_episode_is_locked():
     episode = Carula().episode(NEXT_URL)
     assert not episode.readable
-    assert episode.next_url == "https://note.com/carula/n/n00b25b011cb5"
+    assert (episode.prev_url, episode.next_url) == (EPISODE_URL, "https://note.com/carula/n/n00b25b011cb5")
 
 
 @pytest.mark.network

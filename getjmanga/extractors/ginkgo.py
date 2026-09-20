@@ -30,7 +30,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -90,12 +90,10 @@ class GaiListing:
     #: Episode directory name -> the title the index gives it.
     titles: dict[str, str]
 
-    def next_of(self, episode: str) -> str | None:
-        """The first page of the episode that follows `episode`, or None."""
-        names = list(self.urls)
-        if episode not in names or names.index(episode) + 1 >= len(names):
-            return None
-        return self.urls[names[names.index(episode) + 1]]
+    def neighbours_of(self, episode: str) -> tuple[str | None, str | None]:
+        """The first pages of the episodes either side of `episode`, None at either end."""
+        before, after = neighbours(list(self.urls), episode)
+        return self.urls[before] if before else None, self.urls[after] if after else None
 
 
 def parse_iwate_work(html: str | bytes, url: str) -> IwateWork:
@@ -377,7 +375,8 @@ class Ginkgo(Extractor):
             series_title=first.series_title or match["work"],
             episode_title=listing.titles.get(match["episode"]) or match["episode"],
             pages=tuple(Page(url=page.image) for page in pages if page.image),
-            next_url=listing.next_of(match["episode"]),
+            prev_url=listing.neighbours_of(match["episode"])[0],
+            next_url=listing.neighbours_of(match["episode"])[1],
             metadata={
                 "site": "manga-gai",
                 "work": match["work"],

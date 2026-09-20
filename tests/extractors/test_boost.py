@@ -210,7 +210,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == "第1話"
-    assert episode.next_url == f"{BASE_URL}/product/01700002"
+    assert (episode.prev_url, episode.next_url) == (None, f"{BASE_URL}/product/01700002")
     assert [page.url for page in episode.pages] == [
         f"{CONTENT_URL}OEBPS/text/p-0001.xhtml/0.jpeg",
         f"{CONTENT_URL}OEBPS/text/p-0002.xhtml/0.jpeg",
@@ -256,7 +256,7 @@ def test_last_episode_has_no_next(client):
     episode = boost.episode(f"{BASE_URL}/product/01700010")
     assert episode.readable
     assert episode.episode_title == "第10話"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (f"{BASE_URL}/product/01700009", None)
 
 
 def test_unknown_episode_is_not_an_episode_page(client):

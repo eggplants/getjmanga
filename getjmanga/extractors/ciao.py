@@ -42,7 +42,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlparse
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.viewers.kmanga import GRID, SEED_MAX, SEED_MIN, UNIT, tile_order
 from getjmanga.viewers.kmanga import descramble as descramble_v2
 
@@ -256,7 +256,7 @@ class Ciao(Extractor):
             raise NotAnEpisodePageError(msg)
         title_id = int(entry.get("title_id") or match["title"])
         title = self._title(title_id) or {}
-        next_id = _following(episode_id, [int(i) for i in title.get("episode_id_list") or []])
+        prev_id, next_id = neighbours([int(i) for i in title.get("episode_id_list") or []], episode_id)
 
         viewer: dict[str, Any] | None = None
         pages: tuple[Page, ...] = ()
@@ -265,7 +265,9 @@ class Ciao(Extractor):
             seed = viewer.get("scramble_seed")
             extra = {"seed": seed, "version": int(viewer.get("scramble_ver") or 2)} if isinstance(seed, int) else {}
             pages = tuple(Page(url=str(src), extra=extra) for src in viewer.get("page_list") or [])
-            following = viewer.get("next_episode")
+            preceding, following = viewer.get("previous_episode"), viewer.get("next_episode")
+            if prev_id is None and isinstance(preceding, dict) and preceding.get("episode_id") is not None:
+                prev_id = int(preceding["episode_id"])
             if next_id is None and isinstance(following, dict) and following.get("episode_id") is not None:
                 next_id = int(following["episode_id"])
 
@@ -276,6 +278,7 @@ class Ciao(Extractor):
             series_title=str(title.get("title_name") or shared_name or title_id),
             episode_title=str(entry.get("episode_name") or episode_id),
             pages=pages,
+            prev_url=episode_url(title_id, prev_id) if prev_id is not None else None,
             next_url=episode_url(title_id, next_id) if next_id is not None else None,
             metadata={"episode": entry, "title": title, "viewer": viewer},
         )
@@ -350,14 +353,6 @@ class Ciao(Extractor):
 
     def _api_headers(self, params: Mapping[str, str]) -> dict[str, str]:
         return {**self.HEADERS, _HASH_HEADER: service_hash(params), _CRAWLER_HEADER: "false"}
-
-
-def _following(episode_id: int, ids: list[int]) -> int | None:
-    """The episode after `episode_id` in a work's listing, or None at its end or when it is not listed."""
-    if episode_id not in ids:
-        return None
-    index = ids.index(episode_id) + 1
-    return ids[index] if index < len(ids) else None
 
 
 def _json_or_none(res: Response) -> Any:  # noqa: ANN401 (whatever JSON the site sent)

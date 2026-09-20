@@ -178,6 +178,8 @@ class Nora(Extractor):
 
         viewer = self._viewer(work_url, episode_id)
         metadata["viewer"] = viewer
+        preceding = viewer.get("previous_episode") or {}
+        prev_id = preceding.get("episode_id") if isinstance(preceding, dict) else None
         following = viewer.get("next_episode") or {}
         next_id = following.get("episode_id") if isinstance(following, dict) else None
         seed = viewer.get("scramble_seed")
@@ -187,6 +189,7 @@ class Nora(Extractor):
             series_title=series_title,
             episode_title=episode_title or str(viewer.get("episode_name") or episode_id),
             pages=tuple(Page(url=str(src), extra=extra) for src in viewer.get("page_list") or []),
+            prev_url=_episode_url(work_url, int(prev_id)) if prev_id is not None else None,
             next_url=_episode_url(work_url, int(next_id)) if next_id is not None else None,
             metadata=metadata,
         )

@@ -34,7 +34,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
@@ -227,7 +227,7 @@ class Bloom(Extractor):
         info_url = urljoin(reader_url, str(viewer["data-ptbinb"]))
         work_url = _work_link(reader, reader_url)
 
-        series_title, episode_title, next_url = self._titles_and_next(work_url, canonical, page_title)
+        series_title, episode_title, (prev_url, next_url) = self._titles_and_neighbours(work_url, canonical, page_title)
         metadata: dict[str, Any] = {
             "site": match["site"],
             "episode_id": match["id"],
@@ -247,6 +247,7 @@ class Bloom(Extractor):
                 url=canonical,
                 series_title=series_title,
                 episode_title=episode_title,
+                prev_url=prev_url,
                 next_url=next_url,
                 metadata={**metadata, "locked": True},
             )
@@ -258,6 +259,7 @@ class Bloom(Extractor):
             series_title=series_title,
             episode_title=str(episode_title or content.item.get("Title") or match["id"]),
             pages=book.pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 **metadata,
@@ -292,18 +294,16 @@ class Bloom(Extractor):
             self._works[key] = parse_listing(res.content, key)
         return self._works[key]
 
-    def _titles_and_next(self, work_url: str | None, canonical: str, page_title: str) -> tuple[str, str, str | None]:
-        """The series and episode titles, and the episode after this one, off the work page when there is one."""
+    def _titles_and_neighbours(
+        self, work_url: str | None, canonical: str, page_title: str
+    ) -> tuple[str, str, tuple[str | None, str | None]]:
+        """The series and episode titles, and the episodes either side, off the work page when there is one."""
         if work_url is None:
             series, episode = split_title(page_title)
-            return series, episode, None
+            return series, episode, (None, None)
         series, urls = self._work(work_url)
         _, episode = split_title(page_title, series)
-        next_url = None
-        if canonical in urls:
-            index = urls.index(canonical) + 1
-            next_url = urls[index] if index < len(urls) else None
-        return series, episode, next_url
+        return series, episode, neighbours(urls, canonical)
 
 
 def _work_link(reader: BeautifulSoup, reader_url: str) -> str | None:

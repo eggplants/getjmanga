@@ -406,10 +406,13 @@ class Saizensen(Extractor):
         url = str(res.url or url)
         if kind is _TWI4_EPISODE:
             document = parse_twi4_page(res.content, url)
-            next_url = self._twi4_next(url, document.listed, self._twi4_flags(urljoin(url, ".")))
+            flags = self._twi4_flags(urljoin(url, "."))
+            prev_url = self._twi4_neighbour(url, document.listed, flags, step=-1)
+            next_url = self._twi4_neighbour(url, document.listed, flags, step=1)
         else:
             document = parse_reader_page(res.content, url)
-            next_url = self._reader_next(url, kind)
+            prev_url = self._reader_neighbour(url, kind, step=-1)
+            next_url = self._reader_neighbour(url, kind, step=1)
         return Episode(
             url=url,
             series_title=document.series_title,
@@ -418,6 +421,7 @@ class Saizensen(Extractor):
                 Page(url=strips[0], extra={"strips": list(strips)} if len(strips) > 1 else {})
                 for strips in document.pages
             ),
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 "kind": document.kind,
@@ -482,13 +486,13 @@ class Saizensen(Extractor):
         return self._flags[work_url]
 
     @staticmethod
-    def _twi4_next(url: str, listed: Iterable[int], flags: Sequence[bool] | None) -> str | None:
-        """The next open strip after the current one.
+    def _twi4_neighbour(url: str, listed: Iterable[int], flags: Sequence[bool] | None, *, step: int) -> str | None:
+        """The nearest open strip after (`step` 1) or before (`step` -1) the current one.
 
         `index.js` is the source when it is there: it is current and says
         which strips are open, so the closed ones in between are skipped and a
         bulk run does not fetch a thousand pages to skip them. Without it, the
-        next strip `nav#backnumbers` lists is named, closed or not -- that
+        nearest strip `nav#backnumbers` lists is named, closed or not -- that
         list is baked into the static page and can be behind.
         """
         match = _TWI4_EPISODE.match(urlparse(url).path)
@@ -496,15 +500,17 @@ class Saizensen(Extractor):
             return None
         current = int(match["number"])
         if flags is not None:
-            following = [number for number in range(current + 1, len(flags) + 1) if flags[number - 1]]
+            candidates = [number for number in range(1, len(flags) + 1) if flags[number - 1]]
         else:
-            following = [number for number in listed if number > current]
-        if not following:
+            candidates = list(listed)
+        beyond = [number for number in candidates if (number - current) * step > 0]
+        if not beyond:
             return None
-        return urljoin(url, f"{min(following):04d}.html")
+        nearest = min(beyond) if step > 0 else max(beyond)
+        return urljoin(url, f"{nearest:04d}.html")
 
-    def _reader_next(self, url: str, kind: re.Pattern[str]) -> str | None:
-        """The next volume the work's `meta.json` still lists, if any."""
+    def _reader_neighbour(self, url: str, kind: re.Pattern[str], *, step: int) -> str | None:
+        """The nearest volume after (`step` 1) or before (`step` -1) that the work's `meta.json` still lists."""
         match = kind.match(urlparse(url).path)
         if match is None:
             return None
@@ -517,8 +523,9 @@ class Saizensen(Extractor):
             volume_path = "/works/comics/" + match["work"] + "/{number:02d}/01.html"
         index = self._index(work_url)
         current = int(match["number"])
-        for number in range(current + 1, len(index) + 1):
-            if index[number - 1] == "1":
+        numbers = range(current + 1, len(index) + 1) if step > 0 else range(current - 1, 0, -1)
+        for number in numbers:
+            if number <= len(index) and index[number - 1] == "1":
                 return urljoin(work_url, volume_path.format(number=number))
         return None
 

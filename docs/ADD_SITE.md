@@ -23,7 +23,7 @@ Then answer these questions. Every one of them maps onto a method of
 | Which viewer is it? Look for `gigaviewer` and `script#episode-json` (GigaViewer), `comici.jp` and `#comici-viewer` (Comici+), or `_pdata_` (Piccoma) in the HTML. | Case A if any of these match. |
 | What does an episode URL look like? A series URL? | `HOSTS`, `URL_FORMS`, `suitable()`, `is_series()` |
 | Where does the page list come from -- JSON embedded in the HTML, or an API call the viewer makes? What request headers does it need (`Referer`, `Authorization`, `X-Requested-With`, ...)? | `episode()` |
-| How is "the next episode" named? | `Episode.next_url` |
+| How are "the next episode" and "the previous episode" named? A `prev`/`next` field or link, or the episode's place in the work's listing -- `neighbours()` in `getjmanga/extractor.py` looks either side of a listing, and `Extractor._listed_neighbours()` does so off `series_urls()` when the page names only the next one. | `Episode.next_url`, `Episode.prev_url` |
 | How does a series page or feed list its episodes, and in which order? | `series_urls()` |
 | Are the page images scrambled? Save one from the network tab and look at it. If so, where does the viewer get the permutation or the seed? Read the viewer's JavaScript. | `image()`, `Page.extra` |
 | Do the images need a `Referer` or a cookie to be served? Try `curl` without one. | `image()` |
@@ -159,6 +159,7 @@ class Example(Extractor):
             series_title=series,
             episode_title=title,
             pages=tuple(Page(url=src, extra={"seed": seed}) for src in image_urls),  # () when locked
+            prev_url=prev_url,          # None at the start of the series
             next_url=next_url,          # None at the end of the series
             metadata=raw_json,          # whatever the site said; written by --metadata
         )
@@ -249,7 +250,7 @@ def test_episode_reads_the_titles_and_the_pages(fake_session, fake_response):
 
     assert episode.series_title == "..."
     assert [page.url for page in episode.pages] == ["...", "..."]
-    assert episode.next_url == "https://comic.example.com/episode/2"
+    assert (episode.prev_url, episode.next_url) == (None, "https://comic.example.com/episode/2")
     # What was sent is recorded too:
     assert session.headers_seen[-1]["Referer"] == "https://comic.example.com/episode/1"
     assert session.params_seen[-1] is None

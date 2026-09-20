@@ -219,7 +219,8 @@ def test_episode_reads_the_titles_and_the_pages(client):
 
 def test_episode_stops_at_the_last_episode(client):
     piccoma, _ = client()
-    assert piccoma.episode(f"{BASE_URL}/web/viewer/8195/1185887").next_url is None
+    episode = piccoma.episode(f"{BASE_URL}/web/viewer/8195/1185887")
+    assert (episode.prev_url, episode.next_url) == (f"{BASE_URL}/web/viewer/8195/1185884", None)
 
 
 def test_episode_rejects_a_page_without_a_viewer(fake_session, fake_response):

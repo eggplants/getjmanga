@@ -75,8 +75,10 @@ def image_entry(sort, path, parameter=PARAMETER):
     return {"sort": sort, "url": encrypt_url(f"{CDN}/{path}"), "parameter": parameter, "width": 800, "height": 2000}
 
 
-def chapter_response(chapter=None, *, images=None, epub=None, next_chapter=None, content=CONTENT):
+def chapter_response(chapter=None, *, images=None, epub=None, prev_chapter=None, next_chapter=None, content=CONTENT):
     chapter = dict(chapter or chapter_entry(1, "第 1 話"))
+    if prev_chapter is not None:
+        chapter["previousChapter"] = prev_chapter
     if next_chapter is not None:
         chapter["nextChapter"] = next_chapter
     if images is not None:
@@ -93,7 +95,11 @@ READABLE = chapter_response(
     ],
     next_chapter={"id": 2, "name": "第 2 話", "free": True},
 )
-LOCKED = chapter_response(chapter_entry(4, "第 4 話", free=False), next_chapter={"id": 5, "name": "第 5 話"})
+LOCKED = chapter_response(
+    chapter_entry(4, "第 4 話", free=False),
+    prev_chapter={"id": 3, "name": "第 3 話"},
+    next_chapter={"id": 5, "name": "第 5 話"},
+)
 NOT_FOUND = {"result": {"code": 404, "message": "対象のエピソードが見つかりませんでした。"}, "data": {}}
 DISCONTINUED = {"result": {"code": 303, "message": "販売停止されたコンテンツです。"}, "data": {}}
 
@@ -243,7 +249,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_chapter(client):
         f"{CDN}/1_x.jpg/dims/crop/x2000+0+2000/optimize?{PARAMETER}",
     ]
     assert (episode.pages[0].width, episode.pages[0].height) == (800, 2000)
-    assert episode.next_url == f"{BASE_URL}/comic/13956/chapter/2/product"
+    assert (episode.prev_url, episode.next_url) == (None, f"{BASE_URL}/comic/13956/chapter/2/product")
     assert episode.metadata["content"]["id"] == 13956
     assert episode.metadata["chapter"]["id"] == 1
 
@@ -271,7 +277,10 @@ def test_a_locked_chapter_has_no_pages_but_still_a_next_chapter(client):
     assert episode.pages == ()
     assert episode.series_title == "最悪な鬱小説を書き直してみせます"
     assert episode.episode_title == "第 4 話"
-    assert episode.next_url == f"{BASE_URL}/comic/13956/chapter/5/product"
+    assert (episode.prev_url, episode.next_url) == (
+        f"{BASE_URL}/comic/13956/chapter/3/product",
+        f"{BASE_URL}/comic/13956/chapter/5/product",
+    )
     # A 200 without `images` is the whole answer; the work page is not consulted.
     assert session.calls == [f"{API_URL}/comic/13956/chapter/4/product"]
 
@@ -284,7 +293,7 @@ def test_a_chapter_the_api_refuses_is_named_from_the_work_page(client, fake_resp
     assert episode.pages == ()
     assert episode.episode_title == "第 4 話"
     # The work lists 4 before 3; `sort` settles the order.
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (f"{BASE_URL}/comic/13956/chapter/3/product", None)
     assert episode.metadata["reason"] == "ログインが必要です。"
     assert session.calls == [f"{API_URL}/comic/13956/chapter/4/product", f"{API_URL}/comic/13956"]
 

@@ -260,7 +260,7 @@ def test_locked_episode_has_no_pages_but_keeps_its_titles(client, fake_response)
     assert not episode.readable
     assert episode.series_title == "BAD ASS BUDDIES"
     assert episode.episode_title == "第４８話"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (f"{BASE_URL}/viewer/chapter/24397", None)
     assert episode.metadata["pages"]["prev"] == {"chapterId": 24397}
 
 

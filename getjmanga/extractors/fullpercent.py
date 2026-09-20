@@ -32,7 +32,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -305,9 +305,9 @@ class FullPercent(Extractor):
         series_title, episode_title = split_heading(viewer.heading, work.title if work is not None else "")
         index = work.index_of(episode_id) if work is not None else None
         listed = work.episodes[index] if work is not None and index is not None else None
-        next_url = None
-        if work is not None and index is not None and index + 1 < len(work.episodes):
-            next_url = episode_url(work_id, work.episodes[index + 1].id)
+        before, after = neighbours(work.episodes, listed) if work is not None and listed is not None else (None, None)
+        prev_url = episode_url(work_id, before.id) if before is not None else None
+        next_url = episode_url(work_id, after.id) if after is not None else None
         metadata: dict[str, Any] = {
             "work_id": work_id,
             "episode_id": episode_id,
@@ -324,6 +324,7 @@ class FullPercent(Extractor):
             series_title=series_title or (work.title if work is not None else work_id),
             episode_title=(listed.title if listed is not None else "") or episode_title or episode_id,
             pages=tuple(Page(url=src) for src in viewer.images),
+            prev_url=prev_url,
             next_url=next_url,
             metadata=metadata,
         )

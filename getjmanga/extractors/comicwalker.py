@@ -12,7 +12,7 @@ from PIL import Image
 
 from getjmanga.cipher import xor_unmask
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from httpx import Client, Response
@@ -190,15 +190,16 @@ class ComicWalker(Extractor):
             )
             for m in manuscripts
         )
-        next_url = None
-        if index + 1 < len(entries) and entries[index + 1].get("code"):
-            next_url = episode_url(work_code, str(entries[index + 1]["code"]))
+        before, after = neighbours(entries, entry)
+        prev_url = episode_url(work_code, str(before["code"])) if before and before.get("code") else None
+        next_url = episode_url(work_code, str(after["code"])) if after and after.get("code") else None
 
         return Episode(
             url=episode_url(work_code, episode_code),
             series_title=str((work.get("work") or {}).get("title") or work_code),
             episode_title=episode_title(entry),
             pages=pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={"work": work.get("work"), "episode": entry, "viewer": viewer},
         )

@@ -215,7 +215,7 @@ class Goraku(Extractor):
             raise UnsupportedUrlError(msg)
         props = self._props(url)
         canonical = f"{BASE_URL}/episode/{props['titleId']}/{props['episodeId']}"
-        next_href = props.get("nextEpisodeUrl")
+        prev_href, next_href = props.get("prevEpisodeUrl"), props.get("nextEpisodeUrl")
         metadata = props.get("metadata")
         base, access_key = props.get("base"), props.get("accessKey")
         key, iv = props.get("keyBytes"), props.get("ivBytes")
@@ -237,6 +237,7 @@ class Goraku(Extractor):
             series_title=str(props.get("seriesTitle") or ""),
             episode_title=str(props.get("title") or ""),
             pages=tuple(pages),
+            prev_url=urljoin(BASE_URL, str(prev_href)) if prev_href else None,
             next_url=urljoin(BASE_URL, str(next_href)) if next_href else None,
             metadata=props,
         )

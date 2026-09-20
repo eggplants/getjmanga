@@ -300,6 +300,7 @@ class MangaNo(Extractor):
             series_title=str(work.get("title") or ""),
             episode_title=str(node.get("title") or (f"第{number}話" if number else episode_id)),
             pages=pages,
+            prev_url=episode_url(str(previous_episode["id"])) if previous_episode.get("id") else None,
             next_url=episode_url(str(next_episode["id"])) if next_episode.get("id") else None,
             metadata={
                 "id": episode_id,

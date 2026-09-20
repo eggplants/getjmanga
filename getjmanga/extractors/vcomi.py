@@ -304,6 +304,8 @@ class Vcomi(Extractor):
                 )
             )
 
+        preceding = _dict(data.get("prevEpisode"))
+        prev_url = episode_url(preceding["id"]) if preceding.get("id") is not None else None
         following = _dict(data.get("nextEpisode"))
         next_url = episode_url(following["id"]) if following.get("id") is not None else None
 
@@ -312,6 +314,7 @@ class Vcomi(Extractor):
             series_title=str(series.get("title") or ""),
             episode_title=episode_title(entry),
             pages=tuple(pages),
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 "episode": entry,

@@ -12,7 +12,7 @@ from PIL import Image
 
 from getjmanga.cipher import xor_unmask
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -203,9 +203,9 @@ class NicoManga(Extractor):
         content = self._content(content_id, url) if content_id else {}
         entries = self._listing(content_id, url) if content_id else []
         index = next((i for i, entry in enumerate(entries) if str(entry.get("id")) == episode_id), None)
-        next_url = None
-        if index is not None and index + 1 < len(entries):
-            next_url = episode_url(entries[index + 1]["id"])
+        before, after = neighbours(entries, entries[index]) if index is not None else (None, None)
+        prev_url = episode_url(before["id"]) if before else None
+        next_url = episode_url(after["id"]) if after else None
 
         frames: list[Any] | None = None
         if refused is None:
@@ -226,6 +226,7 @@ class NicoManga(Extractor):
             series_title=str(content.get("title") or content_id or f"mg{episode_id}"),
             episode_title=str(meta.get("title") or f"mg{episode_id}"),
             pages=pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 "episode": info if isinstance(info, dict) else {"meta": meta},

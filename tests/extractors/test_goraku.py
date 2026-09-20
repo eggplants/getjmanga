@@ -85,6 +85,7 @@ LOCKED = props(
     keyBytes=None,
     ivBytes=None,
     title="第十六話 真摯",
+    prevEpisodeUrl=f"/episode/{TITLE_ID}/1145059663106682550",
     nextEpisodeUrl=f"/episode/{TITLE_ID}/1145059663106682552",
     nextOpenedEpisodeUrl=f"/episode/{TITLE_ID}/1145059663106682552",
 )
@@ -167,7 +168,10 @@ def test_locked_episode_has_no_pages_but_a_next(fake_session, fake_response):
     assert episode.pages == ()
     assert not episode.readable
     assert episode.episode_title == "第十六話 真摯"
-    assert episode.next_url == f"{WORK_URL}/1145059663106682552"
+    assert (episode.prev_url, episode.next_url) == (
+        f"{WORK_URL}/1145059663106682550",
+        f"{WORK_URL}/1145059663106682552",
+    )
 
 
 def test_work_url_reads_the_episode_it_renders(fake_session, fake_response):

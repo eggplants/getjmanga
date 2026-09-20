@@ -130,6 +130,14 @@ def cgi_routes(fake_response, *, face=FACE_XML, pages=None):
     return routes
 
 
+def series_routes(fake_response):
+    """The work page, one page of three episodes then an empty one: read for the previous episode."""
+    listed = series_page(
+        [episode_item(18592, "第1話"), episode_item(18665, "第2話"), episode_item(18810, "第3話", free=False)]
+    )
+    return {"/ebook/series/596": [fake_response(text=listed), fake_response(text=series_page([]))]}
+
+
 def open_reader_routes(fake_response, *, colophon=None):
     """Routes from the colophon down to the page XMLs of a free episode."""
     return {
@@ -139,6 +147,7 @@ def open_reader_routes(fake_response, *, colophon=None):
         "/api/reader": fake_response(payload={"redirect": TOKEN_URL}),
         "/reader/18592?trial=0": fake_response(text=READER_HTML),
         **cgi_routes(fake_response),
+        **series_routes(fake_response),
     }
 
 
@@ -234,7 +243,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, f
     assert episode.url == EPISODE_URL
     assert episode.series_title == "コーヴァ -KOHVA-"
     assert episode.episode_title == "第1話"
-    assert episode.next_url == NEXT_URL
+    assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert episode.readable
     assert [page.url.split("?", 1)[1].split("&param=")[0] for page in episode.pages] == [
         "mode=1&file=0000_0000.bin&reqtype=0&vm=4",
@@ -250,13 +259,15 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, f
         "total_pages": 2,
         "scramble": [4, 4],
     }
-    # The reader was opened through the API, then the CGI was asked for the face and each page.
+    # The colophon, the work page (for the previous episode, which the colophon does not name), then
+    # the reader was opened through the API and the CGI was asked for the face and each page.
     assert session.posts == [(f"{ORIGIN}/api/reader", {"ebook_id": "18592", "vertical": "0"})]
     assert session.calls[0] == f"{ORIGIN}/reader/colophon/18592"
-    assert session.calls[1] == TOKEN_URL
-    assert "mode=7&file=face.xml&reqtype=0&vm=4&param=" in session.calls[2]
-    assert "mode=8&file=0000.xml&reqtype=0&vm=4&param=" in session.calls[3]
-    assert "mode=8&file=0001.xml&reqtype=0&vm=4&param=" in session.calls[4]
+    assert session.calls[1:3] == [SERIES_URL, SERIES_URL]
+    assert session.calls[3] == TOKEN_URL
+    assert "mode=7&file=face.xml&reqtype=0&vm=4&param=" in session.calls[4]
+    assert "mode=8&file=0000.xml&reqtype=0&vm=4&param=" in session.calls[5]
+    assert "mode=8&file=0001.xml&reqtype=0&vm=4&param=" in session.calls[6]
 
 
 def test_episode_takes_the_tokened_reader_url_and_the_colophon_url_too(fake_session, fake_response):
@@ -299,6 +310,7 @@ def test_episode_locked_when_the_api_refuses_to_open_the_reader(fake_session, fa
         {
             "/reader/colophon/18810": fake_response(text=colophon_page(episode="第3話", next_area=PAID_NEXT)),
             "/api/reader": fake_response(payload={"message": "不正なアクセスです"}, status_code=HTTPStatus.BAD_REQUEST),
+            **series_routes(fake_response),
         },
     )
     episode = FireCross(session).episode(LOCKED_URL)
@@ -309,7 +321,7 @@ def test_episode_locked_when_the_api_refuses_to_open_the_reader(fake_session, fa
     assert episode.pages == ()
     assert not episode.readable
     # The next episode is a paid one too, named by the rental modal instead of a form.
-    assert episode.next_url == f"{ORIGIN}/reader/18963"
+    assert (episode.prev_url, episode.next_url) == (NEXT_URL, f"{ORIGIN}/reader/18963")
     assert episode.metadata == {"ebook_id": 18810, "series_url": SERIES_URL, "next_ebook_id": 18963, "locked": True}
     assert session.posts == [(f"{ORIGIN}/api/reader", {"ebook_id": "18810", "vertical": "0"})]
 

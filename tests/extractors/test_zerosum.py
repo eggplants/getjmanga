@@ -198,7 +198,7 @@ def test_episode_stops_at_the_newest_chapter(client, fake_response):
     )
     episode = zerosum.episode(episode_url(TAG, 3452))
     assert episode.episode_title == "魔物王子と偽物の聖女　前編"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (episode_url(TAG, 3425), None)
 
 
 def test_an_expired_chapter_has_no_pages(client, fake_response):

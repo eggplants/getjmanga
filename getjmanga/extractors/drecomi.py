@@ -253,12 +253,16 @@ class Drecomi(Extractor):
         next_url = None
         if isinstance(following, dict) and following.get("code"):
             next_url = episode_url(str(following.get("series_code") or series_code), str(following["code"]))
+        # The API has a `/next` but no `/previous`; the series listing has both.
+        canonical = episode_url(series_code, episode_code)
+        prev_url = self._listed_neighbours(f"{BASE_URL}/series/{series_code}", canonical)[0]
 
         return Episode(
-            url=episode_url(series_code, episode_code),
+            url=canonical,
             series_title=str(detail.get("series_title") or series_code),
             episode_title=str((viewer or {}).get("episode_name") or detail.get("name") or episode_code),
             pages=pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={"episode": detail, "viewer": viewer, "next": following},
         )

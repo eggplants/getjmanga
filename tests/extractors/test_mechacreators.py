@@ -185,13 +185,14 @@ def test_episode_reads_the_titles_the_pages_and_the_next_chapter(client):
     assert episode.episode_title == "第1話 黒腕-②"
     assert [page.url for page in episode.pages] == [page["imgUrl"] for page in PAGES]
     assert episode.pages[0].width == 0
-    assert episode.next_url == f"{SERIES_URL}/chapter/50155"
+    assert (episode.prev_url, episode.next_url) == (None, f"{SERIES_URL}/chapter/50155")
     assert episode.metadata["chapter"]["id"] == 50158
     assert episode.metadata["nextChapter"]["name"] == "第1話 黒腕-①"
     assert episode.metadata["title"]["index"]["name"] == "ELDER ONE"
     assert episode.metadata["titleId"] == "18433"
     json.dumps(episode.metadata)
-    assert session.calls == [EPISODE_URL]
+    # The chapter page, then the work page for the chapter before, which only that lists.
+    assert session.calls == [EPISODE_URL, SERIES_URL]
     assert session.headers_seen[0]["User-Agent"].startswith("Mozilla/5.0")
 
 
@@ -208,7 +209,7 @@ def test_episode_has_no_next_url_at_the_end_of_the_work(client):
     episode = mecha.episode(f"{SERIES_URL}/chapter/50161")
 
     assert episode.episode_title == "第2話 予兆"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (f"{SERIES_URL}/chapter/50155", None)
 
 
 def test_episode_names_the_next_chapter_under_the_work_the_site_says_not_the_url(client, fake_response):
@@ -312,7 +313,7 @@ def test_download_writes_the_pages_as_served_and_the_metadata(client, fake_respo
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg", "2.jpg", "metadata.json"]
     with Image.open(result.save_dir / "0.jpg") as saved:
         assert saved.size == (4, 6)
-    assert session.calls[1:] == [page["imgUrl"] for page in PAGES]
+    assert session.calls[2:] == [page["imgUrl"] for page in PAGES]
     assert session.headers_seen[-1]["Referer"] == EPISODE_URL
     metadata = json.loads((result.save_dir / "metadata.json").read_text(encoding="utf-8"))
     assert metadata["metadata"]["chapter"]["name"] == "第1話 黒腕-②"

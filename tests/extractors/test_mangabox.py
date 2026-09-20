@@ -193,7 +193,7 @@ def test_locked_episode_has_no_pages_but_keeps_its_titles(client):
     assert not episode.readable
     assert episode.series_title == "ネトラセ契約"
     assert episode.episode_title == "第45話　完結"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (f"{BASE_URL}/reader/616489/episodes/217817/", None)
     assert episode.metadata["images"] is None
 
 

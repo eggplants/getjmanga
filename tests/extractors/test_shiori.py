@@ -224,7 +224,7 @@ def test_episode_at_the_end_of_a_series_has_no_next(client):
 
     assert episode.episode_title == "37．タイムアタックおくりもの"
     assert [page.url for page in episode.pages] == [f"{UPLOADS}/last.jpg"]
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (f"{BASE_URL}/story/runrun_36", None)
     assert episode.metadata["prev_url"] == f"{BASE_URL}/story/runrun_36"
 
 

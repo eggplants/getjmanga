@@ -279,7 +279,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_volume(client):
     assert episode.url == VOLUME_URL
     assert episode.series_title == "ダイヤのA act2"
     assert episode.episode_title == "ダイヤのＡ　ａｃｔ２（１）"
-    assert episode.next_url == NEXT_URL
+    assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert [page.width for page in episode.pages] == [392, 392]
     page = urlparse(episode.pages[0].url)
     assert f"{page.scheme}://{page.netloc}{page.path}" == f"{SERVER}/sbcGetImg.php"
@@ -357,7 +357,7 @@ def test_last_volume_has_no_next(client):
     episode = cmoa.episode(LAST_URL)
     assert episode.url == LAST_URL
     assert episode.episode_title == "ダイヤのA act2（3）"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (NEXT_URL, None)
 
 
 def test_volume_the_lineup_does_not_list_is_asked_for_by_its_derived_id(client):

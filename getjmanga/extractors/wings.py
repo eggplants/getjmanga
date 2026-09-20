@@ -44,7 +44,7 @@ from httpx import HTTPStatusError
 from PIL import Image
 
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -497,7 +497,8 @@ class Wings(Extractor):
                 url=canonical,
                 series_title=series_title,
                 episode_title=episode_title,
-                next_url=self._next_url(work, canonical),
+                prev_url=self._neighbours(work, canonical)[0],
+                next_url=self._neighbours(work, canonical)[1],
                 metadata={**metadata, "locked": True},
             )
         pages = tuple(
@@ -522,7 +523,8 @@ class Wings(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=pages,
-            next_url=self._next_url(work, canonical),
+            prev_url=self._neighbours(work, canonical)[0],
+            next_url=self._neighbours(work, canonical)[1],
             metadata=metadata,
         )
 
@@ -561,7 +563,8 @@ class Wings(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=tuple(pages),
-            next_url=self._next_url(work, canonical),
+            prev_url=self._neighbours(work, canonical)[0],
+            next_url=self._neighbours(work, canonical)[1],
             metadata={
                 "viewer": "smoozy",
                 "slug": slug,
@@ -610,15 +613,9 @@ class Wings(Extractor):
         return work.title, episode or caption_title(work.episodes.get(canonical, "")) or slug
 
     @staticmethod
-    def _next_url(work: Work | None, canonical: str) -> str | None:
-        """The listed episode after `canonical`, or None when it is the last (or unlisted)."""
-        if work is None:
-            return None
-        urls = list(work.episodes)
-        if canonical not in urls:
-            return None
-        index = urls.index(canonical) + 1
-        return urls[index] if index < len(urls) else None
+    def _neighbours(work: Work | None, canonical: str) -> tuple[str | None, str | None]:
+        """The listed episodes either side of `canonical`, None at either end (or both when unlisted)."""
+        return neighbours(list(work.episodes), canonical) if work is not None else (None, None)
 
     @staticmethod
     def _tile_urls(page: Page) -> Iterator[str]:

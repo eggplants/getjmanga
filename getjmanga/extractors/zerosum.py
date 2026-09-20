@@ -22,7 +22,7 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.protobuf import integer, message, messages, string
 
 if TYPE_CHECKING:
@@ -344,8 +344,10 @@ class ZeroSum(Extractor):
         index = next((i for i, chapter in enumerate(chapters) if chapter["id"] == chapter_id), None)
 
         chapter = chapters[index] if index is not None else {}
-        # Newest first, so the chapter that follows is the one listed before.
-        next_url = episode_url(tag, int(chapters[index - 1]["id"])) if index else None
+        # Newest first, so the chapter that follows is the one listed before, and the other way round.
+        after, before = neighbours(chapters, chapter) if index is not None else (None, None)
+        prev_url = episode_url(tag, int(before["id"])) if before else None
+        next_url = episode_url(tag, int(after["id"])) if after else None
         pages: tuple[Page, ...] = ()
         if viewer["status"] == _STATUS_SUCCESS:
             pages = tuple(Page(url=str(src)) for src in viewer["pages"])
@@ -354,6 +356,7 @@ class ZeroSum(Extractor):
             series_title=str(listing["title"].get("name") or tag),
             episode_title=str(viewer["viewerTitle"] or chapter.get("name") or chapter_id),
             pages=pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={"title": listing["title"], "chapter": chapter, "viewer": viewer},
         )

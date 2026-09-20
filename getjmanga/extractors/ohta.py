@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.viewers import yondemill
 from getjmanga.viewers.speedbinb import split_title
 from getjmanga.viewers.yondemill import CONTENT_HOST, Content, content_url
@@ -193,7 +193,7 @@ class Ohta(Extractor):
 
         work = self._work(work_url) if work_url else None
         series_title, episode_title = self._titles(content, work, content_id)
-        next_url = _next_url(work, content_id)
+        prev_url, next_url = _neighbour_urls(work, content_id)
         metadata: dict[str, Any] = {
             "content_id": content_id,
             "title": content.title,
@@ -210,6 +210,7 @@ class Ohta(Extractor):
                 url=canonical,
                 series_title=series_title,
                 episode_title=episode_title,
+                prev_url=prev_url,
                 next_url=next_url,
                 metadata={**metadata, "locked": True},
             )
@@ -218,6 +219,7 @@ class Ohta(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=opened.book.pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 **metadata,
@@ -265,15 +267,15 @@ class Ohta(Extractor):
         return split_title(content.title)
 
 
-def _next_url(work: Work | None, content_id: str) -> str | None:
-    """The work's episode after `content_id`, or None when it is the last (or unlisted)."""
+def _neighbour_urls(work: Work | None, content_id: str) -> tuple[str | None, str | None]:
+    """The work's episodes either side of `content_id`, None at either end (or both when unlisted)."""
     if work is None:
-        return None
-    ids = list(work.episodes)
-    if content_id not in ids:
-        return None
-    index = ids.index(content_id) + 1
-    return f"https://{CONTENT_HOST}/contents/{ids[index]}" if index < len(ids) else None
+        return None, None
+    before, after = neighbours(list(work.episodes), content_id)
+    return (
+        f"https://{CONTENT_HOST}/contents/{before}" if before else None,
+        f"https://{CONTENT_HOST}/contents/{after}" if after else None,
+    )
 
 
 def _work_link(content: Content) -> str | None:

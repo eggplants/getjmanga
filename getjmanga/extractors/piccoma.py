@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.viewers.seedrandom import descramble as descramble_tiles
 
 if TYPE_CHECKING:
@@ -280,7 +280,8 @@ class Piccoma(Extractor):
                 Page(url=path, width=width, height=height, extra={"scrambled": scrambled})
                 for path, width, height in _pages(body)
             ),
-            next_url=self._next_url(product_id, episode_id, episode_type),
+            prev_url=self._neighbours(product_id, episode_id, episode_type)[0],
+            next_url=self._neighbours(product_id, episode_id, episode_type)[1],
             metadata={
                 "product_id": product_id,
                 "episode_id": episode_id,
@@ -400,21 +401,21 @@ class Piccoma(Extractor):
             url=url,
             series_title=self.series_title(product_id),
             episode_title=entry.title if entry else episode_id,
-            next_url=self._next_url(product_id, episode_id, "E"),
+            prev_url=self._neighbours(product_id, episode_id, "E")[0],
+            next_url=self._neighbours(product_id, episode_id, "E")[1],
             metadata={"product_id": product_id, "episode_id": episode_id, "episode_type": "E", "scrambled": False},
         )
 
-    def _next_url(self, product_id: str, episode_id: str, episode_type: EpisodeType) -> str | None:
-        """Find the episode that follows `episode_id` in its series' list."""
+    def _neighbours(self, product_id: str, episode_id: str, episode_type: EpisodeType) -> tuple[str | None, str | None]:
+        """Find the episodes either side of `episode_id` in its series' list."""
         if not product_id or not episode_id:
-            return None
+            return None, None
         entries = self.entries(product_id, episode_type)
-        ids = [entry.id for entry in entries]
-        try:
-            position = ids.index(episode_id)
-        except ValueError:
-            return None
-        return entries[position + 1].url if position + 1 < len(entries) else None
+        entry = next((entry for entry in entries if entry.id == episode_id), None)
+        if entry is None:
+            return None, None
+        before, after = neighbours(entries, entry)
+        return before.url if before else None, after.url if after else None
 
     def _login_status(self) -> bool:
         """Ask any page whether the session is signed in."""

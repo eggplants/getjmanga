@@ -293,7 +293,7 @@ def test_episode_at_the_end_of_a_series_has_no_next(client):
 
     assert episode.episode_title == "第3回　忘れるスイッチ"
     assert [page.url for page in episode.pages] == [ORIGINAL_2]
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (NEXT_URL, None)
     assert episode.metadata["prev_url"] == NEXT_URL
 
 

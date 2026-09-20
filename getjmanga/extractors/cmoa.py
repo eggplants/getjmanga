@@ -34,7 +34,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
@@ -325,7 +325,7 @@ class Cmoa(Extractor):
             title_id = encoded[0] if encoded else None
 
         listing = self._listing(title_id) if title_id else None
-        volume, next_url = _place(listing, content_id)
+        volume, prev_url, next_url = _place(listing, content_id)
         canonical = volume.url if volume else (urljoin(BASE_URL, shop_url) if shop else url)
         series_title = listing.title if listing else content_id or bib_id
         episode_title = str(item.get("SubTitle") or (volume.title if volume else "") or content_id or bib_id)
@@ -341,6 +341,7 @@ class Cmoa(Extractor):
                 url=canonical,
                 series_title=series_title,
                 episode_title=episode_title,
+                prev_url=prev_url,
                 next_url=next_url,
                 metadata={**metadata, "locked": True},
             )
@@ -352,6 +353,7 @@ class Cmoa(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=book.pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 **metadata,
@@ -437,12 +439,12 @@ def _sample_url(title_id: str, content_id: str) -> str:
     return f"{BASE_URL}/reader/sample/title_id/{title_id}/content_id/{content_id}/"
 
 
-def _place(listing: Listing | None, content_id: str) -> tuple[Volume | None, str | None]:
-    """The lineup entry of a content id and the URL of the volume after it, when the lineup has it."""
+def _place(listing: Listing | None, content_id: str) -> tuple[Volume | None, str | None, str | None]:
+    """The lineup entry of a content id and the URLs of the volumes either side, when the lineup has it."""
     if listing is None or not content_id:
-        return None, None
-    for index, volume in enumerate(listing.volumes):
-        if volume.content_id == content_id:
-            following = listing.volumes[index + 1] if index + 1 < len(listing.volumes) else None
-            return volume, following.url if following else None
-    return None, None
+        return None, None, None
+    volume = next((entry for entry in listing.volumes if entry.content_id == content_id), None)
+    if volume is None:
+        return None, None, None
+    before, after = neighbours(listing.volumes, volume)
+    return volume, before.url if before else None, after.url if after else None

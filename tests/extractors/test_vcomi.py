@@ -331,7 +331,7 @@ def test_locked_episode_has_no_pages_but_keeps_its_titles_and_the_next_episode(c
 def test_last_episode_names_nothing_next(client):
     vcomi, _ = client()
     episode = vcomi.episode(LAST_URL)
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (LOCKED_URL, None)
     assert episode.metadata["prevEpisode"] == LOCKED
 
 

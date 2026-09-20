@@ -180,7 +180,7 @@ def test_episode_is_locked_when_the_site_says_so(client, fake_response):
     assert episode.pages == ()
     assert not episode.readable
     assert episode.episode_title == "最終回"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (SECOND_URL, None)
     assert episode.metadata["result"] == 1
     assert episode.metadata["chapter"] == {
         "id": 50845,

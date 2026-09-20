@@ -218,7 +218,7 @@ def test_latest_story_has_no_next(client, fake_response):
     neetsha, _ = client({"comic.php?id=26627&story=55": fake_response(html.encode())})
     episode = neetsha.episode("http://neetsha.jp/inside/comic.php?id=26627&story=55")
 
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == ("http://neetsha.jp/inside/comic.php?id=26627&story=47", None)
     assert episode.metadata["prev_url"] == "http://neetsha.jp/inside/comic.php?id=26627&story=47"
 
 

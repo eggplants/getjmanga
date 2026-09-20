@@ -328,6 +328,7 @@ class Pachikuri(Extractor):
                 Page(url=src, extra={"original": original} if (original := original_url(src)) else {})
                 for src in post.images
             ),
+            prev_url=post.prev_url,
             next_url=post.next_url,
             metadata=metadata,
         )

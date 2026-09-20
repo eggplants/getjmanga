@@ -200,7 +200,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_story(client):
     assert episode.episode_title == "第2話 占いとお菓子"
     assert [page.url for page in episode.pages] == PAGES
     assert all(page.extra == {} for page in episode.pages)
-    assert episode.next_url == LOCKED_URL
+    assert (episode.prev_url, episode.next_url) == (f"{BASE_URL}/web/reader/wolfchan/{STORY_1}/0", LOCKED_URL)
     assert episode.metadata["storyContents"]["pageImages"]["pageCount"] == 2
     json.dumps(episode.metadata)
 
@@ -257,7 +257,7 @@ def test_locked_episode_has_no_pages_but_is_named_by_the_listing(client):
     assert not episode.readable
     assert episode.series_title == "ウルフちゃんは澄ましたい"
     assert episode.episode_title == "第3話 保健室と相合傘"
-    assert episode.next_url == f"{BASE_URL}/web/reader/wolfchan/{STORY_4}/0"
+    assert (episode.prev_url, episode.next_url) == (EPISODE_URL, f"{BASE_URL}/web/reader/wolfchan/{STORY_4}/0")
     assert episode.metadata["storyContents"]["error"] == error
     assert episode.metadata["storyInfo"]["storyId"] == STORY_3
     json.dumps(episode.metadata)

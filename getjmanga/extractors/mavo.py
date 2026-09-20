@@ -33,7 +33,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -74,12 +74,9 @@ class Listing:
         """The episode URLs, oldest first."""
         return list(self.titles)
 
-    def next_of(self, url: str) -> str | None:
-        """The episode listed after `url`, or None."""
-        urls = self.urls
-        if url not in urls or urls.index(url) + 1 >= len(urls):
-            return None
-        return urls[urls.index(url) + 1]
+    def neighbours_of(self, url: str) -> tuple[str | None, str | None]:
+        """The episodes listed either side of `url`, None at either end."""
+        return neighbours(self.urls, url)
 
 
 def episode_id(url: str) -> str | None:
@@ -329,12 +326,13 @@ class Mavo(Extractor):
         # The listing is keyed on the URL the work page links, which may be
         # on another scheme than the one asked for.
         listed = next((listed for listed in listing.urls if episode_id(listed) == eid), None)
-        next_url = listing.next_of(listed) if listed else None
+        prev_url, next_url = listing.neighbours_of(listed) if listed else (None, None)
         return Episode(
             url=key,
             series_title=viewer.series_title or listing.title or eid,
             episode_title=viewer.episode_title or listing.titles.get(listed or "", "") or eid,
             pages=tuple(Page(url=src) for src in viewer.images),
+            prev_url=urljoin(key, f"viewer.php?id={episode_id(prev_url)}") if prev_url else None,
             next_url=urljoin(key, f"viewer.php?id={episode_id(next_url)}") if next_url else None,
             metadata={
                 "id": eid,

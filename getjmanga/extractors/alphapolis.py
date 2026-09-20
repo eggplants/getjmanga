@@ -348,6 +348,9 @@ class AlphaPolis(Extractor):
         episode = data.get("episode") or {}
         tables = parse_puzzles(str(page.get("placeholder") or ""))
         images = page.get("images") or []
+        prev_url, next_url = _neighbours(
+            url, [urljoin(BASE_URL, str(entry["url"])) for entry in data.get("episodes") or []]
+        )
         return Episode(
             url=url,
             series_title=str(manga.get("title") or "").strip() or work_url.rsplit("/", 1)[-1],
@@ -361,7 +364,8 @@ class AlphaPolis(Extractor):
                 )
                 for index, image in enumerate(images)
             ),
-            next_url=_next_url(url, [urljoin(BASE_URL, str(entry["url"])) for entry in data.get("episodes") or []]),
+            prev_url=prev_url,
+            next_url=next_url,
             metadata={"manga": manga, "episode": episode, "size": page.get("size") or {}},
         )
 
@@ -499,11 +503,13 @@ class AlphaPolis(Extractor):
     def _locked_episode(self, url: str, work_url: str) -> Episode:
         """Describe an episode the site would not open, from its work's list."""
         work = self.work(work_url)
+        prev_url, next_url = _neighbours(url, work.urls)
         return Episode(
             url=url,
             series_title=work.title,
             episode_title=work.titles.get(url) or url.rsplit("/", 1)[-1],
-            next_url=_next_url(url, work.urls),
+            prev_url=prev_url,
+            next_url=next_url,
             metadata={"locked": True},
         )
 
@@ -539,14 +545,14 @@ def _chapter_entries(chapters: list[Any]) -> Iterator[dict[str, Any]]:
             yield extra
 
 
-def _next_url(url: str, urls: list[str] | tuple[str, ...]) -> str | None:
-    """The episode after `url` in a work's list, or None at its end."""
+def _neighbours(url: str, urls: list[str] | tuple[str, ...]) -> tuple[str | None, str | None]:
+    """The episodes before and after `url` in a work's list, None at either end."""
     normalised = [candidate.rstrip("/") for candidate in urls]
     try:
         position = normalised.index(url.rstrip("/"))
     except ValueError:
-        return None
-    return urls[position + 1] if position + 1 < len(urls) else None
+        return None, None
+    return urls[position - 1] if position else None, urls[position + 1] if position + 1 < len(urls) else None
 
 
 def _signed_in(soup: BeautifulSoup) -> bool:

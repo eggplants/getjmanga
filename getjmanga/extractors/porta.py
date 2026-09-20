@@ -21,7 +21,7 @@ from bs4.element import Tag
 from httpx import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
@@ -165,12 +165,13 @@ class Porta(Extractor):
         recommend = str(container.get("data-binbsp-recommend") or "")
         listing = self._listing_of(url, recommend)
         series_title, episode_title = split_title(title, listing.title if listing else "")
-        next_url = _after(listing.urls, url) if listing else None
+        prev_url, next_url = _either_side(listing.urls, url) if listing else (None, None)
         return Episode(
             url=url,
             series_title=series_title,
             episode_title=episode_title,
             pages=tuple(Page(url=ptimg, extra={"spread": spread}) for ptimg, spread in pages),
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 "title": title.strip(),
@@ -255,10 +256,8 @@ class Porta(Extractor):
         return links
 
 
-def _after(urls: tuple[str, ...], url: str) -> str | None:
-    """The URL that follows `url` in `urls`, trailing slash or not, or None."""
+def _either_side(urls: tuple[str, ...], url: str) -> tuple[str | None, str | None]:
+    """The URLs either side of `url` in `urls`, trailing slash or not; None at either end."""
     wanted = url.rstrip("/")
-    for index, candidate in enumerate(urls):
-        if candidate.rstrip("/") == wanted:
-            return urls[index + 1] if index + 1 < len(urls) else None
-    return None
+    listed = next((candidate for candidate in urls if candidate.rstrip("/") == wanted), None)
+    return neighbours(urls, listed) if listed is not None else (None, None)

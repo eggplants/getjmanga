@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlencode, urlparse
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -205,14 +205,17 @@ class YanJan(Extractor):
                 ),
             )
 
+        # The viewer names the next episode but never the previous one; the listing has both.
+        prev_id, listed_next = self._listed_ids(title_id, episode_id)
         next_id = int(navigation.get("next_episode_id") or 0)
         if not next_id and not pages:
-            next_id = self._following(title_id, episode_id)
+            next_id = listed_next
         return Episode(
             url=episode_url(title_id, episode_id),
             series_title=str(navigation.get("title_name") or sheet.get("title_name") or title_id),
             episode_title=str(navigation.get("name") or sheet.get("episode_name") or episode_id),
             pages=tuple(pages),
+            prev_url=episode_url(title_id, prev_id) if prev_id else None,
             next_url=episode_url(title_id, next_id) if next_id else None,
             metadata=data,
         )
@@ -288,14 +291,11 @@ class YanJan(Extractor):
             self._listings[title_id] = [entry for entry in data.get("episodes") or [] if isinstance(entry, dict)]
         return self._listings[title_id]
 
-    def _following(self, title_id: str, episode_id: str) -> int:
-        """The id of the episode listed after `episode_id`, or 0 at the end or when unknown."""
+    def _listed_ids(self, title_id: str, episode_id: str) -> tuple[int, int]:
+        """The ids of the episodes listed either side of `episode_id`, 0 at either end or when unknown."""
         try:
             entries = self._listing(title_id)
         except NotAnEpisodePageError:
-            return 0
-        ids = [str(entry.get("id")) for entry in entries]
-        if episode_id not in ids:
-            return 0
-        index = ids.index(episode_id)
-        return int(ids[index + 1]) if index + 1 < len(ids) else 0
+            return 0, 0
+        before, after = neighbours([str(entry.get("id")) for entry in entries], episode_id)
+        return int(before or 0), int(after or 0)

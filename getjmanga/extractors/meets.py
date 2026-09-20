@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlparse
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -205,15 +205,16 @@ class Meets(Extractor):
             )
             for image in _page_images(viewer)
         )
-        next_url = None
-        if index + 1 < len(entries):
-            next_url = episode_url(origin, dir_name, int(entries[index + 1]["sort_volume"]))
+        before, after = neighbours(entries, entries[index])
+        prev_url = episode_url(origin, dir_name, int(before["sort_volume"])) if before else None
+        next_url = episode_url(origin, dir_name, int(after["sort_volume"])) if after else None
 
         return Episode(
             url=episode_url(origin, dir_name, sort_volume),
             series_title=str(comic.get("title") or ((viewer or {}).get("comic") or {}).get("title") or dir_name),
             episode_title=episode_title(entry),
             pages=pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={"comic": comic, "episode": entry, "viewer": viewer},
         )

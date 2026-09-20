@@ -32,7 +32,7 @@ def test_session_params_add_to_the_query_the_url_carries():
         return httpx.Response(200)
 
     session = make_session()
-    session._transport = httpx.MockTransport(echo)  # noqa: SLF001 (no public way to swap the transport)
+    session._transport = httpx.MockTransport(echo)
     session.get("https://example.com/api?rq=title/detail", params={"title_id": 1})
     session.get("https://example.com/api", params={"page": 2})
     session.get("https://example.com/api?rq=viewer")
@@ -50,7 +50,7 @@ def test_session_follows_redirects():
         return httpx.Response(200, text="landed")
 
     session = make_session()
-    session._transport = httpx.MockTransport(hop)  # noqa: SLF001
+    session._transport = httpx.MockTransport(hop)
     res = session.get("https://example.com/old")
     assert res.text == "landed"
     assert str(res.url) == "https://example.com/new"

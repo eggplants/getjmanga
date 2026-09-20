@@ -229,7 +229,8 @@ def test_episode_calls_the_api_the_way_the_viewer_does(client):
 
 def test_episode_at_the_end_of_the_list_has_no_next(client, fake_response):
     gaugau, _ = client({f"/list/work/{WORK_ID}/episodes/": fake_response(text=episode_html())})
-    assert gaugau.episode(f"{WORK_URL}/episodes/3").next_url is None
+    episode = gaugau.episode(f"{WORK_URL}/episodes/3")
+    assert (episode.prev_url, episode.next_url) == (f"{WORK_URL}/episodes/2", None)
 
 
 def test_a_locked_episode_has_no_pages_but_still_a_next(client, fake_response):
@@ -241,7 +242,7 @@ def test_a_locked_episode_has_no_pages_but_still_a_next(client, fake_response):
     assert episode.pages == ()
     assert episode.episode_title == "第2話(3)"
     assert episode.series_title == "宝石の聖女"
-    assert episode.next_url == f"{WORK_URL}/episodes/3"
+    assert (episode.prev_url, episode.next_url) == (f"{WORK_URL}/episodes/1", f"{WORK_URL}/episodes/3")
     assert episode.metadata == {"work_id": WORK_ID, "locked": True}
     assert not any("bibGetCntntInfo" in url for url in session.calls)
 

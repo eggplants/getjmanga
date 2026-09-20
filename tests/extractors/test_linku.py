@@ -159,7 +159,9 @@ def recording_session(fake_session):
 @pytest.fixture
 def mangaone(recording_session, fake_response):
     def build(routes=None):
-        merged = dict(routes or {})
+        # The chapter list (a GET with `rq` in the URL) goes before the viewer (a POST to the bare path).
+        listing = {"/api/client?rq=viewer/chapter_list": fake_response(mo_chapter_list(MO_CHAPTERS[::-1]))}
+        merged = {**listing, **(routes or {})}
         merged.setdefault("/api/client", fake_response(mo_viewer(), content_type="application/x-protobuf"))
         merged.setdefault("app.manga-one.com", fake_response(encrypted_png()))
         session = recording_session(merged)
@@ -201,7 +203,7 @@ def test_mangaone_episode_reads_the_titles_the_pages_and_the_next_chapter(mangao
     assert [page.url for page in episode.pages] == [MO_IMAGE.format(1), MO_IMAGE.format(2)]
     assert episode.pages[0].extra == {"key": KEY, "iv": IV}
     assert (episode.pages[0].width, episode.pages[0].height) == (720, 1020)
-    assert episode.next_url == f"{MANGAONE_URL}/manga/28024/chapter/353548"
+    assert (episode.prev_url, episode.next_url) == (None, f"{MANGAONE_URL}/manga/28024/chapter/353548")
     assert episode.metadata["free"] is True
     assert episode.metadata["description"] == "だって僕の世界は平和だから"
     assert [c["id"] for c in episode.metadata["chapters"]] == [354637, 353548, 353545]
@@ -229,7 +231,7 @@ def test_mangaone_locked_chapter_has_no_pages_but_keeps_its_names(mangaone, fake
     assert episode.pages == ()
     assert episode.series_title == "女の子を天国に連れていくには"
     assert episode.episode_title == "第3話"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (f"{MANGAONE_URL}/manga/28024/chapter/353548", None)
     assert episode.metadata["free"] is False
 
 
@@ -250,12 +252,12 @@ def test_mangaone_series_urls_walks_the_pages_oldest_first(mangaone, fake_respon
         fake_response(mo_chapter_list([(353545, "第1話", 0), (353548, "第2話", 0)], page=1, total_pages=2)),
         fake_response(mo_chapter_list([(353548, "第2話", 0), (354637, "第3話", 30)], page=2, total_pages=2)),
     ]
-    extractor, session = mangaone({"/api/client": pages})
+    extractor, session = mangaone({"/api/client?rq=viewer/chapter_list": pages})
     urls = extractor.series_urls(MO_TITLE_URL)
 
     assert urls == [f"{MANGAONE_URL}/manga/28024/chapter/{i}" for i in (353545, 353548, 354637)]
+    assert session.calls[0] == f"{MANGAONE_URL}/api/client?rq=viewer/chapter_list"
     assert session.params_seen[0] == {
-        "rq": "viewer/chapter_list",
         "title_id": 28024,
         "type": "chapter",
         "sort_type": "asc",
@@ -266,7 +268,7 @@ def test_mangaone_series_urls_walks_the_pages_oldest_first(mangaone, fake_respon
 
 
 def test_mangaone_series_urls_rejects_an_empty_title(mangaone, fake_response):
-    extractor, _ = mangaone({"/api/client": fake_response(mo_chapter_list([]))})
+    extractor, _ = mangaone({"/api/client?rq=viewer/chapter_list": fake_response(mo_chapter_list([]))})
     with pytest.raises(NotAnEpisodePageError, match="lists no chapter"):
         extractor.series_urls(MO_TITLE_URL)
 
@@ -427,6 +429,7 @@ def test_flower_locked_chapter_is_the_title_page_it_redirects_to(flower, fake_re
     assert episode.pages == ()
     assert episode.series_title == "死神の初恋 〜没落華族の令嬢は愛を知らない死神に嫁ぐ〜"
     assert episode.episode_title == "第23話"
+    assert episode.prev_url is not None
     assert episode.next_url == f"{FLOWERCOMICS_URL}/chapter/139182"
     assert [c["free"] for c in episode.metadata["chapters"]] == [True, True, True, False, False]
     json.dumps(episode.metadata)
@@ -576,10 +579,11 @@ def test_gangan_episode_reads_the_page_json(gangan):
     assert episode.episode_title == "第1話"
     assert [page.url for page in episode.pages] == [GANGANONLINE_URL + GG_IMAGE.format(i) for i in (1, 2)]
     assert episode.pages[0].extra == {}
-    assert episode.next_url == f"{GANGANONLINE_URL}/title/2580/chapter/131954"
+    assert (episode.prev_url, episode.next_url) == (None, f"{GANGANONLINE_URL}/title/2580/chapter/131954")
     assert episode.metadata["author"] == "原作／夜明星良　漫画／宮鈴りうむ"
     assert episode.metadata["left_start"] is True
-    assert session.calls == [GG_CHAPTER_URL]
+    # The chapter page, then the title page for the chapter before, which only that lists.
+    assert session.calls == [GG_CHAPTER_URL, GG_TITLE_URL]
 
 
 def test_gangan_episode_stops_at_the_last_chapter(gangan, fake_response):
@@ -595,7 +599,10 @@ def test_gangan_locked_chapter_is_the_title_page_it_redirects_to(gangan, fake_re
     assert episode.pages == ()
     assert episode.series_title == "ヤンデレ化を回避したはずの天使な義弟は期待を裏切らない"
     assert episode.episode_title == "第4話-3"
-    assert episode.next_url == f"{GANGANONLINE_URL}/title/2580/chapter/131954"
+    assert (episode.prev_url, episode.next_url) == (
+        f"{GANGANONLINE_URL}/title/2580/chapter/127641",
+        f"{GANGANONLINE_URL}/title/2580/chapter/131954",
+    )
     assert [(c["title"], c["free"]) for c in episode.metadata["chapters"]] == [
         ("第1話", True),
         ("第4話-3", False),
@@ -807,7 +814,8 @@ def test_park_episode_reads_the_title_page_and_the_chapter_api(park):
 
 def test_park_episode_stops_at_the_last_chapter(park):
     extractor, _ = park()
-    assert extractor.episode(f"{MANGAPARK_URL}/title/33142/399418").next_url is None
+    last = extractor.episode(f"{MANGAPARK_URL}/title/33142/399418")
+    assert (last.prev_url, last.next_url) == (f"{MANGAPARK_URL}/title/33142/397006", None)
 
 
 def test_park_chapter_wanting_a_login_has_no_pages(park, fake_response):
@@ -1032,7 +1040,7 @@ def test_lab_episode_prefers_the_chapter_name(lab, fake_response):
     episode = extractor.episode(f"{MANGALAB_URL}/title/viewer/810463")
     assert episode.episode_title == "第3話"
     assert episode.metadata["begin_with_blank_page"] is True
-    assert episode.next_url == f"{MANGALAB_URL}/title/viewer/819577"
+    assert (episode.prev_url, episode.next_url) == (ML_CHAPTER_URL, f"{MANGALAB_URL}/title/viewer/819577")
 
 
 def test_lab_episode_stops_at_the_highest_number(lab, fake_response):

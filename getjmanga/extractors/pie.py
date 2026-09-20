@@ -34,7 +34,7 @@ from bs4.element import Tag
 from PIL import Image
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.viewers import yondemill
 from getjmanga.viewers.speedbinb import split_title
 from getjmanga.viewers.yondemill import Content, content_url
@@ -90,13 +90,9 @@ class Work:
         """The readable episode URLs, oldest first, deduplicated."""
         return list(dict.fromkeys(entry.url for entry in self.entries if entry.url))
 
-    def next_url(self, url: str) -> str | None:
-        """The readable episode after `url`, or None when it is the last (or unlisted)."""
-        urls = self.urls
-        if url not in urls:
-            return None
-        index = urls.index(url) + 1
-        return urls[index] if index < len(urls) else None
+    def neighbours_of(self, url: str) -> tuple[str | None, str | None]:
+        """The readable episodes either side of `url`, None at either end (or both when unlisted)."""
+        return neighbours(self.urls, url)
 
     def listed_title(self, url: str) -> str:
         """The listed title of the episode at `url`, or `""` when it is not listed."""
@@ -392,6 +388,7 @@ class Pie(Extractor):
             series_title=story.series_title or story.title,
             episode_title=story.title or story.heading,
             pages=pages,
+            prev_url=story.prev_url,
             next_url=story.next_url,
             metadata={
                 "kind": "story",
@@ -409,11 +406,11 @@ class Pie(Extractor):
         work = self._work_of(canonical, reading.content)
         if work is None:
             series_title, episode_title = split_title(reading.content.title)
-            next_url = None
+            prev_url = next_url = None
         else:
             series_title = work.title
             episode_title = work.listed_title(canonical) or split_title(reading.content.title)[1]
-            next_url = work.next_url(canonical)
+            prev_url, next_url = work.neighbours_of(canonical)
         metadata: dict[str, Any] = {
             "kind": "yondemill",
             "content_id": reading.content_id,
@@ -429,6 +426,7 @@ class Pie(Extractor):
                 url=canonical,
                 series_title=series_title,
                 episode_title=episode_title,
+                prev_url=prev_url,
                 next_url=next_url,
                 metadata={**metadata, "locked": True},
             )
@@ -437,6 +435,7 @@ class Pie(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=opened.book.pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 **metadata,

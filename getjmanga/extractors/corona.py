@@ -274,7 +274,8 @@ class Corona(Extractor):
             raise NotAnEpisodePageError(msg)
 
         neighbours = self._neighbours(episode_id, canonical)
-        next_entry = neighbours.get("next_episode")
+        prev_entry, next_entry = neighbours.get("previous_episode"), neighbours.get("next_episode")
+        prev_url = episode_url(prev_entry["id"]) if isinstance(prev_entry, dict) and prev_entry.get("id") else None
         next_url = episode_url(next_entry["id"]) if isinstance(next_entry, dict) and next_entry.get("id") else None
 
         pages: tuple[Page, ...] = ()
@@ -289,6 +290,7 @@ class Corona(Extractor):
             series_title=str(described.get("comic_title") or described.get("comic_id") or ""),
             episode_title=str(described.get("episode_title") or episode_id),
             pages=pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={"episode": described, "neighbours": neighbours},
         )

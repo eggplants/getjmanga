@@ -218,7 +218,7 @@ def test_last_episode_has_no_next(client, fake_response):
     episode = splush.episode("https://www.splush.jp/series/17023/")
 
     assert episode.episode_title == "第五話（後編）"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == ("https://www.splush.jp/series/17008/", None)
     assert episode.metadata["prev_url"] == "https://www.splush.jp/series/17008/"
 
 

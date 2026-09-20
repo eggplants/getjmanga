@@ -201,6 +201,7 @@ class ViewerData:
 
     series_title: str
     episode_title: str
+    prev_url: str | None = None
     next_url: str | None = None
     raw: Mapping[str, Any] | None = None
 
@@ -307,13 +308,16 @@ def parse_viewer(html: str | bytes) -> ViewerData | None:
     hint = parse_qs(urlparse(tweet_url).query).get("text", [""])[0]
     series, episode = split_title(title, hint)
 
-    next_url = None
-    next_ = data.get("next")
-    if isinstance(next_, dict) and next_.get("to"):
-        ids = parse_qs(urlparse(str(next_["to"])).query).get("content_id", [""])
-        if _PRODUCT_ID.match(ids[0]):
-            next_url = product_url(ids[0])
-    return ViewerData(series_title=series, episode_title=episode, next_url=next_url, raw=data)
+    prev_url, next_url = (_linked_product(data.get(key)) for key in ("prev", "next"))
+    return ViewerData(series_title=series, episode_title=episode, prev_url=prev_url, next_url=next_url, raw=data)
+
+
+def _linked_product(link: object) -> str | None:
+    """The product page a viewer's `prev`/`next` link goes to, when it names a product."""
+    if not isinstance(link, dict) or not link.get("to"):
+        return None
+    ids = parse_qs(urlparse(str(link["to"])).query).get("content_id", [""])
+    return product_url(ids[0]) if _PRODUCT_ID.match(ids[0]) else None
 
 
 def parse_listing(html: str | bytes) -> Listing:
@@ -517,6 +521,7 @@ class Manga5(Extractor):
                 url=canonical,
                 series_title=data.series_title,
                 episode_title=data.episode_title,
+                prev_url=data.prev_url,
                 next_url=data.next_url,
                 metadata={"viewer": data.raw, "license": license_},
             )
@@ -529,6 +534,7 @@ class Manga5(Extractor):
             series_title=data.series_title,
             episode_title=data.episode_title,
             pages=tuple(pages),
+            prev_url=data.prev_url,
             next_url=data.next_url,
             metadata={"viewer": data.raw, "license": license_, **described},
         )
@@ -594,7 +600,7 @@ class Manga5(Extractor):
     def _locked(self, product_id: str) -> Episode:
         """An episode the product page would not open, named off the work's listing."""
         series_title = episode_title = product_id
-        next_url = None
+        prev_url = next_url = None
         found = False
         for listing in self._listings(series_id(product_id)):
             series_title = listing.title or series_title
@@ -605,12 +611,15 @@ class Manga5(Extractor):
                 if item_id == product_id:
                     found = True
                     episode_title = item_title or episode_title
+                else:
+                    prev_url = product_url(item_id)
             if next_url is not None:
                 break
         return Episode(
             url=product_url(product_id),
             series_title=series_title,
             episode_title=episode_title,
+            prev_url=prev_url if found else None,
             next_url=next_url,
             metadata={"listing": {"content_id": series_id(product_id), "found": found}},
         )

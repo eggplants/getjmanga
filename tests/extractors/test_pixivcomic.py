@@ -61,6 +61,7 @@ READABLE = {
             "work_id": 13564,
             "work_title": "異世界皇子、おしかけ求婚に参りました",
             "pages": PAGES,
+            "prev_episode": {"id": 244714, "numbering_title": "0", "sub_title": "プロローグ", "state": "readable"},
             "next_episode": {"id": 244716, "numbering_title": "2", "sub_title": "第1話-2", "state": "readable"},
         }
     }
@@ -268,7 +269,10 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert [page.url for page in episode.pages] == [page["url"] for page in PAGES]
     assert all(page.extra == {"key": KEY, "gridsize": 32} for page in episode.pages)
     assert episode.pages[0].width == 721
-    assert episode.next_url == f"{BASE_URL}/viewer/stories/244716"
+    assert (episode.prev_url, episode.next_url) == (
+        f"{BASE_URL}/viewer/stories/244714",
+        f"{BASE_URL}/viewer/stories/244716",
+    )
     assert episode.metadata == READABLE["data"]["reading_episode"]
 
     # The viewer page is read for the salt, then the API is asked with the signed headers.

@@ -19,7 +19,7 @@ EPISODE_HTML = """
 <meta property="og:title" content="IRUKA・prologue | MANGABU!(マンガ部!)"/>
 </head><body>
 <div id="comici-viewer" data-comici-viewer-id="abc123" data-api-domain="/api"
-     data-share-text="IRUKA" data-next-episode-id="def456"></div>
+     data-share-text="IRUKA" data-prev-episode-id="abc000" data-next-episode-id="def456"></div>
 </body></html>
 """
 
@@ -151,7 +151,10 @@ def test_episode_carries_the_pages_with_their_scramble(fake_session, fake_respon
     assert episode.episode_title == "prologue"
     assert [item.url for item in episode.pages] == ["u1", "u2"]
     assert parse_scramble(episode.pages[1].extra["scramble"]) == SCRAMBLE
-    assert episode.next_url == "https://mangabu.jp/episodes/def456"
+    assert (episode.prev_url, episode.next_url) == (
+        "https://mangabu.jp/episodes/abc000",
+        "https://mangabu.jp/episodes/def456",
+    )
     assert episode.metadata["viewer_id"] == "abc123"
     assert [item["sort"] for item in episode.metadata["pages"]] == [0, 1]
 
@@ -225,6 +228,7 @@ def test_pages_sends_the_token_and_the_content_id_the_page_rendered(fake_session
 EPISODE_API = {
     "episode": {
         "id": "ad51b31190681",
+        "previousEpisodeId": "9b3c8a1a0f2e1",
         "nextEpisodeId": "d05c9cd20ca35",
         "series": {"name": "IRUKA"},
         "summary": {"title": "1話"},
@@ -265,7 +269,10 @@ def test_episode_falls_back_to_the_episode_api(fake_session, fake_response):
 
     assert episode.series_title == "IRUKA"
     assert episode.episode_title == "1話"
-    assert episode.next_url == "https://ebookstore.corkagency.com/episodes/d05c9cd20ca35"
+    assert (episode.prev_url, episode.next_url) == (
+        "https://ebookstore.corkagency.com/episodes/9b3c8a1a0f2e1",
+        "https://ebookstore.corkagency.com/episodes/d05c9cd20ca35",
+    )
     assert episode.metadata["api_base"] == "https://ebookstore.corkagency.com/api"
 
 

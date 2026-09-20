@@ -214,7 +214,7 @@ def test_episode_at_the_end_of_a_series_has_no_next(client):
     episode = comicessay.episode(LAST_URL)
 
     assert episode.episode_title == "第5話　ママは見える所にいてほしい"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (f"{BASE_URL}/read/{SERIES}/entry-53091.html", None)
     assert episode.metadata["prev_url"] == f"{BASE_URL}/read/{SERIES}/entry-53091.html"
 
 

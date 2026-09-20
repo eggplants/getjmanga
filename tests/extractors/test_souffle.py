@@ -201,7 +201,7 @@ def test_episode_at_the_end_of_a_series_has_no_next(client, fake_response):
     souffle, _ = client({"/chigau056-20260916/": fake_response(text=episode_html(next_url=None, prev_url=EPISODE_URL))})
     episode = souffle.episode(f"{BASE_URL}/manga/{SERIES}/chigau056-20260916/")
 
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (EPISODE_URL, None)
     assert episode.metadata["prev_url"] == EPISODE_URL
 
 

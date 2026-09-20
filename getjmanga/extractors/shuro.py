@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -199,7 +199,7 @@ class Shuro(Extractor):
         work_url = urljoin(url, str(work_link["href"])) if isinstance(work_link, Tag) else None
 
         works = parse_manga_data(html)
-        entry, next_url = self._locate(url, works)
+        entry, prev_url, next_url = self._locate(url, works)
         if not episode_title and entry is not None:
             parts = (str(entry.get("title", "")), str(entry.get("titleSub", "")))
             episode_title = " ".join(part for part in parts if part)
@@ -213,6 +213,7 @@ class Shuro(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 "title": _text(soup.title),
@@ -233,18 +234,21 @@ class Shuro(Extractor):
         return res.text
 
     @staticmethod
-    def _locate(url: str, works: Iterable[dict[str, Any]]) -> tuple[dict[str, Any] | None, str | None]:
-        """Find `url` in the works' episode listings: its entry and what follows it."""
+    def _locate(url: str, works: Iterable[dict[str, Any]]) -> tuple[dict[str, Any] | None, str | None, str | None]:
+        """Find `url` in the works' episode listings: its entry and the episodes either side of it."""
         wanted = Shuro._key(url)
         for work in works:
             episodes = [entry for entry in work.get("episodes") or [] if isinstance(entry, dict)]
             by_url = {Shuro._key(str(entry.get("permalink", ""))): entry for entry in episodes}
             ordered = reading_order([(key, str(entry.get("title", ""))) for key, entry in by_url.items()])
             if wanted in by_url:
-                position = ordered.index(wanted)
-                following = ordered[position + 1 :]
-                return by_url[wanted], str(by_url[following[0]].get("permalink")) if following else None
-        return None, None
+                before, after = neighbours(ordered, wanted)
+                return (
+                    by_url[wanted],
+                    str(by_url[before].get("permalink")) if before else None,
+                    str(by_url[after].get("permalink")) if after else None,
+                )
+        return None, None, None
 
     @staticmethod
     def _page_of(slide: Tag, url: str) -> Page | None:

@@ -98,7 +98,7 @@ def viewer_payload(*, seed=SEED, next_id=319, pages=(PAGE_1, PAGE_2)):
         "episode_id": 142,
         "scramble_seed": seed,
         "page_list": list(pages),
-        "previous_episode": None,
+        "previous_episode": {"title_id": 20, "episode_id": 100, "age_rating": None},
         "next_episode": {"title_id": 20, "episode_id": next_id, "age_rating": None} if next_id else None,
         "title_name": "ブッチ組～夜露死苦異世界 我等真武親友 悪鬼滅殺仏血義礼組",
         "episode_name": "特別予告編",
@@ -208,7 +208,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert episode.episode_title == "特別予告編"
     assert [page.url for page in episode.pages] == [PAGE_1, PAGE_2]
     assert all(page.extra == {"seed": SEED} for page in episode.pages)
-    assert episode.next_url == NEXT_URL
+    assert (episode.prev_url, episode.next_url) == (f"{WORK_URL}?episode_id=100", NEXT_URL)
     assert episode.metadata["published"] is True
     assert episode.metadata["date"] == "2026/05/28"
     assert episode.metadata["viewer"]["episode_id"] == 142

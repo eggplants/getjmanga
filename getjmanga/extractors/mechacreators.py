@@ -218,6 +218,10 @@ class MechaCreators(Extractor):
         index = data.get("title", {}).get("index", {})
         title_id = str(index.get("id") or match["title_id"])
         following = data.get("nextChapter") or {}
+        # The page names the next chapter only; the work page lists the one before.
+        chapter_id = chapter.get("id")
+        canonical = episode_url(title_id, chapter_id) if chapter_id is not None else url
+        prev_url = self._listed_neighbours(series_url(title_id), canonical)[0]
         pages = tuple(
             Page(url=str(page["imgUrl"]), width=int(page.get("width") or 0), height=int(page.get("height") or 0))
             for page in data.get("pages") or []
@@ -228,6 +232,7 @@ class MechaCreators(Extractor):
             series_title=str(index.get("name") or ""),
             episode_title=str(chapter.get("name") or ""),
             pages=pages,
+            prev_url=prev_url,
             next_url=episode_url(title_id, following["id"]) if following.get("id") is not None else None,
             metadata={
                 "chapter": chapter,

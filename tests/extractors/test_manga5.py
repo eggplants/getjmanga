@@ -478,7 +478,7 @@ def test_locked_episode_walks_on_to_the_next_listing_page(client, fake_response)
 
     assert not episode.readable
     assert episode.episode_title == "【試し読み】CHAPTER 1"
-    assert episode.next_url == f"{BASE_URL}/product/00760003"
+    assert (episode.prev_url, episode.next_url) == (LOCKED_URL, f"{BASE_URL}/product/00760003")
     assert session.params_seen[1:] == [{"order": "asc", "p": 1}, {"order": "asc", "p": 2}]
 
 
@@ -489,7 +489,7 @@ def test_locked_episode_missing_from_the_listing_keeps_its_id(client, fake_respo
     assert not episode.readable
     assert episode.series_title == BOOK_TITLE
     assert episode.episode_title == "00760009"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (None, None)
     assert episode.metadata["listing"]["found"] is False
 
 

@@ -262,7 +262,7 @@ def test_episode_at_the_end_of_a_series_has_no_next_but_a_previous(client, fake_
 
     assert episode.episode_title == "第7話-ひょっこりおばさん"
     assert len(episode.pages) == 2
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (SIXTH_URL, None)
     assert episode.metadata["prev_url"] == SIXTH_URL
 
 

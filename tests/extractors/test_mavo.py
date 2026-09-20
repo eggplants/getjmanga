@@ -213,7 +213,7 @@ def test_the_newest_episode_has_no_next(client, fake_response):
     episode = mavo.episode("http://mavo.takekuma.jp/viewer.php?id=1560")
 
     assert episode.episode_title == "ミナモノカミ（2022前期優秀作品）"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == ("http://mavo.takekuma.jp/viewer.php?id=1545", None)
 
 
 def test_episode_without_a_work_link_still_reads(client, fake_response):

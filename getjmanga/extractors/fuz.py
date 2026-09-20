@@ -13,7 +13,7 @@ from PIL import Image
 
 from getjmanga.cipher import aes_cbc_decrypt
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.protobuf import encode_bytes_field, encode_varint_field, integer, message, messages, raw, string
 
 if TYPE_CHECKING:
@@ -170,7 +170,8 @@ class Fuz(Extractor):
             series_title=series_title or str(manga_id),
             episode_title=string(data, 1) or str(chapter_id),
             pages=tuple(self._pages(data)),
-            next_url=self._next_url(chapters, chapter_id),
+            prev_url=self._neighbours(chapters, chapter_id)[0],
+            next_url=self._neighbours(chapters, chapter_id)[1],
             metadata={
                 "chapter_id": chapter_id,
                 "manga_id": manga_id,
@@ -260,19 +261,20 @@ class Fuz(Extractor):
                     url=url,
                     series_title=series_title,
                     episode_title=title,
-                    next_url=self._next_url(chapters, chapter_id),
+                    prev_url=self._neighbours(chapters, chapter_id)[0],
+                    next_url=self._neighbours(chapters, chapter_id)[1],
                     metadata={"chapter_id": chapter_id, "manga_id": manga_id},
                 )
         return Episode(url=url, series_title=str(chapter_id), episode_title=str(chapter_id))
 
     @staticmethod
-    def _next_url(chapters: list[Chapter], chapter_id: int) -> str | None:
-        ids = [chapter.id for chapter in chapters]
-        try:
-            position = ids.index(chapter_id)
-        except ValueError:
-            return None
-        return chapters[position + 1].url if position + 1 < len(chapters) else None
+    def _neighbours(chapters: list[Chapter], chapter_id: int) -> tuple[str | None, str | None]:
+        """The URLs of the chapters either side of `chapter_id`, None at either end."""
+        chapter = next((chapter for chapter in chapters if chapter.id == chapter_id), None)
+        if chapter is None:
+            return None, None
+        before, after = neighbours(chapters, chapter)
+        return before.url if before else None, after.url if after else None
 
     @staticmethod
     def _pages(data: dict[int, list[int | bytes]]) -> Iterator[Page]:

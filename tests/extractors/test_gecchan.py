@@ -154,7 +154,7 @@ def test_episode_has_no_next_url_at_the_end_of_the_work(client):
     episode = gecchan.episode(f"{WORK_URL}/3")
 
     assert episode.episode_title == "001 人気者"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (f"{WORK_URL}/2", None)
 
 
 def test_episode_without_an_image_is_not_readable_but_still_names_the_next(client, fake_response):
@@ -164,7 +164,7 @@ def test_episode_without_an_image_is_not_readable_but_still_names_the_next(clien
     assert not episode.readable
     assert episode.pages == ()
     assert episode.episode_title == "プロローグの2"
-    assert episode.next_url == f"{WORK_URL}/3"
+    assert (episode.prev_url, episode.next_url) == (f"{WORK_URL}/1", f"{WORK_URL}/3")
 
 
 def test_episode_the_page_does_not_list_is_not_an_episode(client):

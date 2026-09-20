@@ -345,6 +345,7 @@ class Neetsha(Extractor):
             series_title=story.series_title or (named.work if named else ""),
             episode_title=story.episode_title or f"story {named.story if named else ''}",
             pages=tuple(Page(url=src) for src in story.images),
+            prev_url=story.prev_url,
             next_url=story.next_url,
             metadata={
                 "id": named.work if named else "",

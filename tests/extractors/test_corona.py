@@ -255,7 +255,7 @@ def test_episode_locked_behind_the_subscription_has_no_pages_but_a_next_url(clie
     assert not episode.readable
     assert episode.series_title == "クズ勇者のその日暮らし@COMIC"
     assert episode.episode_title == "第3話"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (SECOND_URL, None)
     assert episode.metadata["episode"]["episode_status"] == "only_for_subscription"
 
 
@@ -447,7 +447,7 @@ def test_login_raises_with_the_firebase_reason(client, fake_response):
     corona, _ = client({FIREBASE_SIGN_IN_URL: fake_response(payload=refusal, status_code=HTTPStatus.BAD_REQUEST)})
     with pytest.raises(LoginError, match="INVALID_LOGIN_CREDENTIALS"):
         corona.login(EPISODE_URL, "someone@example.com", "wrong")
-    assert corona._token is None  # noqa: SLF001
+    assert corona._token is None
 
 
 def test_login_raises_when_no_token_comes_back(client, fake_response):

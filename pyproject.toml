@@ -126,6 +126,7 @@ lint.per-file-ignores."tests/**" = [
   "RUF001",  # Ambiguous unicode (titles the sites really use)
   "S101",    # Use of assert detected
   "S105",    # Hardcoded password (canned credentials)
+  "SLF001",  # Private member access (the base class helpers the extractors share)
   "TRY003",  # Long exception messages (fakes raise inline)
 ]
 lint.allowed-confusables = [ "／", "｜" ]  # Fullwidth forms the sites put in titles

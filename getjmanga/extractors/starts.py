@@ -280,6 +280,7 @@ class Starts(Extractor):
         if data is None and story is None:
             msg = f"no viewer on {canonical}."
             raise NotAnEpisodePageError(msg)
+        prev_url = next((story.url for story in reversed(stories) if story.number < number), None)
         next_url = next((story.url for story in stories if story.number > number), None)
 
         pages: tuple[Page, ...] = ()
@@ -302,6 +303,7 @@ class Starts(Extractor):
             series_title=series_title or f"n{serial}",
             episode_title=episode_title,
             pages=pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={"comic_data": data, "story": asdict(story) if story else None, "images": images},
         )

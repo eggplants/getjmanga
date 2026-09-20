@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlparse
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -398,12 +398,14 @@ class Ganma(Extractor):
 
         if contents.get("__typename") == "StoryContents":
             info = contents.get("storyInfo") or {}
+            prev_story = (info.get("previousStoryInfo") or {}).get("storyId")
             next_story = (info.get("nextStoryInfo") or {}).get("storyId")
             return Episode(
                 url=episode_url(magazine_key, story_id),
                 series_title=series_title,
                 episode_title=story_title(info) or story_id,
                 pages=tuple(Page(url=src) for src in page_urls(contents.get("pageImages") or {})),
+                prev_url=episode_url(magazine_key, str(prev_story)) if prev_story else None,
                 next_url=episode_url(magazine_key, str(next_story)) if next_story else None,
                 metadata=magazine,
             )
@@ -415,15 +417,14 @@ class Ganma(Extractor):
         stories = self._listing(magazine_key, url)
         index = next((i for i, story in enumerate(stories) if story.get("storyId") == story_id), None)
         story = stories[index] if index is not None else {}
-        next_url = None
-        if index is not None and index + 1 < len(stories):
-            next_url = episode_url(magazine_key, str(stories[index + 1].get("storyId")))
+        before, after = neighbours(stories, story) if index is not None else (None, None)
         return Episode(
             url=episode_url(magazine_key, story_id),
             series_title=series_title,
             episode_title=story_title(story) or story_id,
             pages=(),
-            next_url=next_url,
+            prev_url=episode_url(magazine_key, str(before.get("storyId"))) if before else None,
+            next_url=episode_url(magazine_key, str(after.get("storyId"))) if after else None,
             metadata={**magazine, "storyInfo": story},
         )
 

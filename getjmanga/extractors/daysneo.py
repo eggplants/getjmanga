@@ -160,6 +160,8 @@ class DaysNeo(Extractor):
         series_title = _text(soup.select_one("h1.f160 a")) or _text(soup.select_one("#header .title h1"))
         episode_title = _text(soup.select_one("p.b.f140")) or _header_episode_title(soup)
         sources = _page_sources(res.text, soup)
+        # The page only links the next episode; the work page lists the one before.
+        prev_url = self._listed_neighbours(_work_url(url, match["work"]), episode_url)[0]
         next_url = _next_url(episode_url, soup)
         metadata: dict[str, Any] = {
             "work_id": match["work"],
@@ -175,6 +177,7 @@ class DaysNeo(Extractor):
             series_title=series_title,
             episode_title=episode_title or match["episode"],
             pages=tuple(Page(url=src) for src in sources),
+            prev_url=prev_url,
             next_url=next_url,
             metadata=metadata,
         )

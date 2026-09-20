@@ -217,7 +217,8 @@ class Lezhin(Extractor):
             raise NotAnEpisodePageError(msg)
         info = _results(status, body)
         item = info.get("item") or {}
-        next_item = info.get("next_item") or {}
+        prev_item, next_item = info.get("previous_item") or {}, info.get("next_item") or {}
+        prev_url = episode_url(title_id, str(prev_item["hash_id"])) if prev_item.get("hash_id") else None
         next_url = episode_url(title_id, str(next_item["hash_id"])) if next_item.get("hash_id") else None
 
         status, body = self._api(f"comic/{title_id}/chapter/{chapter_id}/viewer", referer=canonical)
@@ -240,6 +241,7 @@ class Lezhin(Extractor):
             series_title=str((item.get("title") or {}).get("name") or title_id),
             episode_title=str(item.get("name") or chapter_id),
             pages=pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={"info": info, "viewer": viewer, "error": None if pages else body.get("message")},
         )

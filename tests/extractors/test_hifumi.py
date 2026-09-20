@@ -259,7 +259,7 @@ def test_last_episode_has_no_next(fake_session, fake_response):
     episode = Hifumi(session).episode(NEXT_URL)
 
     assert episode.episode_title == "第9話"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (EPISODE_URL, None)
 
 
 def test_episode_follows_an_old_recommend_frame_to_the_current_work_page(fake_session, fake_response):

@@ -47,9 +47,18 @@ class Colophon:
 
     series_title: str
     episode_title: str
+    prev_url: str | None = None
     next_url: str | None = None
     content_url: str | None = None
     raw: dict[str, Any] = field(default_factory=dict)
+
+
+def _prev_link(soup: BeautifulSoup, next_link: Tag | None) -> str | None:
+    """The previous episode's link: the other `/product/` button of the colophon, which has no class of its own."""
+    for anchor in soup.select('a[href^="/product/"]'):
+        if anchor is not next_link:
+            return urljoin(BASE_URL, str(anchor.attrs["href"]))
+    return None
 
 
 def product_url(product_id: str) -> str:
@@ -75,6 +84,7 @@ def parse_colophon(html: str | bytes) -> Colophon | None:
     return Colophon(
         series_title=str(share.attrs["data-title"]),
         episode_title=str(share.attrs.get("data-title-sub") or ""),
+        prev_url=_prev_link(soup, next_link),
         next_url=urljoin(BASE_URL, str(next_link.attrs["href"])) if isinstance(next_link, Tag) else None,
         content_url=urljoin(BASE_URL, str(back.attrs["href"])) if isinstance(back, Tag) else None,
         raw={key: str(value) for key, value in share.attrs.items() if key.startswith("data-")},
@@ -201,6 +211,7 @@ class Boost(Extractor):
                 url=canonical,
                 series_title=colophon.series_title,
                 episode_title=colophon.episode_title,
+                prev_url=colophon.prev_url,
                 next_url=colophon.next_url,
                 metadata={"colophon": colophon.raw},
             )
@@ -219,6 +230,7 @@ class Boost(Extractor):
                 url=canonical,
                 series_title=colophon.series_title,
                 episode_title=colophon.episode_title,
+                prev_url=colophon.prev_url,
                 next_url=colophon.next_url,
                 metadata={"colophon": colophon.raw, "license": license_},
             )
@@ -228,6 +240,7 @@ class Boost(Extractor):
             series_title=colophon.series_title,
             episode_title=colophon.episode_title,
             pages=tuple(pages(pack, content_url)),
+            prev_url=colophon.prev_url,
             next_url=colophon.next_url,
             metadata={"colophon": colophon.raw, "license": license_, "configuration": pack.content["configuration"]},
         )

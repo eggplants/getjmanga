@@ -146,6 +146,7 @@ class Shiori(Extractor):
             series_title=series_title or episode_id.rsplit("_", 1)[0],
             episode_title=episode_title or episode_id,
             pages=tuple(Page(url=src) for src in image_urls),
+            prev_url=_nav_link(soup, "前の話", page_url),
             next_url=_nav_link(soup, "次の話", page_url),
             metadata={
                 "episode_id": episode_id,

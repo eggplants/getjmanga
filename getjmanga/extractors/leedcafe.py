@@ -32,7 +32,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -347,17 +347,16 @@ class LeedCafe(Extractor):
 
         series_title = ""
         episode_title = page.title
-        next_url = page.next_url
-        listed_next: str | None = None
+        prev_url, next_url = page.prev_url, page.next_url
         work_link = page.work_url
         if work_link is not None and (work_key := work_slug(work_link)) is not None:
             work, episodes = self._work(work_key)
             series_title = work.title
             episode_title = episodes.get(slug) or page.title
-            listed_next = _next_in(episodes, slug)
+            listed_prev, listed_next = _either_side(episodes, slug)
+            prev_url = listed_prev or prev_url
+            next_url = listed_next or next_url
             work_link = work.url
-        if listed_next is not None:
-            next_url = listed_next
         if not series_title:
             series_title = page.title
 
@@ -366,6 +365,7 @@ class LeedCafe(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=tuple(Page(url=src, width=width, height=height) for src, width, height in page.images),
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 "post_id": page.post_id,
@@ -424,13 +424,10 @@ class LeedCafe(Extractor):
         return episodes
 
 
-def _next_in(episodes: dict[str, str], slug: str) -> str | None:
-    """The listed episode after `slug`, or None when it is the last one (or unlisted)."""
-    slugs = list(episodes)
-    if slug not in slugs:
-        return None
-    index = slugs.index(slug) + 1
-    return episode_url(slugs[index]) if index < len(slugs) else None
+def _either_side(episodes: dict[str, str], slug: str) -> tuple[str | None, str | None]:
+    """The listed episodes either side of `slug`, None at either end (or both when unlisted)."""
+    before, after = neighbours(list(episodes), slug)
+    return episode_url(before) if before else None, episode_url(after) if after else None
 
 
 def _text(html: str | bytes) -> str:

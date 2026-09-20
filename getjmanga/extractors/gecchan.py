@@ -176,6 +176,7 @@ class Gecchan(Extractor):
             msg = f"{url} lists no episode {number}."
             raise NotAnEpisodePageError(msg)
         entry = entries[number - 1]
+        preceding = entries[number - 2] if number > 1 else None
         following = entries[number] if number < len(entries) else None
 
         return Episode(
@@ -183,6 +184,7 @@ class Gecchan(Extractor):
             series_title=series_title,
             episode_title=entry.title,
             pages=(Page(url=entry.image),) if entry.image else (),
+            prev_url=self._episode_url(url, slug, preceding.number) if preceding is not None else None,
             next_url=self._episode_url(url, slug, following.number) if following is not None else None,
             metadata={
                 "slug": slug,

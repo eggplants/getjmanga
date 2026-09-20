@@ -270,6 +270,8 @@ class Nettai(Extractor):
         if listing is not None:
             series_title = listing.title
             episode_title = episode_title or listing.titles.get(content_id, "")
+        # The colophon points forward only; the work page lists the episode before.
+        prev_url = self._listed_neighbours(book_url(book_id), canonical)[0] if book_id else None
         metadata: dict[str, Any] = {
             "book_content_id": content_id,
             "license": license_,
@@ -280,6 +282,7 @@ class Nettai(Extractor):
                 url=canonical,
                 series_title=series_title or content_id,
                 episode_title=episode_title or content_id,
+                prev_url=prev_url,
                 next_url=colophon.next_url if colophon is not None else None,
                 metadata=metadata,
             )
@@ -291,6 +294,7 @@ class Nettai(Extractor):
             series_title=series_title or episode_title or content_id,
             episode_title=episode_title or content_id,
             pages=tuple(pages(pack, content_url)),
+            prev_url=prev_url,
             next_url=colophon.next_url if colophon is not None else None,
             metadata={**metadata, "configuration": pack.content["configuration"]},
         )

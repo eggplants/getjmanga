@@ -302,15 +302,20 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
         "content_type": "episode",
         "page_number": 1,
     }
-    assert episode.next_url == SECOND_URL
+    assert (episode.prev_url, episode.next_url) == (None, SECOND_URL)
     assert episode.metadata["episode"]["code"] == "CD20013-001-001"
     assert episode.metadata["viewer"] == VIEWER
     assert episode.metadata["next"] == ENTRIES[1]
     json.dumps(episode.metadata)
     json.dumps([dict(page.extra) for page in episode.pages])
 
-    # The detail and the next episode are GETs, the viewer session a POST, all as JSON from the site's origin.
-    assert session.calls == [f"{API_URL}/episodes/CD20013-001-001", f"{API_URL}/episodes/CD20013-001-001/next"]
+    # The detail, the next episode and -- for the previous one, which the API has no call for -- the
+    # series listing are GETs, the viewer session a POST, all as JSON from the site's origin.
+    assert session.calls == [
+        f"{API_URL}/episodes/CD20013-001-001",
+        f"{API_URL}/episodes/CD20013-001-001/next",
+        f"{API_URL}/episodes",
+    ]
     assert session.posts == [(f"{API_URL}/viewer/episodes/CD20013-001-001/session", None)]
     assert all(headers["Accept"] == "application/json" for headers in session.headers_seen)
     assert all(headers["Origin"] == BASE_URL for headers in session.headers_seen)
@@ -332,7 +337,7 @@ def test_locked_episode_has_no_pages_but_keeps_its_titles(client):
     assert not episode.readable
     assert episode.series_title == "毒姫は呪われた指先に春を乞う"
     assert episode.episode_title == "第2話（1）"
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (SECOND_URL, None)
     assert episode.metadata["viewer"] is None
     assert episode.metadata["next"] is None
     assert session.posts == [(f"{API_URL}/viewer/episodes/CD20013-001-003/session", None)]

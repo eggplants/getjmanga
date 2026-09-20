@@ -153,6 +153,7 @@ class Fleur(Extractor):
             )
             if src
         ]
+        prev_url = self._pager(soup, url, "_prev")
         next_url = self._pager(soup, url, "_next")
 
         return Episode(
@@ -160,6 +161,7 @@ class Fleur(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=tuple(Page(url=original_url(src), extra={"served": src}) for src in served),
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 "id": match["id"],

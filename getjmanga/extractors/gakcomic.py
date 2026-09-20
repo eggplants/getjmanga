@@ -281,6 +281,10 @@ class Work:
                 return index
         return None
 
+    def prev_url(self, index: int) -> str | None:
+        """The URL of the episode before the one at `index`, None at the start."""
+        return self.episode_url(self.items[index - 1]) if index else None
+
     def next_url(self, index: int) -> str | None:
         """The URL of the episode after the one at `index`, None at the end."""
         return self.episode_url(self.items[index + 1]) if index + 1 < len(self.items) else None
@@ -415,6 +419,7 @@ class Gakcomic(Extractor):
                 series_title=work.title,
                 episode_title=item.title,
                 pages=(Page(url=item.image),),
+                prev_url=work.prev_url(index),
                 next_url=work.next_url(index),
                 metadata=metadata,
             )
@@ -424,6 +429,7 @@ class Gakcomic(Extractor):
             series_title=work.title,
             episode_title=item.title,
             pages=self._pages(item.content_id, content),
+            prev_url=work.prev_url(index),
             next_url=work.next_url(index),
             metadata={**metadata, "content_id": item.content_id, **content.info},
         )
@@ -500,6 +506,7 @@ class Gakcomic(Extractor):
                     series_title=work.title,
                     episode_title=work.items[index].title,
                     pages=self._pages(content_id, content),
+                    prev_url=work.prev_url(index),
                     next_url=work.next_url(index),
                     metadata={**metadata, "episode_id": work.items[index].id, "work_url": work.url},
                 )

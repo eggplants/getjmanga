@@ -280,7 +280,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert [page.url for page in episode.pages] == [SOURCE_1, SOURCE_2]
     assert [(page.width, page.height) for page in episode.pages] == [(577, 800), (564, 800)]
     assert episode.pages[0].extra == {"template": template(SOURCE_1), "id": "p1"}
-    assert episode.next_url == episode_url(NEXT_ID)
+    assert (episode.prev_url, episode.next_url) == (episode_url(PREV_ID), episode_url(NEXT_ID))
     assert episode.metadata["prev_url"] == episode_url(PREV_ID)
     assert episode.metadata["work_url"] == WORK_URL
     assert episode.metadata["locked"] is False

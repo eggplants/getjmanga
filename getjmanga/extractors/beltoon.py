@@ -28,7 +28,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from PIL import Image
 
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -285,7 +285,7 @@ class BeLToon(Extractor):
         work = self._work(alias)
         entries = _episodes(work) if work is not None else []
         entry = next((e for e in entries if str(e.get("alias")) == episode_alias), None)
-        next_url = self._next_url(alias, entries, episode_alias)
+        prev_url, next_url = self._neighbours(alias, entries, episode_alias)
 
         if not isinstance(result, dict):
             code = str((error or {}).get("code") or "")
@@ -297,6 +297,7 @@ class BeLToon(Extractor):
                 url=url,
                 series_title=str((work or {}).get("title") or alias),
                 episode_title=str((entry or {}).get("title") or episode_alias),
+                prev_url=prev_url,
                 next_url=next_url,
                 metadata={"alias": alias, "episode_alias": episode_alias, "error": error, "episode": entry},
             )
@@ -321,6 +322,7 @@ class BeLToon(Extractor):
             series_title=str(result.get("contentsTitle") or (work or {}).get("title") or alias),
             episode_title=str(result.get("title") or (entry or {}).get("title") or episode_alias),
             pages=pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={key: value for key, value in result.items() if key != "images"},
         )
@@ -403,13 +405,12 @@ class BeLToon(Extractor):
         return self._works[alias]
 
     @staticmethod
-    def _next_url(alias: str, entries: list[dict[str, Any]], episode_alias: str) -> str | None:
-        aliases = [str(entry.get("alias")) for entry in entries]
-        try:
-            position = aliases.index(episode_alias)
-        except ValueError:
-            return None
-        return episode_url(alias, aliases[position + 1]) if position + 1 < len(aliases) else None
+    def _neighbours(alias: str, entries: list[dict[str, Any]], episode_alias: str) -> tuple[str | None, str | None]:
+        before, after = neighbours([str(entry.get("alias")) for entry in entries], episode_alias)
+        return (
+            episode_url(alias, before) if before is not None else None,
+            episode_url(alias, after) if after is not None else None,
+        )
 
     def _scramble_indices(self, result: dict[str, Any], images: list[dict[str, Any]]) -> list[list[int]]:
         """The tile permutation of every page, empty for a page served straight."""

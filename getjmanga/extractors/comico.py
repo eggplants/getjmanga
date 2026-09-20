@@ -14,7 +14,7 @@ from xml.etree import ElementTree as ET
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -287,12 +287,18 @@ class Comico(Extractor):
 
         content: dict[str, Any] = data.get("content") or {}
         chapter: dict[str, Any] = data["chapter"]
+        prev_chapter = chapter.get("previousChapter") or {}
         next_chapter = chapter.get("nextChapter") or {}
         return Episode(
             url=canonical,
             series_title=str(content.get("name") or content_id),
             episode_title=episode_title(str(chapter.get("name") or chapter_id), sales_type),
             pages=tuple(self._pages(chapter, canonical)),
+            prev_url=(
+                episode_url(content_type, content_id, prev_chapter["id"], sales_type)
+                if prev_chapter.get("id")
+                else None
+            ),
             next_url=(
                 episode_url(content_type, content_id, next_chapter["id"], sales_type)
                 if next_chapter.get("id")
@@ -353,14 +359,13 @@ class Comico(Extractor):
             msg = f"no chapter {chapter_id} in the work at {canonical}: {reason or 'not listed'}."
             raise NotAnEpisodePageError(msg)
         listing = self._listings[content_type, content_id]
-        next_url = None
-        if position + 1 < len(chapters):
-            next_url = episode_url(content_type, content_id, chapters[position + 1]["id"], sales_type)
+        before, after = neighbours(chapters, chapters[position])
         return Episode(
             url=canonical,
             series_title=str(listing.get("name") or content_id),
             episode_title=episode_title(str(chapters[position].get("name") or chapter_id), sales_type),
-            next_url=next_url,
+            prev_url=episode_url(content_type, content_id, before["id"], sales_type) if before else None,
+            next_url=episode_url(content_type, content_id, after["id"], sales_type) if after else None,
             metadata={"chapter": chapters[position], "reason": reason},
         )
 

@@ -115,7 +115,8 @@ class Rookie(Extractor):
             UnsupportedUrlError: The URL is no episode URL.
             NotAnEpisodePageError: The page is gone or carries no viewer.
         """
-        if _EPISODE_PATH.match(urlparse(url).path) is None:
+        match = _EPISODE_PATH.match(urlparse(url).path)
+        if match is None:
             msg = f"{url} is not an episode url."
             raise UnsupportedUrlError(msg)
         soup = self._page(url)
@@ -144,6 +145,11 @@ class Rookie(Extractor):
             if _EPISODE_PATH.match(urlparse(candidate).path):
                 next_url = candidate
 
+        # The page buttons only forward; the series page lists what comes before.
+        origin = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
+        series_url = f"{origin}/series/{match['series']}"
+        prev_url = self._listed_neighbours(series_url, f"{series_url}/{match['episode']}")[0]
+
         author = soup.select_one(".page-upper .user-container .user-name")
         published = soup.select_one("#series-history .series-history-date")
         return Episode(
@@ -151,6 +157,7 @@ class Rookie(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 "title": soup.title.get_text(strip=True) if isinstance(soup.title, Tag) else "",

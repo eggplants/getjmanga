@@ -334,6 +334,8 @@ class PixivComic(Extractor):
             for entry in reading.get("pages") or []
             if isinstance(entry, dict) and entry.get("url")
         )
+        preceding = reading.get("prev_episode") or {}
+        prev_url = episode_url(preceding["id"]) if isinstance(preceding, dict) and preceding.get("id") else None
         following = reading.get("next_episode") or {}
         next_url = episode_url(following["id"]) if isinstance(following, dict) and following.get("id") else None
         title = reading.get("title") or " ".join(
@@ -344,6 +346,7 @@ class PixivComic(Extractor):
             series_title=str(reading.get("work_title") or reading.get("work_id") or ""),
             episode_title=str(title or episode_id),
             pages=pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata=reading,
         )

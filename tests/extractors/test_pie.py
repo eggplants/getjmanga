@@ -351,13 +351,17 @@ def test_episode_reads_a_story(client):
 def test_episode_remembers_the_original_of_a_scaled_image(client, fake_response):
     scaled = f"{UPLOADS}/2026/08/08_H_1-scaled.jpg"
     pie, _ = client(
-        {"/story/henry": fake_response(text=story_html("【Part 8】Henry", "Henry", (scaled,), next_url=None))}
+        {
+            "/story/henry": fake_response(
+                text=story_html("【Part 8】Henry", "Henry", (scaled,), prev_url=NEXT_STORY_URL, next_url=None)
+            )
+        }
     )
     episode = pie.episode("https://comics.pie.co.jp/story/henry")
 
     assert episode.pages[0].url == scaled
     assert episode.pages[0].extra == {"original": f"{UPLOADS}/2026/08/08_H_1.jpg"}
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (NEXT_STORY_URL, None)
 
 
 def test_story_without_an_image_is_not_readable(client, fake_response):

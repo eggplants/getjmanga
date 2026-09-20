@@ -300,7 +300,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert episode.episode_title == "黄色い悪夢　第９回『ライクアローリングストーン』前編"
     assert [page.url for page in episode.pages] == [IMAGE_1, IMAGE_2]
     assert (episode.pages[1].width, episode.pages[1].height) == (1410, 1000)
-    assert episode.next_url == THIRD_URL
+    assert (episode.prev_url, episode.next_url) == (FIRST_URL, THIRD_URL)
     assert episode.metadata["post_id"] == "81705"
     assert episode.metadata["number"] == 2
     assert episode.metadata["work_url"] == WORK_URL
@@ -325,7 +325,7 @@ def test_episode_next_comes_from_the_listing_when_the_page_has_no_arrow(client, 
 
 
 def test_episode_falls_back_to_the_arrow_when_unlisted(client, fake_response):
-    html = _episode_html(heading="9. 黄色い悪夢　第５回", next_url=THIRD_URL)
+    html = _episode_html(heading="9. 黄色い悪夢　第５回", prev_url=SECOND_URL, next_url=THIRD_URL)
     leedcafe, _ = client(
         {
             "/webcomic/": fake_response(text=html),
@@ -336,7 +336,7 @@ def test_episode_falls_back_to_the_arrow_when_unlisted(client, fake_response):
     episode = leedcafe.episode("https://leedcafe.com/webcomic/unlisted/")
 
     assert episode.episode_title == "黄色い悪夢　第５回"
-    assert episode.next_url == THIRD_URL
+    assert (episode.prev_url, episode.next_url) == (SECOND_URL, THIRD_URL)
 
 
 def test_episode_is_the_last_one_when_the_listing_ends(client, fake_response):

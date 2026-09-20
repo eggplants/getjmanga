@@ -82,6 +82,10 @@ class WorkPage:
         """The listed episode with `number`, or None when the list has none."""
         return next((episode for episode in self.episodes if episode.number == number), None)
 
+    def before(self, number: int) -> Listed | None:
+        """The last listed episode before `number`, or None when it is the first."""
+        return next((episode for episode in reversed(self.episodes) if episode.number < number), None)
+
     def after(self, number: int) -> Listed | None:
         """The first listed episode after `number`, or None when it is the last."""
         return next((episode for episode in self.episodes if episode.number > number), None)
@@ -258,7 +262,8 @@ class Yomonga(Extractor):
         work = parse_work_page(res.content, page_url)
         self._episodes[title_id] = work.episodes
 
-        following = work.after(number)
+        preceding, following = work.before(number), work.after(number)
+        prev_url = episode_url(title_id, preceding.number, preceding.content_id) if preceding else None
         next_url = episode_url(title_id, following.number, following.content_id) if following else None
         listed = work.listed(number)
         if work.episode_no != number or listed is None:
@@ -272,6 +277,7 @@ class Yomonga(Extractor):
                 url=page_url,
                 series_title=work.series_title,
                 episode_title=f"Chapter.{number}",
+                prev_url=prev_url,
                 next_url=next_url,
                 metadata={"title_id": title_id, "episode_no": number, "locked": True},
             )
@@ -298,6 +304,7 @@ class Yomonga(Extractor):
             series_title=work.series_title,
             episode_title=work.episode_title or listed.title or f"Chapter.{number}",
             pages=book.pages,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={
                 "title_id": title_id,

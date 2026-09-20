@@ -314,12 +314,14 @@ class Corocoro(Extractor):
                 for fields in (message(buf) for buf in messages(viewer, _VIEWER_PAGES))
                 if string(fields, _IMAGE_SRC)
             )
+        preceding = chapter(raw(viewer, _VIEWER_PREV))
         following = chapter(raw(viewer, _VIEWER_NEXT))
         return Episode(
             url=episode_url(chapter_id),
             series_title=series["name"] or str(series["id"] or chapter_id),
             episode_title=chapter_title(current),
             pages=pages,
+            prev_url=episode_url(preceding["id"]) if preceding["id"] else None,
             next_url=episode_url(following["id"]) if following["id"] else None,
             metadata={
                 "result": result,

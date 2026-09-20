@@ -412,8 +412,11 @@ def test_twi4_episode_reads_the_strip_and_skips_closed_ones_for_the_next(client,
         f"{HOST}/comics/twi4/tsuredure/works/0009.fUvE7wwnjls9mY5u1rpLuv4sVHverpUP.jpg",
     ]
     assert episode.pages[0].extra == {}
-    # `index.js` says 10 and 11 are closed, so the next open strip is 12.
-    assert episode.next_url == f"{HOST}/comics/twi4/tsuredure/0012.html"
+    # `index.js` says 4 to 8 and 10 to 11 are closed, so the open strips either side are 3 and 12.
+    assert (episode.prev_url, episode.next_url) == (
+        f"{HOST}/comics/twi4/tsuredure/0003.html",
+        f"{HOST}/comics/twi4/tsuredure/0012.html",
+    )
     assert episode.metadata["kind"] == "twi4"
     assert episode.metadata["closed"] is False
     assert session.calls == [TWI4_EPISODE_URL, f"{HOST}/comics/twi4/tsuredure/index.js"]
@@ -428,7 +431,11 @@ def test_twi4_next_comes_from_the_back_numbers_without_an_index(client, fake_res
         },
     )
     episode = saizensen.episode(TWI4_EPISODE_URL)
-    assert episode.next_url == f"{HOST}/comics/twi4/tsuredure/0010.html"
+    # The back numbers list 10 down to 8 around the current strip.
+    assert (episode.prev_url, episode.next_url) == (
+        f"{HOST}/comics/twi4/tsuredure/0008.html",
+        f"{HOST}/comics/twi4/tsuredure/0010.html",
+    )
 
 
 def test_twi4_closed_strip_has_no_pages_but_a_next(client, fake_response):
@@ -454,7 +461,8 @@ def test_twi4_last_open_strip_has_no_next(client, fake_response):
             "/tsuredure/0012.html": fake_response(text=TWI4_HTML.replace("#0009", "#0012")),
         },
     )
-    assert saizensen.episode(f"{HOST}/comics/twi4/tsuredure/0012.html").next_url is None
+    episode = saizensen.episode(f"{HOST}/comics/twi4/tsuredure/0012.html")
+    assert (episode.prev_url, episode.next_url) == (f"{HOST}/comics/twi4/tsuredure/0003.html", None)
 
 
 def test_twi4_all_page_lists_every_strip_of_the_entry(client, fake_response):
@@ -492,8 +500,11 @@ def test_reader_episode_reads_the_pages_and_the_next_served_volume(client, fake_
         f"{HOST}/works/comics/karanokyoukai/03/01.res/002.png",
         f"{HOST}/works/comics/karanokyoukai/03/01.res/003.png",
     ]
-    # Volumes 4 to 71 are gone; 72 is the next one `meta.json` still lists.
-    assert episode.next_url == f"{HOST}/works/comics/karanokyoukai/72/01.html"
+    # Volumes 4 to 71 are gone; 72 is the next one `meta.json` still lists, 2 the one before.
+    assert (episode.prev_url, episode.next_url) == (
+        f"{HOST}/works/comics/karanokyoukai/02/01.html",
+        f"{HOST}/works/comics/karanokyoukai/72/01.html",
+    )
     assert episode.metadata["kind"] == "reader"
     assert session.calls == [READER_EPISODE_URL, f"{HOST}/comics/karanokyoukai/meta.json"]
 
@@ -507,7 +518,8 @@ def test_reader_meta_is_fetched_once_per_work_and_the_last_volume_has_no_next(cl
         },
     )
     assert saizensen.episode(f"{HOST}/works/comics/karanokyoukai/72/01.html").next_url.endswith("/73/01.html")
-    assert saizensen.episode(f"{HOST}/works/comics/karanokyoukai/73/01.html").next_url is None
+    last = saizensen.episode(f"{HOST}/works/comics/karanokyoukai/73/01.html")
+    assert (last.prev_url, last.next_url) == (f"{HOST}/works/comics/karanokyoukai/72/01.html", None)
     assert session.calls.count(f"{HOST}/comics/karanokyoukai/meta.json") == 1
 
 

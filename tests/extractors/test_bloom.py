@@ -316,6 +316,7 @@ def test_last_episode_has_no_next(client, fake_response):
     )
     episode = bloom.episode(LAST_URL)
     assert episode.episode_title == "第4話　前編"
+    assert episode.prev_url is not None
     assert episode.next_url is None
 
 
@@ -354,7 +355,7 @@ def test_api_that_refuses_the_content_is_locked(client):
     assert not episode.readable
     assert episode.series_title == "なんか、花火"
     assert episode.episode_title == "第1話"
-    assert episode.next_url == NEXT_URL
+    assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert episode.metadata["locked"] is True
     json.dumps(episode.metadata)
 

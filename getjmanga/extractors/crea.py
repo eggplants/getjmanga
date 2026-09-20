@@ -38,6 +38,7 @@ _AUTHOR_PATH = re.compile(r"^/list/comic-essay/author/(?P<name>[^/]+)/?$")
 # the rendition size; `-` is the file as uploaded.
 _IMAGE_PATH = re.compile(r"^(?P<prefix>/mwimgs/[0-9a-f]/[0-9a-f]/)(?P<size>[^/]+)/(?P<name>img_[^/]+)$")
 
+_PREV_LABEL = "前のお話"
 _NEXT_LABEL = "次のお話"
 _PREV_LABEL = "前のお話"
 _SUMMARY_LABEL = "まとめページ"
@@ -166,6 +167,7 @@ class Crea(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=tuple(pages),
+            prev_url=_button_link(body, _PREV_LABEL, page_url),
             next_url=_button_link(body, _NEXT_LABEL, page_url),
             metadata={
                 "article_id": article_id,

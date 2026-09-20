@@ -60,7 +60,8 @@ class Viewer:
     episode_title: str
     #: The page images in reading order, absolute, deduplicated.
     images: tuple[str, ...]
-    #: The episode the footer names as next, absolute, or None at the end.
+    #: The episodes the footer names as previous and next, absolute, or None at either end.
+    prev_url: str | None
     next_url: str | None
 
 
@@ -135,20 +136,24 @@ def parse_viewer(html: str | bytes, url: str) -> Viewer:
             series_title = series_title or match["series"].strip()
             episode_title = episode_title or match["episode"].strip()
 
-    next_url = None
     footer = viewer.find("footer")
-    anchor = footer.select_one("a.next[href]") if isinstance(footer, Tag) else None
-    if isinstance(anchor, Tag) and str(anchor["href"]).strip():
-        next_url = urljoin(url, str(anchor["href"]).strip())
-
     return Viewer(
         kind=kind,
         series_title=series_title,
         series_url=series_url,
         episode_title=episode_title,
         images=tuple(images),
-        next_url=next_url,
+        prev_url=_footer_link(footer, "prev", url),
+        next_url=_footer_link(footer, "next", url),
     )
+
+
+def _footer_link(footer: Tag | None, direction: str, url: str) -> str | None:
+    """The viewer footer's `a.prev` / `a.next` episode link, or None when it is absent or empty."""
+    anchor = footer.select_one(f"a.{direction}[href]") if isinstance(footer, Tag) else None
+    if isinstance(anchor, Tag) and str(anchor["href"]).strip():
+        return urljoin(url, str(anchor["href"]).strip())
+    return None
 
 
 def _footer_heading(viewer: Tag, url: str) -> tuple[str, str | None, str]:
@@ -303,6 +308,7 @@ class Torch(Extractor):
             series_title=viewer.series_title,
             episode_title=viewer.episode_title,
             pages=tuple(Page(url=src) for src in viewer.images),
+            prev_url=viewer.prev_url,
             next_url=viewer.next_url,
             metadata={
                 "slug": story_slug(url),

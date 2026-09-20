@@ -37,6 +37,7 @@ TEST_URLS: dict[str, str] = {
 
 EPISODE_URL = "https://shonenjumpplus.com/episode/10834108156648240735"
 NEXT_URL = "https://shonenjumpplus.com/episode/10834108156648240736"
+PREV_URL = "https://shonenjumpplus.com/episode/10834108156648240734"
 
 
 def episode_json(**overrides):
@@ -46,6 +47,7 @@ def episode_json(**overrides):
         "series": {"title": "SPY×FAMILY"},
         "isPublic": True,
         "hasPurchased": False,
+        "prevReadableProductUri": PREV_URL,
         "nextReadableProductUri": NEXT_URL,
         "pageStructure": {
             "pages": [
@@ -130,7 +132,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_url(fake_session, fake_
     assert episode.episode_title == "第1話"
     assert [page.url for page in episode.pages] == ["https://cdn.example/1.jpg", "https://cdn.example/2.jpg"]
     assert episode.pages[0].width == 64
-    assert episode.next_url == NEXT_URL
+    assert (episode.prev_url, episode.next_url) == (PREV_URL, NEXT_URL)
     assert episode.metadata["readableProduct"]["typeName"] == "episode"
 
 

@@ -441,7 +441,7 @@ def test_episode_takes_the_index_html_form_and_reads_the_work_once(client):
     last = wings.episode(LAST_URL)
     assert first.url == EPISODE_URL
     assert last.episode_title == "第2話"  # the caption, since the book's title adds nothing
-    assert last.next_url is None
+    assert (last.prev_url, last.next_url) == (NEXT_URL, None)
     assert session.calls.count(WORK_URL) == 1
 
 

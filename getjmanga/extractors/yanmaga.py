@@ -41,7 +41,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
@@ -293,13 +293,15 @@ class YanMaga(Extractor):
 
         page_series, page_episode = split_page_title(soup.title.get_text() if soup.title else "")
         item = content.item
-        following = item.get("NextEpisode")
+        preceding, following = item.get("PrevEpisode"), item.get("NextEpisode")
+        prev_path = preceding.get("ViewerPath") if isinstance(preceding, dict) else None
         next_path = following.get("ViewerPath") if isinstance(following, dict) else None
         return Episode(
             url=canonical,
             series_title=str(item.get("ParentTitle") or page_series),
             episode_title=str(item.get("Title") or page_episode or episode_id),
             pages=book.pages,
+            prev_url=_episode_url_of(urljoin(canonical, str(prev_path))) if prev_path else None,
             next_url=_episode_url_of(urljoin(canonical, str(next_path))) if next_path else None,
             metadata={
                 "episode_id": episode_id,
@@ -374,15 +376,14 @@ class YanMaga(Extractor):
             raise NotAnEpisodePageError(msg)
         listed = self.listing(title)
         urls = [entry.url for entry in listed]
-        next_url = None
         if canonical in urls:
-            index = urls.index(canonical)
-            episode_title = listed[index].title or episode_title
-            next_url = urls[index + 1] if index + 1 < len(urls) else None
+            episode_title = listed[urls.index(canonical)].title or episode_title
+        prev_url, next_url = neighbours(urls, canonical)
         return Episode(
             url=canonical,
             series_title=series_title,
             episode_title=episode_title or episode_id,
+            prev_url=prev_url,
             next_url=next_url,
             metadata={"episode_id": episode_id, "content_id": content_id, "locked": True},
         )

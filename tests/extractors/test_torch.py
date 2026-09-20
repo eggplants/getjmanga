@@ -66,6 +66,7 @@ LAST_EPISODE_HTML = f"""
 <div class="manga_page not_blank"><p class="manga_page_con">
 <span class="manga_page_image" img-url="{IMAGE_BASE}/fv13_001.jpg"></span></p></div>
 <footer class="viewer_ui">
+<a class="prev" href="https://to-ti.in/story/fv_12">前のエピソード</a>
 <h2><a href="{WORK_URL}">フェイバリッツ FAVORITES<span class="name">#13</span></a></h2></footer>
 </div>
 </body></html>
@@ -235,7 +236,7 @@ def test_episode_at_the_end_of_a_work_has_no_next(fake_session, fake_response):
 
     assert episode.episode_title == "#13"
     assert [page.url for page in episode.pages] == [f"{IMAGE_BASE}/fv13_001.jpg"]
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == ("https://to-ti.in/story/fv_12", None)
 
 
 def test_text_post_has_no_pages_but_still_a_next(fake_session, fake_response):

@@ -253,7 +253,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, readabl
     assert episode.episode_title == "第2話"
     assert [page.url for page in episode.pages] == [PAGE_1, PAGE_2]
     assert all(page.extra == {"seed": SEED, "version": 2} for page in episode.pages)
-    assert episode.next_url == NEXT_URL
+    assert (episode.prev_url, episode.next_url) == (episode_url(813, 32964), NEXT_URL)
     assert episode.metadata["episode"]["episode_id"] == 32965
     assert episode.metadata["title"]["title_name"] == SERIES_TITLE
     assert episode.metadata["viewer"]["scramble_seed"] == SEED
@@ -300,7 +300,8 @@ def test_last_episode_has_no_next(client, readable_routes, fake_response):
     readable_routes[TITLE_API] = fake_response(payload=title_payload(ids=(32964, 32965)))
     readable_routes[VIEWER_API] = fake_response(payload=viewer_payload(next_id=None))
     ciao, _ = client(readable_routes)
-    assert ciao.episode(EPISODE_URL).next_url is None
+    episode = ciao.episode(EPISODE_URL)
+    assert (episode.prev_url, episode.next_url) == (episode_url(813, 32964), None)
 
 
 def test_priced_episode_has_no_pages_and_leaves_the_viewer_alone(client, fake_response):

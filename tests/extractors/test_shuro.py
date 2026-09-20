@@ -298,7 +298,7 @@ def test_last_episode_has_no_next(client, fake_response):
 
     assert episode.episode_title == "第１5話 「ウエちゃんが撮ったやつ」"
     assert len(episode.pages) == 1
-    assert episode.next_url is None
+    assert (episode.prev_url, episode.next_url) == (EPISODE_URL, None)
 
 
 def test_episode_with_an_empty_viewer_has_no_pages(client, fake_response):

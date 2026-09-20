@@ -185,6 +185,7 @@ class Souffle(Extractor):
             series_title=series_title,
             episode_title=episode_title,
             pages=() if expired else tuple(Page(url=src) for src in image_urls),
+            prev_url=_button_link(soup, "sf-before_btn", url),
             next_url=_button_link(soup, "sf-next_btn", url),
             metadata={
                 "section": section,
