@@ -68,6 +68,13 @@ def unmask(data: bytes, drm_hash: str) -> bytes:
     return xor_unmask(data, drm_key(drm_hash))
 
 
+def _publisher(content: dict[str, Any]) -> str:
+    """Who an official work comes from: its `配信元：<name>` sign; a user's work has none."""
+    sign = str(content.get("contract_sign") or "")
+    _, colon, name = sign.partition("：")
+    return name.strip() if colon else sign.strip()
+
+
 def episode_url(episode_id: str | int) -> str:
     """The canonical URL of an episode.
 
@@ -84,6 +91,7 @@ class NicoManga(Extractor):
     """Fetch episodes from ニコニコ漫画."""
 
     NAME = "nicomanga"
+    PUBLISHER = "ドワンゴ"
     # `seiga.nicovideo.jp` is the old home of the same pages and redirects to
     # `manga.nicovideo.jp`; `sp.` is the mobile front end of the same API.
     HOSTS = ("manga.nicovideo.jp", "seiga.nicovideo.jp", "sp.manga.nicovideo.jp")
@@ -234,6 +242,8 @@ class NicoManga(Extractor):
                 "frames": frames,
                 "error_code": refused,
             },
+            writer=str(content.get("display_author_name") or ""),
+            publisher=_publisher(content) or self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

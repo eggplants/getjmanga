@@ -93,6 +93,23 @@ def episode_url(book_id: str, *, indies: bool = False) -> str:
     return f"{BASE_URL}/book/viewer?id={book_id}"
 
 
+#: A work page's `出版社` row: the term, then the linked name.
+_PUBLISHER = re.compile(r"出版社</dt>\s*<dd[^>]*>\s*<a[^>]*>\s*(?P<name>[^<]+?)\s*</a>")
+
+
+def parse_publisher(html: str) -> str:
+    """The publisher a work page names in its `出版社` row, or "" without one.
+
+    Args:
+        html: The work page.
+
+    Returns:
+        The linked name, whitespace trimmed.
+    """
+    match = _PUBLISHER.search(html)
+    return match["name"] if match else ""
+
+
 def _query_id(url: str) -> str | None:
     """The `id` parameter of a URL, when it looks like one of the site's ids."""
     values = parse_qs(urlparse(url).query).get("id") or []
@@ -187,6 +204,7 @@ class LineManga(Extractor):
 
     NAME = "linemanga"
     HOSTS = ("manga.line.me",)
+    PUBLISHER = "LINE Digital Frontier"
     URL_FORMS = (
         "https://manga.line.me/book/viewer?id=<book>",
         "https://manga.line.me/product/periodic?id=<product>",
@@ -207,6 +225,8 @@ class LineManga(Extractor):
         self._products: dict[str, str] = {}
         #: Work titles by `(flavour, product id)`, as the listings named them.
         self._names: dict[tuple[str, str], str] = {}
+        #: The publisher each work page names, by product id.
+        self._publishers: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -298,14 +318,17 @@ class LineManga(Extractor):
             raise NotAnEpisodePageError(msg)
 
         next_id = (option.get("next_book") or {}).get("id")
+        product_id = str(option.get("productId") or "")
         return Episode(
             url=canonical,
             series_title=str(option.get("productName") or option.get("productId") or ""),
             episode_title=str(option.get("title") or book_id),
             pages=parse_pages(res.text),
-            prev_url=self._listed_before(flavour, str(option.get("productId") or ""), book_id, canonical),
+            prev_url=self._listed_before(flavour, product_id, book_id, canonical),
             next_url=episode_url(str(next_id), indies=flavour == "indies") if next_id else None,
             metadata={"option": option},
+            writer=str(option.get("authorName") or ""),
+            publisher=self._publisher(flavour, product_id, canonical),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -354,7 +377,20 @@ class LineManga(Extractor):
             prev_url=episode_url(str(before["id"]), indies=flavour == "indies") if before else None,
             next_url=episode_url(str(after["id"]), indies=flavour == "indies") if after else None,
             metadata={"book": entry},
+            writer=", ".join(str(a.get("name") or "") for a in entry.get("authors") or [] if a.get("name")),
+            publisher=self._publisher(flavour, product_id, url),
         )
+
+    def _publisher(self, flavour: str, product_id: str, referer: str) -> str:
+        """The `出版社` a serial's work page names, read once per work; an indies work has only the site."""
+        if flavour == "indies" or not product_id:
+            return self.PUBLISHER
+        if product_id not in self._publishers:
+            res = self._session.get(
+                f"{BASE_URL}/product/periodic?id={product_id}", headers={**self.HEADERS, "Referer": referer}
+            )
+            self._publishers[product_id] = parse_publisher(res.text) if res.is_success else ""
+        return self._publishers[product_id] or self.PUBLISHER
 
     def _listed_before(self, flavour: str, product_id: str, book_id: str, referer: str) -> str | None:
         """The episode the work lists before `book_id`: the viewer only names the next one.

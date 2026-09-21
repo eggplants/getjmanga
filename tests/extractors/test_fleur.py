@@ -95,6 +95,9 @@ def story_link(href: str, title: str) -> str:
 
 def work_html(*links: tuple[str, str]) -> str:
     return f"""<!DOCTYPE html><html lang="ja"><head><title>ゆきあいの青 | COMICフルール</title></head><body>
+<div class="cb-author"><div class="cb-author__item">
+<a class="cb-author__link" href="{ORIGIN}/search/keyword/たつもとみお/?type=lineup&blog=magazine">たつもとみお</a>
+</div></div>
 <div class="cb-story-links"><ul class="cb-story-links__list">
 {"".join(story_link(href, title) for href, title in links)}
 </ul></div>
@@ -198,12 +201,14 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "ゆきあいの青"
     assert episode.episode_title == "第1話"
+    assert (episode.writer, episode.publisher) == ("たつもとみお", "KADOKAWA")
     assert [page.url for page in episode.pages] == ORIGINALS
     assert [page.extra["served"] for page in episode.pages] == SERVED
     assert episode.next_url == NEXT_URL
     assert episode.metadata == {"id": "cb264_01", "images": SERVED, "prev_url": None}
     json.dumps(episode.metadata)
-    assert session.calls == [EPISODE_URL]
+    # The credits come off the work page, read once.
+    assert session.calls == [EPISODE_URL, WORK_URL]
     assert "User-Agent" in session.headers_seen[0]
 
 

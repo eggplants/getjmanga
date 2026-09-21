@@ -8,7 +8,7 @@ from PIL import Image
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractors.carula import Carula, is_locked, neighbour_keys, split_title
+from getjmanga.extractors.carula import Carula, is_locked, neighbour_keys, parse_catalogue, split_title
 
 EPISODE_URL = "https://note.com/carula/n/nb016b73d0f1d"
 NEXT_URL = "https://note.com/carula/n/n596c41e8118a"
@@ -47,6 +47,18 @@ def note(**overrides):
         "user": {"urlname": "carula", "nickname": "コミックカルラ"},
         **overrides,
     }
+
+
+WORKS_CSV = (
+    "id,サムネイル画像,タイトル,タイトルのヨミ,著者1,著者1のヨミ,クレジット1,SNS1,著者2,著者2のヨミ,クレジット2,著者3,クレジット3\n"
+    "W004,image/rock.jpg,留学ろっく!!,リュウガクロック,一本木蛮,イッポンギバン,,https://x.com/bang_ipp,,,,,\n"
+    "W010,image/p.jpg,ピノッキオの冒険,ピノッキオノボウケン,カルロ・コッローディ,,原作,,高田靖彦,タカダヤスヒコ,漫画,,\n"
+)
+
+
+@pytest.fixture
+def catalogue(fake_response):
+    return fake_response(text=WORKS_CSV, content_type="text/csv")
 
 
 @pytest.fixture
@@ -137,32 +149,41 @@ def test_is_series(url, expected):
 # --- episodes -------------------------------------------------------------------------------
 
 
-def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, api):
-    session = fake_session({"/api/v3/notes/nb016b73d0f1d": api({"data": note()})})
+def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, api, catalogue):
+    session = fake_session({"/api/v3/notes/nb016b73d0f1d": api({"data": note()}), "works.csv": catalogue})
     episode = Carula(session).episode(EPISODE_URL)
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == "留学ろっく!!"
     assert episode.episode_title == "Lesson 1　パパはダイヤモンドチューバー‼"
+    assert (episode.writer, episode.publisher) == ("一本木蛮", "世界文化ブックス")
     assert [page.url for page in episode.pages] == [PAGE_1, PAGE_2]
     assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert episode.metadata["key"] == "nb016b73d0f1d"
-    assert session.calls == ["https://note.com/api/v3/notes/nb016b73d0f1d"]
-    assert session.headers_seen[-1]["Accept"].startswith("application/json")
+    assert session.calls == ["https://note.com/api/v3/notes/nb016b73d0f1d", "https://carula.jp/works.csv"]
+    assert session.headers_seen[0]["Accept"].startswith("application/json")
 
 
-def test_episode_follows_the_legacy_catalogue_redirect(fake_session, fake_response, api):
+def test_parse_catalogue_credits_every_author_with_their_role():
+    assert parse_catalogue(WORKS_CSV) == {
+        "留学ろっく!!": "一本木蛮",
+        "ピノッキオの冒険": "カルロ・コッローディ (原作), 高田靖彦 (漫画)",
+    }
+
+
+def test_episode_follows_the_legacy_catalogue_redirect(fake_session, fake_response, api, catalogue):
     session = fake_session(
         {
             "carula.jp/series/": fake_response(text="<html></html>", url=EPISODE_URL),
             "/api/v3/notes/nb016b73d0f1d": api({"data": note()}),
+            "works.csv": catalogue,
         },
     )
     episode = Carula(session).episode(LEGACY_URL)
 
     assert episode.url == EPISODE_URL
     assert len(episode.pages) == 2
-    assert session.calls == [LEGACY_URL, "https://note.com/api/v3/notes/nb016b73d0f1d"]
+    assert session.calls[:2] == [LEGACY_URL, "https://note.com/api/v3/notes/nb016b73d0f1d"]
 
 
 def test_episode_rejects_a_legacy_url_that_lands_elsewhere(fake_session, fake_response):
@@ -171,10 +192,13 @@ def test_episode_rejects_a_legacy_url_that_lands_elsewhere(fake_session, fake_re
         Carula(session).episode(LEGACY_URL)
 
 
-def test_paid_episode_is_locked_but_still_names_the_next_one(fake_session, api):
+def test_paid_episode_is_locked_but_still_names_the_next_one(fake_session, api, catalogue):
     preview = INDEX + f'<figure><img src="{PAGE_1}"></figure>'
     session = fake_session(
-        {"/api/v3/notes/nb016b73d0f1d": api({"data": note(body=preview, price=100, remained_figure_num=11)})},
+        {
+            "/api/v3/notes/nb016b73d0f1d": api({"data": note(body=preview, price=100, remained_figure_num=11)}),
+            "works.csv": catalogue,
+        },
     )
     episode = Carula(session).episode(EPISODE_URL)
 
@@ -184,8 +208,10 @@ def test_paid_episode_is_locked_but_still_names_the_next_one(fake_session, api):
     assert episode.series_title == "留学ろっく!!"
 
 
-def test_last_episode_has_no_next(fake_session, api):
-    session = fake_session({"/api/v3/notes/na3813b19fd66": api({"data": note(key="na3813b19fd66")})})
+def test_last_episode_has_no_next(fake_session, api, catalogue):
+    session = fake_session(
+        {"/api/v3/notes/na3813b19fd66": api({"data": note(key="na3813b19fd66")}), "works.csv": catalogue}
+    )
     episode = Carula(session).episode("https://note.com/carula/n/na3813b19fd66")
     assert (episode.prev_url, episode.next_url) == (NEXT_URL, None)
 
@@ -258,13 +284,14 @@ def test_series_urls_rejects_an_episode_url(fake_session):
 # --- downloading ----------------------------------------------------------------------------
 
 
-def test_download_writes_the_pages(tmp_path, fake_session, fake_response, api):
+def test_download_writes_the_pages(tmp_path, fake_session, fake_response, api, catalogue):
     raw = BytesIO()
     Image.new("RGB", (4, 6), (10, 20, 30)).save(raw, "PNG")
     session = fake_session(
         {
             "/api/v3/notes/nb016b73d0f1d": api({"data": note()}),
             "assets.st-note.com": fake_response(raw.getvalue(), content_type="image/jpg"),
+            "works.csv": catalogue,
         },
     )
     result = Downloader(Carula(session), tmp_path).download(EPISODE_URL)

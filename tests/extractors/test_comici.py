@@ -18,6 +18,12 @@ EPISODE_HTML = """
 <title>IRUKA・prologue | MANGABU!</title>
 <meta property="og:title" content="IRUKA・prologue | MANGABU!(マンガ部!)"/>
 </head><body>
+<div class="series-h-credit-user">
+  <a class="g-author mode-link" href="/authors/981"><span class="g-author-name">施川ユウキ</span>
+    <span class="g-author-role">(<!-- -->原作<!-- -->)</span></a>
+  <a class="g-author mode-link" href="/authors/982"><span class="g-author-name">nniko      </span>
+    <span class="g-author-role">(<!-- -->作画<!-- -->)</span></a>
+</div>
 <div id="comici-viewer" data-comici-viewer-id="abc123" data-api-domain="/api"
      data-share-text="IRUKA" data-prev-episode-id="abc000" data-next-episode-id="def456"></div>
 </body></html>
@@ -156,6 +162,7 @@ def test_episode_carries_the_pages_with_their_scramble(fake_session, fake_respon
 
     assert episode.series_title == "IRUKA"
     assert episode.episode_title == "prologue"
+    assert (episode.writer, episode.publisher) == ("施川ユウキ (原作), nniko (作画)", "ファムエンタテイメント")
     assert [item.url for item in episode.pages] == ["u1", "u2"]
     assert parse_scramble(episode.pages[1].extra["scramble"]) == SCRAMBLE
     assert (episode.prev_url, episode.next_url) == (
@@ -264,7 +271,10 @@ def hydrated_session(fake_session, fake_response, payload=EPISODE_API, **routes)
     return fake_session(
         {
             "/api/episodes/": fake_response(payload=payload),
-            "/episodes/": fake_response(text="<html><body>hydrated later</body></html>"),
+            "/episodes/": fake_response(
+                text='<html><body><div class="series-h-credit-user"><span class="g-author">'
+                '<span class="g-author-name">大石浩二</span></span></div></body></html>'
+            ),
             **routes,
         },
     )
@@ -276,6 +286,7 @@ def test_episode_falls_back_to_the_episode_api(fake_session, fake_response):
 
     assert episode.series_title == "IRUKA"
     assert episode.episode_title == "1話"
+    assert (episode.writer, episode.publisher) == ("大石浩二", "コルク")
     assert (episode.prev_url, episode.next_url) == (
         "https://ebookstore.corkagency.com/episodes/9b3c8a1a0f2e1",
         "https://ebookstore.corkagency.com/episodes/d05c9cd20ca35",

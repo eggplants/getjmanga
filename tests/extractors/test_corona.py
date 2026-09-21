@@ -160,6 +160,15 @@ def client(fake_session, fake_response):
                 payload=neighbours(previous=ENTRIES[1], following=None),
             ),
             f"{API_URL}/episodes/1/begin_reading": fake_response(payload=NOT_FOUND, status_code=HTTPStatus.NOT_FOUND),
+            f"{API_URL}/comics/{COMIC_ID}": fake_response(
+                payload={
+                    "authors": [
+                        {"creator_id": "1", "name": "OFURO", "role": "漫画"},
+                        {"creator_id": "2", "name": "珍比良", "role": "原作"},
+                    ],
+                    "title": "クズ勇者のその日暮らし@COMIC",
+                },
+            ),
             f"{API_URL}/episodes?comic_id={COMIC_ID}&{LISTING_QUERY}&after_than=c1": fake_response(
                 payload={"resources": [ENTRIES[2], ENTRIES[1]], "next_cursor": None},
             ),
@@ -229,6 +238,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "クズ勇者のその日暮らし@COMIC"
     assert episode.episode_title == " 第1話"
+    assert (episode.writer, episode.publisher) == ("OFURO (漫画), 珍比良 (原作)", "TOブックス")
     assert [page.url.split("?")[0] for page in episode.pages] == [f"{CDN}/aaaa", f"{CDN}/bbbb"]
     assert [page.extra for page in episode.pages] == [{"drm_hash": SHUFFLE}, {"drm_hash": ""}]
     assert episode.next_url == SECOND_URL
@@ -238,8 +248,13 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert session.calls == [
         f"{API_URL}/episodes/245764154232569/begin_reading",
         f"{API_URL}/episodes/245764154232569/end_reading",
+        f"{API_URL}/comics/{COMIC_ID}",
     ]
-    assert session.params_seen == [None, {"previous_and_next_episode_status": "free_viewing,only_for_subscription"}]
+    assert session.params_seen == [
+        None,
+        {"previous_and_next_episode_status": "free_viewing,only_for_subscription"},
+        None,
+    ]
     for headers in session.headers_seen:
         assert headers["X-API-Environment-Key"] == API_ENVIRONMENT_KEY
         assert headers["Referer"] == EPISODE_URL

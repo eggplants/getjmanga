@@ -228,6 +228,7 @@ class ZeroSum(Extractor):
 
     NAME = "zerosum"
     HOSTS = ("zerosumonline.com",)
+    PUBLISHER = "一迅社"
     URL_FORMS = (
         "https://zerosumonline.com/episode/<tag>/chapter/<token>",
         "https://zerosumonline.com/detail/<tag>",
@@ -359,6 +360,8 @@ class ZeroSum(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata={"title": listing["title"], "chapter": chapter, "viewer": viewer},
+            writer=str(listing["title"].get("author") or ""),
+            publisher=self.PUBLISHER,
         )
 
     def _listing(self, tag: str, referer: str) -> dict[str, Any]:

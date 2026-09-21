@@ -100,6 +100,8 @@ class Work:
     title: str
     #: The listed episodes in reading order: canonical episode URL -> the button's caption.
     episodes: dict[str, str]
+    #: `p.author`, its `[作]` label taken off.
+    writer: str = ""
 
 
 @dataclass(frozen=True)
@@ -184,7 +186,13 @@ def parse_work(page: str | bytes, url: str) -> Work:
                 canonical = episode_url(urljoin(url, str(element["href"])))
                 if canonical is not None:
                     episodes.setdefault(canonical, caption)
-    return Work(url=url, title=heading.get_text(strip=True), episodes=episodes)
+    author = detail.select_one("p.author") if isinstance(detail, Tag) else None
+    writer = _AUTHOR_LABEL.sub("", author.get_text(strip=True)).strip() if isinstance(author, Tag) else ""
+    return Work(url=url, title=heading.get_text(strip=True), episodes=episodes, writer=writer)
+
+
+#: The role label in front of the author, `[作]` or `[原作]`.
+_AUTHOR_LABEL = re.compile(r"^\[[^\]]*\]\s*")
 
 
 def parse_book(text: str) -> Book:
@@ -341,6 +349,7 @@ class Wings(Extractor):
 
     NAME = "wings"
     HOSTS = (HOST,)
+    PUBLISHER = "新書館"
     URL_FORMS = (
         "https://www.shinshokan.com/webwings/contents/<slug>/",
         "https://www.shinshokan.com/webwings/title<NN>.html",
@@ -500,6 +509,8 @@ class Wings(Extractor):
                 prev_url=self._neighbours(work, canonical)[0],
                 next_url=self._neighbours(work, canonical)[1],
                 metadata={**metadata, "locked": True},
+                writer=work.writer if work else "",
+                publisher=self.PUBLISHER,
             )
         pages = tuple(
             Page(
@@ -526,6 +537,8 @@ class Wings(Extractor):
             prev_url=self._neighbours(work, canonical)[0],
             next_url=self._neighbours(work, canonical)[1],
             metadata=metadata,
+            writer=work.writer if work else "",
+            publisher=self.PUBLISHER,
         )
 
     def _smoozy_episode(self, canonical: str, slug: str, work: Work | None, title: str) -> Episode:
@@ -573,6 +586,8 @@ class Wings(Extractor):
                 "slides": slides,
                 "conf": conf,
             },
+            writer=(work.writer if work else "") or title.partition("／")[2].strip(),
+            publisher=self.PUBLISHER,
         )
 
     def _work(self, url: str) -> Work | None:

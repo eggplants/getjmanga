@@ -81,6 +81,8 @@ class EpisodePage:
     next_url: str | None
     #: The `更新日` date, ISO formatted, when shown.
     updated: str | None
+    #: The `.author-info` heading, the name after its colon.
+    writer: str = ""
 
 
 @dataclass(frozen=True)
@@ -178,6 +180,7 @@ def parse_episode_page(html: str | bytes, url: str) -> EpisodePage:
         prev_url=prev_url,
         next_url=next_url,
         updated=str(updated["datetime"]) if isinstance(updated, Tag) else None,
+        writer=_author(soup),
     )
 
 
@@ -247,6 +250,7 @@ class LeedCafe(Extractor):
 
     NAME = "leedcafe"
     HOSTS = (HOST,)
+    PUBLISHER = "リイド社"
     URL_FORMS = (
         "https://leedcafe.com/webcomic/<slug>/",
         "https://leedcafe.com/webcomicinfo/<slug>/",
@@ -376,6 +380,8 @@ class LeedCafe(Extractor):
                 "prev_url": page.prev_url,
                 "nav_next_url": page.next_url,
             },
+            writer=page.writer,
+            publisher=self.PUBLISHER,
         )
 
     def _work(self, slug: str) -> tuple[Work, dict[str, str]]:
@@ -422,6 +428,14 @@ class LeedCafe(Extractor):
             if not listed or len(listed) < _LISTING_PAGE_SIZE or (total and len(episodes) >= total):
                 break
         return episodes
+
+
+def _author(soup: BeautifulSoup) -> str:
+    """The `.author-info` block's `h3`: a colon, then the author's name."""
+    heading = soup.select_one(".author-info h3")
+    if not isinstance(heading, Tag):
+        return ""
+    return heading.get_text(" ", strip=True).lstrip(":： ").strip()
 
 
 def _either_side(episodes: dict[str, str], slug: str) -> tuple[str | None, str | None]:

@@ -417,6 +417,7 @@ def test_episode_reads_a_flipper_u_book(client):
     episode = wings.episode(EPISODE_URL)
 
     assert episode.series_title == "リヨンでメルシー！ 〜気ままなフランス旅日記〜"
+    assert (episode.writer, episode.publisher) == ("野宮レナ", "新書館")
     assert episode.episode_title == "第0話"
     assert episode.next_url == NEXT_URL
     assert [page.url for page in episode.pages] == [

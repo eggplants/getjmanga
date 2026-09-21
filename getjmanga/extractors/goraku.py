@@ -125,6 +125,7 @@ class Goraku(Extractor):
 
     NAME = "goraku"
     HOSTS = ("gorakuweb.com",)
+    PUBLISHER = "日本文芸社"
     URL_FORMS = (
         "https://gorakuweb.com/episode/<title id>/<episode id>",
         "https://gorakuweb.com/episode/<title id>",
@@ -240,6 +241,8 @@ class Goraku(Extractor):
             prev_url=urljoin(BASE_URL, str(prev_href)) if prev_href else None,
             next_url=urljoin(BASE_URL, str(next_href)) if next_href else None,
             metadata=props,
+            writer=str(props.get("author") or ""),
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

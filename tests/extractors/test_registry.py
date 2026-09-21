@@ -51,3 +51,11 @@ def test_every_known_host_has_a_site_test():
     assert set(tested) == {host for extractor in EXTRACTORS for host in extractor.HOSTS}
     for host, url in tested.items():
         assert host in find_extractor(url).HOSTS, url
+
+
+def test_every_host_names_its_publisher():
+    """Each host of each extractor falls back on a publisher, and a per-host table names no stray host."""
+    for extractor in EXTRACTORS:
+        assert set(extractor.PUBLISHERS) <= set(extractor.HOSTS), extractor.NAME
+        for host in extractor.HOSTS:
+            assert extractor.publisher(f"https://{host}/"), f"{extractor.NAME} names no publisher for {host}"

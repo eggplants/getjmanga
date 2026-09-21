@@ -13,6 +13,7 @@ from getjmanga.extractors.saizensen import (
     Saizensen,
     group_strips,
     parse_twi4_index,
+    reader_credits,
     split_reader_title,
     stitch,
 )
@@ -370,6 +371,22 @@ def test_split_reader_title_drops_the_author_and_the_credits(heading, expected):
     assert split_reader_title(heading) == expected
 
 
+@pytest.mark.parametrize(
+    ("heading", "expected"),
+    [
+        (READER_TITLE, "天空すふぃあ, 奈須きのこ (原作), 武内 崇 (キャラクターデザイン原案)"),
+        (
+            "『まりんこゆみ』第193回 著者：野上武志 原案：アナステーシア・モレノ | 最前線",
+            "野上武志 (著者), アナステーシア・モレノ (原案)",
+        ),
+        ("佐々木少年『月の珊瑚』 原作／奈須きのこ | 最前線", "佐々木少年, 奈須きのこ (原作)"),
+        ("no brackets at all", ""),
+    ],
+)
+def test_reader_credits_names_the_author_and_everyone_credited(heading, expected):
+    assert reader_credits(heading) == expected
+
+
 def test_group_strips_keeps_consecutive_strips_of_one_page_together():
     assert group_strips(["/a/01.01.jpg", "/a/01.02.jpg", "/a/02.01.jpg", "/a/x.png", "/a/02.02.jpg"]) == [
         ("/a/01.01.jpg", "/a/01.02.jpg"),
@@ -408,6 +425,7 @@ def test_twi4_episode_reads_the_strip_and_skips_closed_ones_for_the_next(client,
     assert episode.url == TWI4_EPISODE_URL
     assert episode.series_title == "徒然チルドレン"
     assert episode.episode_title == "告白（８）"
+    assert (episode.writer, episode.publisher) == ("若林稔弥", "星海社")
     assert [page.url for page in episode.pages] == [
         f"{HOST}/comics/twi4/tsuredure/works/0009.fUvE7wwnjls9mY5u1rpLuv4sVHverpUP.jpg",
     ]
@@ -495,6 +513,7 @@ def test_reader_episode_reads_the_pages_and_the_next_served_volume(client, fake_
 
     assert episode.series_title == "空の境界 the Garden of sinners"
     assert episode.episode_title == "１／俯瞰風景 第三回"
+    assert episode.writer == "天空すふぃあ, 奈須きのこ (原作), 武内 崇 (キャラクターデザイン原案)"
     assert [page.url for page in episode.pages] == [
         f"{HOST}/works/comics/karanokyoukai/03/01.res/001.png",
         f"{HOST}/works/comics/karanokyoukai/03/01.res/002.png",

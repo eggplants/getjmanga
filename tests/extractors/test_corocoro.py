@@ -157,6 +157,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_chapter(client, fake_re
     assert episode.next_url == SECOND_URL
     assert episode.metadata["chapter"]["badge"] == "free"
     assert episode.metadata["authors"] == [{"name": "てしろぎたかし", "role": ""}]
+    assert (episode.writer, episode.publisher) == ("てしろぎたかし", "小学館")
     assert [entry["id"] for entry in episode.metadata["chapters"]] == [51001, 51043, 50845]
 
     url, params = session.puts[0]

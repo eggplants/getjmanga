@@ -114,6 +114,7 @@ class Bloom(Extractor):
 
     NAME = "bloom"
     HOSTS = (HOST,)
+    PUBLISHER = "ホーム社"
     URL_FORMS = (
         "https://bloom.homesha.co.jp/cbs/<site>/<content-id>/",
         "https://bloom.homesha.co.jp/webcomic/<slug>/",
@@ -226,6 +227,8 @@ class Bloom(Extractor):
             raise NotAnEpisodePageError(msg)
         info_url = urljoin(reader_url, str(viewer["data-ptbinb"]))
         work_url = _work_link(reader, reader_url)
+        author = reader.select_one("div.cst_author")
+        writer = author.get_text(strip=True) if isinstance(author, Tag) else ""
 
         series_title, episode_title, (prev_url, next_url) = self._titles_and_neighbours(work_url, canonical, page_title)
         metadata: dict[str, Any] = {
@@ -250,6 +253,8 @@ class Bloom(Extractor):
                 prev_url=prev_url,
                 next_url=next_url,
                 metadata={**metadata, "locked": True},
+                writer=writer,
+                publisher=self.PUBLISHER,
             )
 
         book = speedbinb.page_list(self, content, referer=reader_url)
@@ -267,6 +272,8 @@ class Bloom(Extractor):
                 "contents_server": content.server,
                 "info": content.info,
             },
+            writer=writer,
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

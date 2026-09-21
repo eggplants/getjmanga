@@ -291,6 +291,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     # The work page names the series and the episode; YONDEMILL's title is only metadata.
     assert episode.series_title == "起承転転"
+    assert (episode.writer, episode.publisher) == ("雁須磨子 (著)", "太田出版")
     assert episode.episode_title == "第1話　50歳の転機(32p)"
     assert [page.url for page in episode.pages] == [f"{SERVER}/pages/a.jpg/M_H.jpg", f"{SERVER}/pages/b.jpg/M_H.jpg"]
     assert episode.pages[0].width == 392

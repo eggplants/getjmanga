@@ -176,6 +176,7 @@ class BeLToon(Extractor):
 
     NAME = "beltoon"
     HOSTS = ("www.beltoon.jp",)
+    PUBLISHER = "レジンエンターテインメント"
     URL_FORMS = (
         "https://www.beltoon.jp/viewer/<alias>/<episode>",
         "https://www.beltoon.jp/detail/<alias>",
@@ -300,6 +301,8 @@ class BeLToon(Extractor):
                 prev_url=prev_url,
                 next_url=next_url,
                 metadata={"alias": alias, "episode_alias": episode_alias, "error": error, "episode": entry},
+                writer=_creators(work),
+                publisher=self.PUBLISHER,
             )
 
         if result.get("contentType") != "IMAGE":
@@ -325,6 +328,8 @@ class BeLToon(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata={key: value for key, value in result.items() if key != "images"},
+            writer=_creators(work),
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -441,6 +446,12 @@ class BeLToon(Extractor):
             answer = {}
         key = answer.get("data") if answer.get("result") == "SUCCESS" else None
         return str(key) if key else FALLBACK_SCRAMBLE_KEY
+
+
+def _creators(work: dict[str, Any] | None) -> str:
+    """The work's `creators` names, joined the way the site's own `<meta name="author">` joins them."""
+    creators = (work or {}).get("creators") or []
+    return ", ".join(str(creator["name"]) for creator in creators if isinstance(creator, dict) and creator.get("name"))
 
 
 def _episodes(work: dict[str, Any]) -> list[dict[str, Any]]:

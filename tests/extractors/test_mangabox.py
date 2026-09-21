@@ -28,6 +28,7 @@ LISTING = {
     "result": {
         "id": 616489,
         "title": "ネトラセ契約",
+        "authors": [{"name": "後藤晶", "id": 13130, "role": "著"}],
         "totalEpisodeCount": 3,
         "episodes": [
             {"id": 217816, "episodeId": 217816, "volume": 1, "displayVolume": None, "numberOfPages": 2},
@@ -159,6 +160,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == "ネトラセ契約"
+    assert (episode.writer, episode.publisher) == ("後藤晶 (著)", "マンガボックス")
     assert episode.episode_title == "第1話"
     assert [page.url for page in episode.pages] == IMAGE_URLS
     assert all(page.extra == {"mask": -7} for page in episode.pages)

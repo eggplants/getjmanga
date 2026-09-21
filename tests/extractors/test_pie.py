@@ -113,6 +113,7 @@ def story_html(
 <link rel="canonical" href="{STORY_URL}/" /></head><body>
 <header class="p-work_header">
 <h1 class="p-work_headerTitle is-2row">Poetic Horror<span class="p-work_latestUpdate">26.02.04更新</span></h1>
+<p class="p-work_author">坂月さかな</p>
 <div class="p-work_nav"><ul><li><a href="https://comics.pie.co.jp/comicart/illustration/">イラスト</a><i>></i></li>
 {crumb}<li>{heading}</li></ul></div></header>
 <div class="c-contentBlock c-contentBlock-single"><div class="c-contentBlock_body">
@@ -331,6 +332,7 @@ def test_episode_reads_a_story(client):
     assert episode.url == STORY_URL
     assert episode.series_title == "Poetic Horror"
     assert episode.episode_title == "【Part 1】Alicia"
+    assert (episode.writer, episode.publisher) == ("坂月さかな", "パイ インターナショナル")
     assert [page.url for page in episode.pages] == [f"{UPLOADS}/2025/07/01_A_1.jpg"]
     assert episode.pages[0].extra == {}
     assert episode.next_url == NEXT_STORY_URL
@@ -342,6 +344,7 @@ def test_episode_reads_a_story(client):
         "series_url": "https://comics.pie.co.jp/series/poetic",
         "updated": "26.02.04",
         "prev_url": None,
+        "author": "坂月さかな",
     }
     json.dumps(episode.metadata)
     # A story needs no work page.
@@ -410,6 +413,7 @@ def test_content_is_titled_after_the_work_page_that_lists_it(client):
     assert episode.metadata["kind"] == "yondemill"
     assert episode.metadata["work_url"] == MANGA_WORK_URL
     assert episode.metadata["author"] == "ねこ助"
+    assert (episode.writer, episode.publisher) == ("ねこ助", "パイ インターナショナル")
     assert episode.metadata["content_id"] == "52480"
     assert episode.metadata["binb_id"] == BINB_ID
     json.dumps(episode.metadata)

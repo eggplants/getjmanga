@@ -200,6 +200,7 @@ def test_mangaone_episode_reads_the_titles_the_pages_and_the_next_chapter(mangao
 
     assert episode.series_title == "女の子を天国に連れていくには"
     assert episode.episode_title == "第1話"
+    assert (episode.writer, episode.publisher) == ("高見奈緒", "小学館")
     assert [page.url for page in episode.pages] == [MO_IMAGE.format(1), MO_IMAGE.format(2)]
     assert episode.pages[0].extra == {"key": KEY, "iv": IV}
     assert (episode.pages[0].width, episode.pages[0].height) == (720, 1020)
@@ -360,7 +361,10 @@ def fc_chapter_html(viewer=None):
 
 
 def fc_title_html(chapters=FC_CHAPTERS, heading="死神の初恋 〜没落華族の令嬢は愛を知らない死神に嫁ぐ〜"):
-    line = json.dumps(["$", "$L40", None, {"section": {"chapters": chapters}}], ensure_ascii=False)
+    fan_letter = {
+        "fanLetter": {"authors": [{"id": 6, "name": "美麻りん", "authorPageEnabled": True}], "fromTitleId": 2915}
+    }
+    line = json.dumps(["$", "$L40", None, {"section": {"chapters": chapters}}, fan_letter], ensure_ascii=False)
     return f'<html><body><h1 class="x">{heading}</h1>{flight_html(f"36:{line}" + chr(10))}</body></html>'
 
 
@@ -404,6 +408,7 @@ def test_flower_episode_reads_the_viewer_props(flower):
 
     assert episode.series_title == "死神の初恋 〜没落華族の令嬢は愛を知らない死神に嫁ぐ〜"
     assert episode.episode_title == "第1話 -1"
+    assert (episode.writer, episode.publisher) == ("美麻りん", "小学館")
     assert [page.url for page in episode.pages] == [FC_IMAGE.format(1), FC_IMAGE.format(2)]
     assert episode.pages[0].extra == {"key": KEY, "iv": IV}
     assert episode.next_url == f"{FLOWERCOMICS_URL}/chapter/96935"
@@ -413,7 +418,8 @@ def test_flower_episode_reads_the_viewer_props(flower):
         "orientation": "horizontal",
         "right_to_left": True,
     }
-    assert session.calls == [FC_CHAPTER_URL]
+    # The chapter page names no author; the title page does, and is read once.
+    assert session.calls == [FC_CHAPTER_URL, f"{FLOWERCOMICS_URL}/title/2915"]
 
 
 def test_flower_episode_stops_at_the_last_chapter(flower, fake_response):
@@ -429,6 +435,7 @@ def test_flower_locked_chapter_is_the_title_page_it_redirects_to(flower, fake_re
     assert episode.pages == ()
     assert episode.series_title == "死神の初恋 〜没落華族の令嬢は愛を知らない死神に嫁ぐ〜"
     assert episode.episode_title == "第23話"
+    assert episode.writer == "美麻りん"
     assert episode.prev_url is not None
     assert episode.next_url == f"{FLOWERCOMICS_URL}/chapter/139182"
     assert [c["free"] for c in episode.metadata["chapters"]] == [True, True, True, False, False]
@@ -581,6 +588,7 @@ def test_gangan_episode_reads_the_page_json(gangan):
     assert episode.pages[0].extra == {}
     assert (episode.prev_url, episode.next_url) == (None, f"{GANGANONLINE_URL}/title/2580/chapter/131954")
     assert episode.metadata["author"] == "原作／夜明星良　漫画／宮鈴りうむ"
+    assert (episode.writer, episode.publisher) == ("原作／夜明星良　漫画／宮鈴りうむ", "スクウェア・エニックス")
     assert episode.metadata["left_start"] is True
     # The chapter page, then the title page for the chapter before, which only that lists.
     assert session.calls == [GG_CHAPTER_URL, GG_TITLE_URL]
@@ -722,6 +730,7 @@ def mp_title_html(chapters=MP_CHAPTERS, name="アクトジジョウ"):
         <div data-title-id="33142"></div>
         <div data-title-name="{name}"></div>
         <h1 class="txtColorSubject">{name}</h1>
+        <p class="author txtColorSubject">原作：糸加　作画：白藤圭</p>
       </div>
       <div class="row title"><div class="chapter"><ul>{rows}</ul></div></div>
       <div class="row viewer-end"><div class="chapter"><ul>
@@ -796,6 +805,7 @@ def test_park_episode_reads_the_title_page_and_the_chapter_api(park):
 
     assert episode.series_title == "アクトジジョウ"
     assert episode.episode_title == "#１①"
+    assert (episode.writer, episode.publisher) == ("原作：糸加　作画：白藤圭", "白泉社")
     assert [page.url for page in episode.pages] == [MP_IMAGE.format(0), MP_IMAGE.format(1)]
     assert episode.pages[0].extra == {"key": MP_KEY}
     assert episode.next_url == f"{MANGAPARK_URL}/title/33142/397006"
@@ -1028,6 +1038,7 @@ def test_lab_episode_reads_the_chapter_and_walks_the_title_list_upwards(lab):
     assert episode.metadata["title_id"] == 105830
     assert episode.metadata["number"] == 2.0
     assert episode.metadata["author"] == "西野ぺんぎん"
+    assert (episode.writer, episode.publisher) == ("西野ぺんぎん", "白泉社")
     assert episode.metadata["begin_with_blank_page"] is False
     assert [c["title"] for c in episode.metadata["chapters"]] == ["1", "2", "第3話", "4"]
     json.dumps(episode.metadata)

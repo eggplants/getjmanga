@@ -154,6 +154,12 @@ def client(fake_session, fake_response):
                 fake_response(payload=LISTING_PAGE_2),
             ],
             f"{API_URL}/works/999/episodes/v2": fake_response(payload=NOT_FOUND, status_code=HTTPStatus.NOT_FOUND),
+            f"{API_URL}/works/v5/13564": fake_response(
+                payload={"data": {"official_work": {"id": 13564, "name": "異世界皇子", "author": "紺乃みる/加藤沙羽"}}}
+            ),
+            f"{API_URL}/works/v5/785": fake_response(
+                payload={"data": {"official_work": {"id": 785, "author": "吉田覚"}}}
+            ),
             "/viewer/stories/999": fake_response(text="not found", status_code=HTTPStatus.NOT_FOUND),
             "/viewer/stories/": fake_response(text=VIEWER_HTML),
             CDN: fake_response(jpeg_bytes(scramble(striped_page(), KEY)), content_type="image/jpeg"),
@@ -266,6 +272,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "異世界皇子、おしかけ求婚に参りました"
     assert episode.episode_title == "1 第1話-1"
+    assert (episode.writer, episode.publisher) == ("紺乃みる/加藤沙羽", "ピクシブ")
     assert [page.url for page in episode.pages] == [page["url"] for page in PAGES]
     assert all(page.extra == {"key": KEY, "gridsize": 32} for page in episode.pages)
     assert episode.pages[0].width == 721
@@ -275,9 +282,10 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     )
     assert episode.metadata == READABLE["data"]["reading_episode"]
 
-    # The viewer page is read for the salt, then the API is asked with the signed headers.
-    assert session.calls == [EPISODE_URL, f"{API_URL}/episodes/244715/read_v4"]
-    sent = session.headers_seen[-1]
+    # The viewer page is read for the salt, then the API is asked with the signed
+    # headers; the work's description, for its author, comes last.
+    assert session.calls == [EPISODE_URL, f"{API_URL}/episodes/244715/read_v4", f"{API_URL}/works/v5/13564"]
+    sent = session.headers_seen[-2]
     assert sent["X-Requested-With"] == "pixivcomic"
     assert sent["Referer"] == EPISODE_URL
     assert sent["X-Client-Hash"] == hashlib.sha256(f"{sent['X-Client-Time']}{SALT}".encode()).hexdigest()

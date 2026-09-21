@@ -281,6 +281,7 @@ class Ganma(Extractor):
 
     NAME = "ganma"
     HOSTS = ("ganma.jp",)
+    PUBLISHER = "コミスマ"
     URL_FORMS = (
         "https://ganma.jp/web/reader/<alias>/<story>/<page>",
         "https://ganma.jp/web/magazine/<alias>",
@@ -395,6 +396,7 @@ class Ganma(Extractor):
             raise NotAnEpisodePageError(msg)
         contents = magazine.get("storyContents") or {}
         series_title = str(magazine.get("title") or magazine_key)
+        writer = str(magazine.get("authorName") or "")
 
         if contents.get("__typename") == "StoryContents":
             info = contents.get("storyInfo") or {}
@@ -408,6 +410,8 @@ class Ganma(Extractor):
                 prev_url=episode_url(magazine_key, str(prev_story)) if prev_story else None,
                 next_url=episode_url(magazine_key, str(next_story)) if next_story else None,
                 metadata=magazine,
+                writer=writer,
+                publisher=self.PUBLISHER,
             )
 
         if contents.get("error") == _STORY_NOT_FOUND:
@@ -426,6 +430,8 @@ class Ganma(Extractor):
             prev_url=episode_url(magazine_key, str(before.get("storyId"))) if before else None,
             next_url=episode_url(magazine_key, str(after.get("storyId"))) if after else None,
             metadata={**magazine, "storyInfo": story},
+            writer=writer,
+            publisher=self.PUBLISHER,
         )
 
     def login(self, url: str, username: str, password: str) -> None:

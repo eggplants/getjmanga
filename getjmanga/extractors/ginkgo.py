@@ -244,6 +244,7 @@ class Ginkgo(Extractor):
 
     NAME = "ginkgo"
     HOSTS = ("comiciwate.jp", "manga-gai.net", "www.comiciwate.jp", "www.manga-gai.net")
+    PUBLISHER = "銀杏社"
     URL_FORMS = (
         "http://comiciwate.jp/comic/<work>/",
         "http://comiciwate.jp/foreign/<work>_<lang>/",
@@ -354,6 +355,8 @@ class Ginkgo(Extractor):
             episode_title=title,
             pages=tuple(Page(url=src) for src in work.images),
             metadata={"site": "comiciwate", "title": work.title, "author": work.author, "images": list(work.images)},
+            writer=work.author,
+            publisher=self.PUBLISHER,
         )
 
     def _gai_episode(self, url: str) -> Episode:
@@ -384,6 +387,8 @@ class Ginkgo(Extractor):
                 "index_url": first.index_url,
                 "pages": [page.url for page in pages],
             },
+            # 漫画街 names its authors on its front page only, not on the work or its pages.
+            publisher=self.PUBLISHER,
         )
 
     def _walk(self, url: str) -> Iterator[GaiPage]:

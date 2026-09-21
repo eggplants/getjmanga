@@ -48,6 +48,8 @@ class Listing:
 
     title: str
     urls: tuple[str, ...]
+    #: `p.authors`, as the page writes it.
+    writer: str = ""
 
 
 class Porta(Extractor):
@@ -60,6 +62,7 @@ class Porta(Extractor):
 
     NAME = "porta"
     HOSTS = ("comic-porta.com",)
+    PUBLISHER = "イースト・プレス"
     URL_FORMS = (
         "https://comic-porta.com/p_data/<slug>",
         "https://comic-porta.com/series/<id>",
@@ -179,6 +182,8 @@ class Porta(Extractor):
                 "recommend": recommend,
                 "ptimg": [ptimg for ptimg, _ in pages],
             },
+            writer=listing.writer if listing else "",
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -234,9 +239,11 @@ class Porta(Extractor):
             res = self._get(key)
             soup = BeautifulSoup(res.content, "html.parser")
             heading = soup.find("h2", class_="title")
+            authors = soup.find("p", class_="authors")
             self._listings[key] = Listing(
                 title=heading.get_text(strip=True) if isinstance(heading, Tag) else "",
                 urls=tuple(self._episode_links(soup, key)),
+                writer=authors.get_text(strip=True) if isinstance(authors, Tag) else "",
             )
         return self._listings[key]
 

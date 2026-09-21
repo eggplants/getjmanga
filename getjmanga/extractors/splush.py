@@ -63,6 +63,8 @@ class Document:
     episode_urls: tuple[str, ...]
     #: The page's `<title>`.
     title: str
+    #: `p.author` under the work's title.
+    writer: str = ""
 
 
 def parse_document(html: str | bytes, url: str) -> Document:
@@ -102,6 +104,7 @@ def parse_document(html: str | bytes, url: str) -> Document:
         notice=_text(notice),
         episode_urls=tuple(_episode_links(lineup, url)) if isinstance(lineup, Tag) else (),
         title=_text(soup.title),
+        writer=_text(soup.find("p", class_="author")),
     )
 
 
@@ -142,6 +145,7 @@ class Splush(Extractor):
 
     NAME = "splush"
     HOSTS = ("splush.jp", "www.splush.jp")
+    PUBLISHER = "イースト・プレス"
     URL_FORMS = ("https://www.splush.jp/series/<id>",)
 
     def __init__(self, session: Client | None = None) -> None:
@@ -244,6 +248,8 @@ class Splush(Extractor):
                 "work_url": document.work_url,
                 "images": list(document.images),
             },
+            writer=document.writer,
+            publisher=self.PUBLISHER,
         )
 
     def _document(self, url: str) -> Document:

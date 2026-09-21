@@ -36,7 +36,17 @@ EPISODES = [
     {"id": 1058, "alias": "2", "title": "2話", "orderNo": 2, "isLogin": True, "possessionCoin": 0},
     {"id": 1067, "alias": "3", "title": "3話 【1部 完】", "orderNo": 3, "isLogin": True, "possessionCoin": 62},
 ]
-WORK = {"id": 2, "alias": "12s1", "title": "片思い〜報われない恋をした〜", "isAdult": True, "episodes": EPISODES}
+WORK = {
+    "id": 2,
+    "alias": "12s1",
+    "title": "片思い〜報われない恋をした〜",
+    "isAdult": True,
+    "episodes": EPISODES,
+    "creators": [
+        {"creatorId": 3, "name": "TR", "type": "ORIGINAL"},
+        {"creatorId": 1256, "name": "黄金期", "type": "AUTHOR"},
+    ],
+}
 
 #: A permutation: source tile `i` lands in slot `INDEX[i]`.
 INDEX = [5, 0, 15, 8, 1, 14, 3, 10, 13, 6, 9, 2, 12, 7, 4, 11]
@@ -204,6 +214,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
 
     assert episode.series_title == "片思い〜報われない恋をした〜"
     assert episode.episode_title == "1話"
+    assert (episode.writer, episode.publisher) == ("TR, 黄金期", "レジンエンターテインメント")
     # Pages come back in `order`, whatever order the site listed them in.
     assert [page.url for page in episode.pages] == [IMAGE_URL.format(1), IMAGE_URL.format(2)]
     assert episode.pages[0].width == 32
@@ -294,6 +305,7 @@ def test_a_locked_episode_has_no_pages_but_a_next_url(client, fake_response):
     assert episode.pages == ()
     assert episode.series_title == "片思い〜報われない恋をした〜"
     assert episode.episode_title == "2話"
+    assert episode.writer == "TR, 黄金期"
     assert (episode.prev_url, episode.next_url) == (EPISODE_URL, f"{BASE_URL}/viewer/12s1/3")
     assert episode.metadata["error"] == error
     json.dumps(episode.metadata)

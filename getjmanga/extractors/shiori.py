@@ -26,7 +26,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from httpx import Response
+    from httpx import Client, Response
 
 BASE_URL = "https://shiori-on.com"
 
@@ -49,6 +49,18 @@ class Shiori(Extractor):
 
     NAME = "shiori"
     HOSTS = ("shiori-on.com",)
+    PUBLISHER = "大洋図書"
+
+    def __init__(self, session: Client | None = None) -> None:
+        """Build an extractor.
+
+        Args:
+            session: A session to reuse. A retrying one is made when omitted.
+        """
+        super().__init__(session)
+        #: The author each work page profiles, by URL.
+        self._credits: dict[str, str] = {}
+
     URL_FORMS = (
         "https://shiori-on.com/story/<slug>_<n>",
         "https://shiori-on.com/product/<slug>",
@@ -154,7 +166,19 @@ class Shiori(Extractor):
                 "prev_url": _nav_link(soup, "前の話", page_url),
                 "images": image_urls,
             },
+            writer=self._writer(series_url),
+            publisher=self.PUBLISHER,
         )
+
+    def _writer(self, series_url: str) -> str:
+        """The name the work page's `著者プロフィール` heads, read once per work; an episode page names none."""
+        if not series_url:
+            return ""
+        if series_url not in self._credits:
+            soup = BeautifulSoup(self._fetch_page(series_url, "series").content, "html.parser")
+            heading = soup.select_one(".product-profile .comment h3, .comment h3")
+            self._credits[series_url] = heading.get_text(strip=True) if isinstance(heading, Tag) else ""
+        return self._credits[series_url]
 
     def _fetch_page(self, url: str, kind: str) -> Response:
         """GET a site page, turning a 404 into `NotAnEpisodePageError`."""

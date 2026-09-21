@@ -32,7 +32,12 @@ SECRET = "axLkvm84K3m9Kow5imEQ_XOV90KrvK52Ft4JkaA9m40"
 IVS = ["8J_w2tK7RY_OpXmz5ohd7Q", "EY_i66bIOWCgLYCPpncG2Q"]
 PATHS = ["episodes/15693/web/7A5R5HFNmSYRDtxEii8YRPog", "episodes/15693/web/EROuZJFwe8nJJe5bGeXbMHwH"]
 
-SERIES = {"id": 660, "title": "転生したら殺人犯の娘だった", "orientation": "vertical"}
+SERIES = {
+    "id": 660,
+    "title": "転生したら殺人犯の娘だった",
+    "orientation": "vertical",
+    "authors": [{"author": {"name": "オカヤマ"}}, {"author": {"name": "沢ちより"}}],
+}
 
 
 def entry(episode_id, sequence, prefix, title):
@@ -290,6 +295,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == "転生したら殺人犯の娘だった"
+    assert (episode.writer, episode.publisher) == ("オカヤマ, 沢ちより", "Vスクロールコミックス")
     assert episode.episode_title == "1話 バイト帰りのストーカー"
     assert [page.url for page in episode.pages] == [f"{IMAGE_URL}/{path}" for path in PATHS]
     assert episode.pages[0].extra == {"iv": IVS[0], "secret": SECRET}

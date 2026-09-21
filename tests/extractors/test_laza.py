@@ -325,6 +325,7 @@ def test_mt_episode_walks_the_pages_until_the_title_changes(client, mt_routes):
 
     assert episode.url == f"{HOST}/kimono-lolita/manga/001.html"
     assert episode.series_title == "着物ちゃんとロリータちゃん"
+    assert (episode.writer, episode.publisher) == ("", "まんだらけ")
     assert episode.episode_title == "第一話 着物ちゃん"
     assert [page.url for page in episode.pages] == [f"{HOST}/kimono-lolita/up/2021/01/29/00{n}.png" for n in (1, 2, 3)]
     # The next episode comes from the list, skipping the announcement.
@@ -472,6 +473,7 @@ def test_old_update_is_read_frame_by_frame(client, old_routes):
 
     assert episode.url == f"{HOST}/comic001/p36.html"
     assert episode.series_title == "ロリータばばあの言うことにゃ"
+    assert (episode.writer, episode.publisher) == ("岡野く仔", "まんだらけ")
     assert episode.episode_title == "191 ふざけてはいない。本当の愛だ。"
     assert [page.url for page in episode.pages] == [f"{HOST}/comic001/img/191.png", f"{HOST}/comic001/img/192.jpg"]
     # The update after p36 that is still public, per the index.

@@ -166,6 +166,7 @@ class Yawaspi(Extractor):
 
     NAME = "yawaspi"
     HOSTS = ("www.yawaspi.com", "yawaspi.com")
+    PUBLISHER = "小学館"
     URL_FORMS = (
         "https://yawaspi.com/<work>/comic/<episode>.html",
         "https://yawaspi.com/<work>/",
@@ -276,6 +277,8 @@ class Yawaspi(Extractor):
                 "prev_url": document.prev_url,
                 "images": list(document.images),
             },
+            writer=document.author,
+            publisher=self.PUBLISHER,
         )
 
     def _document(self, url: str) -> Document:

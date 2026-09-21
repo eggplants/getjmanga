@@ -101,6 +101,16 @@ def masked_png(color, key=XOR_KEY):
     return xor_unmask(raw.getvalue(), key)
 
 
+# The work page's flight payload, quotes escaped the way Next.js inlines it.
+WORK_HTML = (
+    '<html><body><script>self.__next_f.push([1,"11:[\\"$\\",\\"div\\",null,{\\"comicDetailData\\":'
+    '{\\"title_id\\":\\"taming_zennenrei\\",\\"name\\":\\"テイミング【改訂版】\\",\\"copyright\\":null,'
+    '\\"author\\":{\\"data\\":[{\\"hash_id\\":\\"01k18w6a\\",\\"name\\":\\"ＣＨＵ\\",\\"display_order\\":0},'
+    '{\\"hash_id\\":\\"01k18wn7\\",\\"name\\":\\"CHADA\\",\\"display_order\\":1}]},'
+    '\\"tag\\":{\\"data\\":[{\\"name\\":\\"主従関係\\"}]}}]"])</script></body></html>'
+)
+
+
 @pytest.fixture
 def client(fake_session, fake_response):
     def make(extra=None):
@@ -112,6 +122,8 @@ def client(fake_session, fake_response):
             f"{API_URL}/comic/{TITLE}/chapter/{FIRST}/viewer": fake_response(
                 payload=VIEWER, content_type="application/json"
             ),
+            f"{BASE_URL}/comic/{TITLE}": fake_response(text=WORK_HTML),
+            f"{BASE_URL}/comic/adult_title": fake_response(text="<html></html>"),
             f"{API_URL}/comic/{TITLE}/chapter/{LOCKED}/general-info": fake_response(
                 payload=general_info(
                     "第 4 話",
@@ -219,6 +231,7 @@ def test_episode_reads_titles_pages_and_the_next_chapter(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "テイミング【改訂版】"
     assert episode.episode_title == "第 1 話"
+    assert (episode.writer, episode.publisher) == ("ＣＨＵ, CHADA", "レジンエンターテインメント")
     assert [page.url.split("?")[0] for page in episode.pages] == [f"{CDN}/{FIRST}/p1.webp", f"{CDN}/{FIRST}/p2.webp"]
     assert episode.pages[0].extra == {"key": XOR_KEY}
     assert (episode.pages[0].width, episode.pages[0].height) == (1080, 4218)
@@ -227,10 +240,11 @@ def test_episode_reads_titles_pages_and_the_next_chapter(client):
     assert session.calls == [
         f"{API_URL}/comic/{TITLE}/chapter/{FIRST}/general-info",
         f"{API_URL}/comic/{TITLE}/chapter/{FIRST}/viewer",
+        f"{BASE_URL}/comic/{TITLE}",
     ]
-    assert session.headers_seen[-1]["Referer"] == EPISODE_URL
-    assert session.headers_seen[-1]["Accept"] == "application/json"
-    assert "Authorization" not in session.headers_seen[-1]
+    assert session.headers_seen[-2]["Referer"] == EPISODE_URL
+    assert session.headers_seen[-2]["Accept"] == "application/json"
+    assert "Authorization" not in session.headers_seen[-2]
 
 
 def test_episode_is_locked_when_the_viewer_wants_a_purchase(client):
@@ -378,7 +392,7 @@ def test_login_posts_the_credentials_and_sends_the_token_afterwards(client, fake
 
     assert session.posts == [(LOGIN_URL, {"email": "someone@example.com", "password": "hunter2"})]
     lezhin.episode(EPISODE_URL)
-    assert session.headers_seen[-1]["Authorization"] == "Bearer eyJ.token"
+    assert session.headers_seen[-2]["Authorization"] == "Bearer eyJ.token"
 
 
 def test_login_raises_with_the_site_reason(client, fake_response):

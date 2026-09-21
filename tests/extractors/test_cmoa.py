@@ -69,6 +69,7 @@ def listing_html(items, *, pages=("1", "2"), breadcrumb=True):
 <html><head><title>ダイヤのＡ　ａｃｔ２（１）｜無料漫画（マンガ）ならコミックシーモア｜寺嶋裕二</title></head><body>
 {crumbs}
 <h1 class="titleName">ダイヤのＡ　ａｃｔ２（１）</h1>
+<div class="title_details_author_name"><a href="/search/author/9533/">寺嶋裕二</a></div>
 <a href="/title/{TITLE_ID}/?page=1&amp;order=up&amp;disp_mode=comp#buyarea">詳細</a>
 <a href="/title/{TITLE_ID}/?page=1&amp;order=down#buyarea">最新刊から</a>
 <ul class="title_vol_easy_box clearfix">{"".join(items)}</ul>
@@ -263,10 +264,11 @@ def test_parse_listing_page_falls_back_to_the_heading_without_a_breadcrumb():
     html = listing_html(
         [lineup_item(f"/title/{TITLE_ID}/vol/2/", "ダイヤのＡ　ａｃｔ２（２）", "100001048600002")], breadcrumb=False
     )
-    title, volumes, last = parse_listing_page(html, TITLE_ID)
-    assert title == "ダイヤのＡ　ａｃｔ２（１）"
-    assert [volume.url for volume in volumes] == [NEXT_URL]
-    assert last == 2
+    page = parse_listing_page(html, TITLE_ID)
+    assert page.title == "ダイヤのＡ　ａｃｔ２（１）"
+    assert [volume.url for volume in page.volumes] == [NEXT_URL]
+    assert page.last == 2
+    assert (page.writer, page.publisher) == ("寺嶋裕二", "")
 
 
 # --- episodes -------------------------------------------------------------------------
@@ -279,6 +281,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_volume(client):
     assert episode.url == VOLUME_URL
     assert episode.series_title == "ダイヤのA act2"
     assert episode.episode_title == "ダイヤのＡ　ａｃｔ２（１）"
+    assert (episode.writer, episode.publisher) == ("寺嶋裕二", "講談社")
     assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert [page.width for page in episode.pages] == [392, 392]
     page = urlparse(episode.pages[0].url)

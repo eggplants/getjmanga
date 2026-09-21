@@ -27,6 +27,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 from getjmanga.viewers.publus import decode_pack, descramble, pages
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
 
 BASE_URL = "https://comic-boost.com"
@@ -59,6 +60,12 @@ def _prev_link(soup: BeautifulSoup, next_link: Tag | None) -> str | None:
         if anchor is not next_link:
             return urljoin(BASE_URL, str(anchor.attrs["href"]))
     return None
+
+
+def _credit(text: str) -> str:
+    """`役割：名前` as `名前 (役割)`; a bare name as it is."""
+    role, sep, name = text.partition("：")
+    return f"{name.strip()} ({role.strip()})" if sep else text.strip()
 
 
 def product_url(product_id: str) -> str:
@@ -109,8 +116,19 @@ class Boost(Extractor):
         "https://comic-boost.com/product/<id>",
         "https://comic-boost.com/content/<id>",
     )
+    PUBLISHER = "幻冬舎コミックス"
     #: How many listing pages a work is allowed to have before the walk gives up.
     MAX_LISTING_PAGES: ClassVar[int] = 500
+
+    def __init__(self, session: Client | None = None) -> None:
+        """Build an extractor.
+
+        Args:
+            session: A session to reuse. A retrying one is made when omitted.
+        """
+        super().__init__(session)
+        #: The credits of each work page read, by URL.
+        self._credits: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -214,6 +232,8 @@ class Boost(Extractor):
                 prev_url=colophon.prev_url,
                 next_url=colophon.next_url,
                 metadata={"colophon": colophon.raw},
+                writer=self._writer(colophon.content_url),
+                publisher=self.PUBLISHER,
             )
 
         license_ = self._get(LICENSE_URL, params={"cid": cid}, headers={**self.HEADERS, "Referer": landed}).json()
@@ -233,6 +253,8 @@ class Boost(Extractor):
                 prev_url=colophon.prev_url,
                 next_url=colophon.next_url,
                 metadata={"colophon": colophon.raw, "license": license_},
+                writer=self._writer(colophon.content_url),
+                publisher=self.PUBLISHER,
             )
         pack = decode_pack(self._get(urljoin(content_url, "configuration_pack.json")).text)
         return Episode(
@@ -243,7 +265,24 @@ class Boost(Extractor):
             prev_url=colophon.prev_url,
             next_url=colophon.next_url,
             metadata={"colophon": colophon.raw, "license": license_, "configuration": pack.content["configuration"]},
+            writer=self._writer(colophon.content_url),
+            publisher=self.PUBLISHER,
         )
+
+    def _writer(self, content_url: str | None) -> str:
+        """The credits off the work page the colophon links back to, read once per work.
+
+        The work page's own `ul.author-list` comes first, one `役割：名前` per
+        entry (or a bare name); the lists further down belong to other works.
+        """
+        if content_url is None:
+            return ""
+        if content_url not in self._credits:
+            soup = BeautifulSoup(self._get(content_url).content, "html.parser")
+            authors = soup.select_one("ul.author-list")
+            items = authors.select("li.author") if isinstance(authors, Tag) else []
+            self._credits[content_url] = ", ".join(_credit(item.get_text("", strip=True)) for item in items)
+        return self._credits[content_url]
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
         """Fetch one page and unshuffle its tiles.

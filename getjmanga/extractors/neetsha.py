@@ -259,6 +259,7 @@ class Neetsha(Extractor):
 
     NAME = "neetsha"
     HOSTS = ("neetsha.jp", "www.neetsha.jp")
+    PUBLISHER = "新都社"
     URL_FORMS = (
         "http://neetsha.jp/inside/comic.php?id=<id>&story=<n>",
         "http://neetsha.jp/inside/comic2p.php?id=<id>&story=<n>",
@@ -357,6 +358,8 @@ class Neetsha(Extractor):
                 "next_url": story.next_url,
                 "images": list(story.images),
             },
+            writer=story.author,
+            publisher=self.PUBLISHER,
         )
 
     def _fetch(self, url: str) -> Response:

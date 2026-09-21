@@ -254,6 +254,7 @@ def test_iwate_episode_is_one_of_the_anthology(client, fake_response):
     ]
     assert episode.next_url is None
     assert episode.metadata["author"] == "蓮まこと"
+    assert (episode.writer, episode.publisher) == ("蓮まこと", "銀杏社")
     assert episode.metadata["site"] == "comiciwate"
     assert session.headers_seen[-1]["User-Agent"].startswith("Mozilla/5.0")
 
@@ -304,6 +305,7 @@ def test_gai_episode_walks_the_pages_and_names_itself_from_the_index(client, gai
 
     assert episode.url == GAI_EPISODE_URL
     assert episode.series_title == "ずったり岩手"
+    assert (episode.writer, episode.publisher) == ("", "銀杏社")
     assert episode.episode_title == "第735話　昔あそび　の巻"
     assert [page.url for page in episode.pages] == [
         "http://www.manga-gai.net/manga/zuttari/735/01.jpg",

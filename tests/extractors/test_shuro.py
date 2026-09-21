@@ -21,6 +21,7 @@ MANGA_DATA = (
     '<script>const mangaData = [{"title":"\\u30ab\\u30c3\\u30d1\\u306e\\u30ab\\u30fc\\u30c6\\u30a3\\u3068\\u795f\\u308a'
     '\\u3069\\u3082\\u306e\\u611b","slug":"kappanokarty","id":71038,'
     '"permalink":"https:\\/\\/shuro.world\\/manga\\/kappanokarty\\/",'
+    '"authors":[{"title":"\\u5bae\\u5d0e\\u590f\\u6b21\\u7cfb","role":"\\u6f2b\\u753b\\u5bb6"}],'
     '"episodes":[{"title":"\\u7b2c\\uff115\\u8a71","titleSub":"\\u300c\\u30a6\\u30a8\\u3061\\u3083\\u3093\\u300d",'
     '"permalink":"https:\\/\\/shuro.world\\/episode\\/146210\\/","relatedWork":71038},'
     '{"title":"\\u7b2c\\uff11\\u8a71","titleSub":"\\u300c\\u5272\\u308c\\u3066\\u307e\\u3059\\u3088\\u300d",'
@@ -267,6 +268,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == "カッパのカーティと祟りどもの愛"
+    assert (episode.writer, episode.publisher) == ("宮崎夏次系 (漫画家)", "マガジンハウス")
     assert episode.episode_title == "第１話 「割れてますよ、頭の皿」"
     assert [page.url for page in episode.pages] == [
         "https://img.shuro.world/wp-content/uploads/2025/12/09204919/cover.jpg",

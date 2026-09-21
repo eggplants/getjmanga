@@ -111,6 +111,7 @@ def listing_html(episodes, *, last, closed=()):
     ]
     hidden = " is-hidde" if last else ""
     return f"""<html><body><h1 class="detail--title">{SERIES_TITLE}</h1>
+<div class="detail__author__list"><span class="detail__author__item" href="">宮川輝</span></div>
 <div class="container detail--product__list">{"".join(items)}</div>
 <ul class="pagenation_list">
 <li class="pagenation__item is-active"><span class="pagenation__item__link">1</span></li>
@@ -249,6 +250,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == SERIES_TITLE
+    assert (episode.writer, episode.publisher) == ("宮川輝", "光文社")
     assert episode.episode_title == "#001（前編）"
     assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert [page.url for page in episode.pages] == [

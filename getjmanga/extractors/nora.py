@@ -59,6 +59,7 @@ class Nora(Extractor):
 
     NAME = "nora"
     HOSTS = ("nora.gakken.jp",)
+    PUBLISHER = "Gakken"
     URL_FORMS = (
         "https://nora.gakken.jp/comic/page-<slug>/?episode_id=<id>",
         "https://nora.gakken.jp/comic/page-<slug>/",
@@ -161,6 +162,8 @@ class Nora(Extractor):
                 ),
             ),
         )
+        # `作家名：` in the header, one name per line with its role in fullwidth parentheses.
+        writer = " ".join(_text(article.select_one(".page-comic-detail-content-header__name dd")).split())
         metadata: dict[str, Any] = {
             "episode_id": episode_id,
             "published": embedded == episode_id,
@@ -174,6 +177,8 @@ class Nora(Extractor):
                 series_title=series_title,
                 episode_title=episode_title or str(episode_id),
                 metadata={**metadata, "viewer": None},
+                writer=writer,
+                publisher=self.PUBLISHER,
             )
 
         viewer = self._viewer(work_url, episode_id)
@@ -192,6 +197,8 @@ class Nora(Extractor):
             prev_url=_episode_url(work_url, int(prev_id)) if prev_id is not None else None,
             next_url=_episode_url(work_url, int(next_id)) if next_id is not None else None,
             metadata=metadata,
+            writer=writer,
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

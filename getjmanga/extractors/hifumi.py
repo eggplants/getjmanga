@@ -158,6 +158,7 @@ class Hifumi(Extractor):
 
     NAME = "hifumi"
     HOSTS = (HOST,)
+    PUBLISHER = "一二三書房"
     URL_FORMS = (
         "https://www.123hon.com/vw/<slug>/<id>",
         "https://www.123hon.com/polca/web-comic/<slug>/",
@@ -280,6 +281,8 @@ class Hifumi(Extractor):
                 "recommend": recommend,
                 "ptimg": [ptimg for ptimg, _ in pages],
             },
+            # Neither imprint credits an author anywhere but the copyright line.
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

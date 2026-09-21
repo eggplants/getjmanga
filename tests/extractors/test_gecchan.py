@@ -120,9 +120,10 @@ def test_is_series_tells_a_work_page_from_an_episode():
 
 def test_parse_work_falls_back_on_the_og_title():
     html = WORK_HTML.replace("<h3>ハニカム</h3>", "")
-    series_title, entries = parse_work(html, WORK_URL)
+    series_title, writer, entries = parse_work(html, WORK_URL)
 
     assert series_title == "ハニカム"
+    assert writer == "まりぱか"
     assert len(entries) == 3
 
 
@@ -135,6 +136,7 @@ def test_episode_reads_the_titles_the_page_and_the_next_episode(client):
 
     assert episode.series_title == "ハニカム"
     assert episode.episode_title == "プロローグの2 誰とでも仲良くできる男"
+    assert (episode.writer, episode.publisher) == ("まりぱか", "秋田書店")
     assert [page.url for page in episode.pages] == ["https://nikkangecchan.jp/comics/hanikamu/2/image"]
     assert episode.next_url == f"{WORK_URL}/3"
     assert episode.metadata == {

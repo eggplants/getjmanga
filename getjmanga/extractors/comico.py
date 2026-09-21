@@ -179,6 +179,7 @@ class Comico(Extractor):
 
     NAME = "comico"
     HOSTS = ("www.comico.jp",)
+    PUBLISHER = "NHN comico"
     URL_FORMS = (
         "https://www.comico.jp/comic/<content>/chapter/<chapter>/product",
         "https://www.comico.jp/comic/<content>/chapter/<chapter>/trial",
@@ -305,6 +306,8 @@ class Comico(Extractor):
                 else None
             ),
             metadata={"content": content, "chapter": chapter},
+            writer=_authors(content),
+            publisher=str(content.get("publisherName") or "") or self.PUBLISHER,
         )
 
     def _pages(self, chapter: dict[str, Any], referer: str) -> Iterator[Page]:
@@ -367,6 +370,8 @@ class Comico(Extractor):
             prev_url=episode_url(content_type, content_id, before["id"], sales_type) if before else None,
             next_url=episode_url(content_type, content_id, after["id"], sales_type) if after else None,
             metadata={"chapter": chapters[position], "reason": reason},
+            writer=_authors(listing),
+            publisher=str(listing.get("publisherName") or "") or self.PUBLISHER,
         )
 
     def _chapters(self, content_type: str, content_id: str, referer: str) -> list[dict[str, Any]]:
@@ -400,6 +405,21 @@ class Comico(Extractor):
         res = self._get(f"{API_URL}{path}", headers={**self.HEADERS, **api_headers(), "Referer": referer})
         body = res.json()
         return body if isinstance(body, dict) else {}
+
+
+#: What the API's author `role` codes mean; a plain `creator` needs no saying.
+_ROLES = {"creator": "", "original_creator": "原作"}
+
+
+def _authors(content: dict[str, Any]) -> str:
+    """The work's `authors` in `sort` order, each with its role when it has one worth naming."""
+    credited = []
+    for author in sorted((a for a in content.get("authors") or [] if isinstance(a, dict)), key=_sort_key):
+        name, role = str(author.get("name") or "").strip(), str(author.get("role") or "")
+        role = _ROLES.get(role, role)
+        if name:
+            credited.append(f"{name} ({role})" if role else name)
+    return ", ".join(credited)
 
 
 def _sort_key(chapter: dict[str, Any]) -> int:

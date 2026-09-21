@@ -221,6 +221,7 @@ def test_episode_walks_the_pages_and_reads_the_titles(client):
     assert episode.url == FIRST_URL
     assert episode.series_title == "マダムはあきらめない"
     assert episode.episode_title == "第1話-老後資金の増やし方を知りたい！"
+    assert (episode.writer, episode.publisher) == ("青沼貴子", "竹書房")
     assert [page.url for page in episode.pages] == [
         f"https://sukupara.jp/plus/manga/{MANGA}/2160/{number}.jpg" for number in (1, 2, 3)
     ]

@@ -200,6 +200,7 @@ class PixivComic(Extractor):
 
     NAME = "pixivcomic"
     HOSTS = ("comic.pixiv.net",)
+    PUBLISHER = "ピクシブ"
     URL_FORMS = (
         "https://comic.pixiv.net/viewer/stories/<id>",
         "https://comic.pixiv.net/works/<id>",
@@ -220,6 +221,8 @@ class PixivComic(Extractor):
         super().__init__(session)
         # The salt is one value for the whole site; read off the first viewer page and kept.
         self._salt: str | None = None
+        #: The author each work's description names, by work id.
+        self._credits: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -349,7 +352,25 @@ class PixivComic(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata=reading,
+            # The work's description names its author and its magazine, not who publishes it.
+            writer=self._writer(str(reading.get("work_id") or ""), page_url),
+            publisher=self.PUBLISHER,
         )
+
+    def _writer(self, work_id: str, referer: str) -> str:
+        """The `official_work.author` of `/works/v5/<id>`, asked for once per work."""
+        if not work_id:
+            return ""
+        if work_id not in self._credits:
+            res = self._session.get(
+                f"{API_URL}/works/v5/{work_id}",
+                headers={**self.HEADERS, **_API_HEADERS, "Referer": referer},
+                timeout=self.TIMEOUT,
+            )
+            data = self._data(res) or {}
+            work = data.get("official_work") if isinstance(data, dict) else None
+            self._credits[work_id] = str(work.get("author") or "") if isinstance(work, dict) else ""
+        return self._credits[work_id]
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
         """Fetch one page with its shuffle key and put it back together.

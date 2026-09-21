@@ -41,6 +41,7 @@ RECOMMEND_HTML = """
 SERIES_HTML = """
 <html><head><title>OLと人魚｜COMIC ポルタ｜イースト・プレス</title></head><body>
 <h2 class="title">OLと人魚</h2>
+<p class="authors">司馬舞</p>
 <div class="series-pickup"><ul>
   <li class="pickup1"><a href="https://comic-porta.com/p_data/ol_ningyo002ns/">newest</a></li>
   <li class="pickup2"><a href="https://comic-porta.com/p_data/ol_ningyo001al/">older</a></li>
@@ -160,6 +161,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, f
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == "OLと人魚"
+    assert (episode.writer, episode.publisher) == ("司馬舞", "イースト・プレス")
     assert episode.episode_title == "OLと人魚"
     assert [page.url for page in episode.pages] == [
         "https://comic-porta.com/p_data/ol_ningyo001al/data/0001.ptimg.json",

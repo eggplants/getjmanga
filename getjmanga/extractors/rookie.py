@@ -44,6 +44,7 @@ class Rookie(Extractor):
 
     NAME = "rookie"
     HOSTS = ("rookie.shonenjump.com",)
+    PUBLISHER = "集英社"
     URL_FORMS = (
         "https://rookie.shonenjump.com/series/<series>/<episode>",
         "https://rookie.shonenjump.com/series/<series>",
@@ -167,6 +168,8 @@ class Rookie(Extractor):
                 "page_structure": _json(viewer.get("data-page-structure")),
                 "images": [page.url for page in pages],
             },
+            writer=author.get_text(strip=True) if isinstance(author, Tag) else "",
+            publisher=self.PUBLISHER,
         )
 
     def _page(self, url: str) -> BeautifulSoup:

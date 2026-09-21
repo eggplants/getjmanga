@@ -54,6 +54,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from httpx import Client
     from PIL import Image
 
 _READER_PATH = re.compile(r"^/reader/(?:colophon/)?(?P<id>\d+)/?$")
@@ -113,6 +114,17 @@ class FireCross(Extractor):
         "https://firecross.jp/ebook/series/<id>",
     )
     CONFIG_KEY = "firecross"
+    PUBLISHER = "ホビージャパン"
+
+    def __init__(self, session: Client | None = None) -> None:
+        """Build an extractor.
+
+        Args:
+            session: A session to reuse. A retrying one is made when omitted.
+        """
+        super().__init__(session)
+        #: The credits of each work page read, by URL.
+        self._credits: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -164,6 +176,7 @@ class FireCross(Extractor):
         page = 1
         while True:
             soup = BeautifulSoup(self._get(series_url, params={"page": page}).content, "html.parser")
+            self._credits.setdefault(series_url, _credits(soup))
             found = [
                 _reader_url(origin, str(item["data-id"]))
                 for item in soup.select("div.shop-item--episode[data-id]")
@@ -211,8 +224,10 @@ class FireCross(Extractor):
         next_id = _next_id(colophon)
         home = colophon.select_one("a.colophonBtn__home[href]")
         series_url = urljoin(origin, str(home["href"])) if isinstance(home, Tag) else None
-        # The colophon points forward only; the work page lists the episode before.
+        # The colophon points forward only; the work page lists the episode before
+        # and credits the work, which the listing keeps for here.
         prev_url = self._listed_neighbours(series_url, episode_url)[0] if series_url else None
+        writer = self._credits.get(series_url or "", "")
         metadata: dict[str, Any] = {
             "ebook_id": int(episode_id),
             "series_url": str(home["href"]) if isinstance(home, Tag) else None,
@@ -228,6 +243,8 @@ class FireCross(Extractor):
                 prev_url=prev_url,
                 next_url=_reader_url(origin, next_id) if next_id is not None else None,
                 metadata={**metadata, "locked": True},
+                writer=writer,
+                publisher=self.PUBLISHER,
             )
         reader = BeautifulSoup(self._get(reader_url, headers=self.HEADERS).content, "html.parser")
         cgi, param = _reader_meta(reader)
@@ -260,6 +277,8 @@ class FireCross(Extractor):
             prev_url=prev_url,
             next_url=_reader_url(origin, next_id) if next_id is not None else None,
             metadata=metadata,
+            writer=writer,
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -350,6 +369,19 @@ def _reader_url(origin: str, episode_id: str) -> str:
 def _cgi_url(cgi_url: str, mode: str, file: str, param: str) -> str:
     query = {"mode": mode, "file": file, "reqtype": _REQUEST_TYPE_FILE, "vm": _VIEW_MODE, "param": param}
     return f"{cgi_url}?{urlencode(query)}"
+
+
+def _credits(series: BeautifulSoup) -> str:
+    """A work page's `ul.ebook-series-author`: `名前 (役割)` per entry, the role its `-type` span."""
+    credited = []
+    for item in series.select("ul.ebook-series-author li.ebook-series-author-item"):
+        kind = item.select_one("span.ebook-series-author-type")
+        role = _text(kind)
+        link = item.find("a")
+        name = _text(link) if isinstance(link, Tag) else ""
+        if name:
+            credited.append(f"{name} ({role})" if role else name)
+    return ", ".join(credited)
 
 
 def _reader_meta(reader: BeautifulSoup) -> tuple[str, str]:

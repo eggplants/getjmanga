@@ -196,6 +196,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next(client):
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == "私だけのエモサマー"
+    assert (episode.writer, episode.publisher) == ("檸檬山れち", "集英社")
     assert episode.episode_title == "1話"
     assert [page.url for page in episode.pages] == [
         f"{CDN}/c_fill,f_auto,w_720/v1788282113/first.jpg",

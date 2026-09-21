@@ -205,6 +205,7 @@ class FullPercent(Extractor):
 
     NAME = "fullpercent"
     HOSTS = ("fullpercent.net",)
+    PUBLISHER = "RelatyLS"
     URL_FORMS = (
         "https://fullpercent.net/comic/view/<work_id>/<episode_id>",
         "https://fullpercent.net/comic/detail/<work_id>",
@@ -327,6 +328,8 @@ class FullPercent(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata=metadata,
+            writer=str(metadata["author"]),
+            publisher=self.PUBLISHER,
         )
 
     def login(self, url: str, username: str, password: str) -> None:  # noqa: ARG002 (one site, one login route)

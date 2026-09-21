@@ -69,6 +69,7 @@ class Fuz(Extractor):
         "https://comic-fuz.com/manga/<manga-id>",
     )
     CONFIG_KEY = "comic-fuz"
+    PUBLISHER = "芳文社"
     HEADERS: ClassVar[dict[str, str]] = {**Extractor.HEADERS, "Origin": BASE_URL, "Referer": f"{BASE_URL}/"}
 
     def __init__(self, session: Client | None = None) -> None:
@@ -82,6 +83,8 @@ class Fuz(Extractor):
         # is what a locked chapter (the API answers 401 or 402, nothing else)
         # is named and given its next chapter from.
         self._chapters: dict[int, tuple[str, list[Chapter]]] = {}
+        #: The credits of every manga seen, by id, off the same responses.
+        self._credits: dict[int, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -177,6 +180,8 @@ class Fuz(Extractor):
                 "manga_id": manga_id,
                 "chapters": [{"id": c.id, "title": c.title, "points": c.points} for c in chapters],
             },
+            writer=self._credits.get(manga_id, ""),
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -248,8 +253,16 @@ class Fuz(Extractor):
                     Chapter(integer(fields, 1), title or str(integer(fields, 1)), integer(message(raw(fields, 5)), 2))
                 )
         chapters.reverse()
+        # `authorships`: one `Author` (name in field 2) and their role each.
+        credited = []
+        for authorship in messages(res, 6):
+            fields = message(authorship)
+            name, role = string(message(raw(fields, 1)), 2), string(fields, 2)
+            if name:
+                credited.append(f"{name} ({role})" if role else name)
         if manga_id:
             self._chapters[manga_id] = (series_title, chapters)
+            self._credits[manga_id] = ", ".join(credited)
         return manga_id, series_title, chapters
 
     def _locked(self, url: str, chapter_id: int) -> Episode:
@@ -264,8 +277,10 @@ class Fuz(Extractor):
                     prev_url=self._neighbours(chapters, chapter_id)[0],
                     next_url=self._neighbours(chapters, chapter_id)[1],
                     metadata={"chapter_id": chapter_id, "manga_id": manga_id},
+                    writer=self._credits.get(manga_id, ""),
+                    publisher=self.PUBLISHER,
                 )
-        return Episode(url=url, series_title=str(chapter_id), episode_title=str(chapter_id))
+        return Episode(url=url, series_title=str(chapter_id), episode_title=str(chapter_id), publisher=self.PUBLISHER)
 
     @staticmethod
     def _neighbours(chapters: list[Chapter], chapter_id: int) -> tuple[str | None, str | None]:

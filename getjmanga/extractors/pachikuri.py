@@ -219,6 +219,7 @@ class Pachikuri(Extractor):
 
     NAME = "pachikuri"
     HOSTS = (HOST,)
+    PUBLISHER = "主婦と生活社"
     URL_FORMS = (
         "https://pachikuri.jp/<work>/<slug>/",
         "https://pachikuri.jp/?p=<id>",
@@ -331,6 +332,8 @@ class Pachikuri(Extractor):
             prev_url=post.prev_url,
             next_url=post.next_url,
             metadata=metadata,
+            writer=post.author,
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

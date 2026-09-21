@@ -162,6 +162,7 @@ class MangaNo(Extractor):
 
     NAME = "mangano"
     HOSTS = ("manga-no.com",)
+    PUBLISHER = "はてな"
     URL_FORMS = (
         "https://manga-no.com/episodes/<id>",
         "https://manga-no.com/works/<id>",
@@ -323,6 +324,8 @@ class MangaNo(Extractor):
                 "viewable_count": (node.get("pages") or {}).get("viewableCount"),
                 "images": [_template(page_node) for page_node in edges],
             },
+            writer=str((work.get("user") or {}).get("displayName") or ""),
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

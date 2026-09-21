@@ -61,9 +61,10 @@ _TWI4_TITLE = re.compile(r"^(?:(?P<episode>.*?) -)?『(?P<series>.+)』(?P<autho
 # `<h1>` of a reader page: `<author>『<work>』<volume> <credits> | 最前線`.
 _READER_TITLE = re.compile(r"^(?P<author>[^『]*)『(?P<series>.+?)』(?P<rest>.*)$")
 # Where the credits start in what follows the work title.
-_CREDITS = re.compile(
-    r"\s*(?:原作|原案|著者|作画|漫画|監修|脚本|構成|キャラクターデザイン原案|キャラクター原案)[／：/:].*$",  # noqa: RUF001 (the site writes a fullwidth colon)
-)
+_ROLES = r"原作|原案|著者|作画|漫画|監修|脚本|構成|キャラクターデザイン原案|キャラクター原案"
+_CREDITS = re.compile(rf"\s*(?:{_ROLES})[／：/:].*$")
+# One credit in that tail: the role, a separator, the name up to the next role.
+_CREDIT = re.compile(rf"(?P<role>{_ROLES})[／：/:]\s*(?P<name>.+?)(?=\s+(?:{_ROLES})[／：/:]|$)")
 # A strip of a legacy reader page: `<page>.<strip>.jpg`.
 _STRIP_NAME = re.compile(r"^(?P<page>\d+)\.(?P<strip>\d+)\.\w+$")
 # The `Format` of each item of a ツイ4 work's `index.js`; a trailing `0` marks a closed one.
@@ -90,6 +91,8 @@ class Document:
     listed: tuple[int, ...]
     #: ツイ4: the page says the strip is no longer public.
     closed: bool
+    #: Who the work is by: the name before the brackets, then the credits after the volume.
+    writer: str = ""
 
 
 def parse_twi4_page(html: str | bytes, url: str) -> Document:
@@ -134,6 +137,7 @@ def parse_twi4_page(html: str | bytes, url: str) -> Document:
         and link["work"] == work
         and not link["all"]
     )
+    author = soup.select_one("span.work-author")
     return Document(
         kind="twi4",
         series_title=series_title or work,
@@ -142,6 +146,7 @@ def parse_twi4_page(html: str | bytes, url: str) -> Document:
         title=title,
         listed=listed,
         closed=not images and "公開を終了" in articles[0].get_text(),
+        writer=(match["author"].strip() if match else "") or _text(author).removeprefix("作者：").strip(),
     )
 
 
@@ -191,6 +196,7 @@ def parse_reader_page(html: str | bytes, url: str) -> Document:
         title=title,
         listed=(),
         closed=False,
+        writer=reader_credits(heading),
     )
 
 
@@ -213,6 +219,28 @@ def split_reader_title(heading: str) -> tuple[str, str]:
     if match is None:
         return "", ""
     return match["series"].strip(), _CREDITS.sub("", match["rest"]).strip()
+
+
+def reader_credits(heading: str) -> str:
+    """Everyone a reader heading credits: the author before the brackets, then each `役割／名前` after the volume.
+
+    `シオミヤイルカ『非実在推理少女あ〜や』第一話 原作／錦メガネ | 最前線` gives
+    `シオミヤイルカ, 錦メガネ (原作)`.
+
+    Args:
+        heading: The page's `<h1>` or `<title>`.
+
+    Returns:
+        The names, comma-separated; empty when the heading has no brackets.
+    """
+    match = _READER_TITLE.match(heading.strip().removesuffix(_SITE_SUFFIX).strip())
+    if match is None:
+        return ""
+    credited = [match["author"].strip()]
+    tail = _CREDITS.search(match["rest"])
+    if tail is not None:
+        credited.extend(f"{c['name'].strip()} ({c['role']})" for c in _CREDIT.finditer(tail.group(0).strip()))
+    return ", ".join(name for name in credited if name)
 
 
 def group_strips(urls: Iterable[str]) -> list[tuple[str, ...]]:
@@ -290,6 +318,7 @@ class Saizensen(Extractor):
 
     NAME = "saizensen"
     HOSTS = ("sai-zen-sen.jp",)
+    PUBLISHER = "星海社"
     URL_FORMS = (
         "https://sai-zen-sen.jp/comics/twi4/<work>/<nnnn>.html",
         "https://sai-zen-sen.jp/comics/twi4/<work>/",
@@ -429,6 +458,8 @@ class Saizensen(Extractor):
                 "closed": document.closed,
                 "pages": [list(strips) for strips in document.pages],
             },
+            writer=document.writer,
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

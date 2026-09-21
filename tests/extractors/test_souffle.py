@@ -182,6 +182,7 @@ def test_episode_reads_the_titles_and_the_pages(client):
     episode = souffle.episode(EPISODE_URL)
 
     assert episode.series_title == "違うクラスの好きな人"
+    assert (episode.writer, episode.publisher) == ("かわいちひろ", "秋田書店")
     assert episode.episode_title == "#1 靴擦れと夏祭り"
     assert [page.url for page in episode.pages] == [f"{CDN}/0001.jpg", f"{CDN}/0002.jpg"]
     assert episode.next_url == NEXT_URL

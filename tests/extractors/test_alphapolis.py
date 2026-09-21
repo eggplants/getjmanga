@@ -77,6 +77,14 @@ EPISODES = [
 ]
 
 WORK_HTML = f"""<html><head><title>Ｆ級テイマー | 公式Web漫画 | アルファポリス</title></head><body>
+<div class="author-label">
+    <div class="authors">
+        <a href="https://www.alphapolis.co.jp/author/detail/373494515?type=official_manga&amp;a_id=10747">石田総司</a><!--
+        -->/漫画
+        <a href="https://www.alphapolis.co.jp/author/detail/710199495?type=official_manga&amp;a_id=11339">ゆーき</a><!--
+        -->/原作
+    </div>
+</div>
 <div id="app-official-manga-toc">
     <script type="application/json">
         {
@@ -94,6 +102,11 @@ WORK_HTML = f"""<html><head><title>Ｆ級テイマー | 公式Web漫画 | アル
 </div></body></html>"""
 
 USER_WORK_HTML = f"""<html><body>
+<div class="p-content-info__author-diary">
+    <a href="https://www.alphapolis.co.jp/author/detail/140803433" class="p-content-info__author c-link">
+        梅星かぼす
+    </a>
+</div>
 <script type="application/json" id="app-cover-data">
 {
     json.dumps(
@@ -369,6 +382,7 @@ def test_episode_reads_the_titles_and_the_pages(client):
 
     assert episode.series_title == "Ｆ級テイマーは数の暴力で世界を裏から支配する"
     assert episode.episode_title == "第1回『最下級スキルの力』"
+    assert (episode.writer, episode.publisher) == ("石田総司 (漫画), ゆーき (原作)", "アルファポリス")
     assert [page.url for page in episode.pages] == [
         "https://ot-image.alphapolis.co.jp/p/1.webp?Expires=1",
         "https://ot-image.alphapolis.co.jp/p/2.webp?Expires=1",
@@ -409,6 +423,7 @@ def test_episode_of_a_user_work_posts_to_its_own_viewer_endpoint(client, fake_re
 
     assert episode.series_title == "ghost"
     assert episode.episode_title == "1話目"
+    assert (episode.writer, episode.publisher) == ("梅星かぼす", "アルファポリス")
     assert [page.extra for page in episode.pages] == [{"puzzle": ""}]
     assert episode.next_url == f"{USER_WORK_URL}/episode/11788108"
     assert session.posts[-1][0] == f"{USER_EPISODE_URL}/viewer.json"

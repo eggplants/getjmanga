@@ -109,6 +109,7 @@ class Shuro(Extractor):
 
     NAME = "shuro"
     HOSTS = ("shuro.world",)
+    PUBLISHER = "マガジンハウス"
     URL_FORMS = (
         "https://shuro.world/episode/<id>/",
         "https://shuro.world/manga/<slug>/",
@@ -205,6 +206,13 @@ class Shuro(Extractor):
             episode_title = " ".join(part for part in parts if part)
         if not series_title and works:
             series_title = str(works[0].get("title", ""))
+        # The work's `authors`, each `名前 (役割)` -- the role is what the site calls them, `漫画家`.
+        credited = [
+            f"{a['title']} ({a['role']})" if a.get("role") else str(a["title"])
+            for work in works[:1]
+            for a in work.get("authors") or []
+            if isinstance(a, dict) and a.get("title")
+        ]
 
         slides = [slide for slide in viewer.find_all("div", class_="slide") if isinstance(slide, Tag)]
         pages = tuple(page for page in (self._page_of(slide, url) for slide in slides) if page is not None)
@@ -222,6 +230,8 @@ class Shuro(Extractor):
                 "works": [{key: value for key, value in work.items() if key != "episodes"} for work in works],
                 "images": [page.url for page in pages],
             },
+            writer=", ".join(credited),
+            publisher=self.PUBLISHER,
         )
 
     def _page(self, url: str) -> str:

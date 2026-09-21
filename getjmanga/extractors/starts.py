@@ -162,11 +162,30 @@ def parse_listing(html: str | bytes, origin: str, serial: str) -> tuple[str, lis
     return title, [stories[number] for number in sorted(stories)]
 
 
+def parse_credits(html: str | bytes) -> str:
+    """The `ul.credit` entries of a series page, `役割／名前` each, as `名前 (役割)`.
+
+    Args:
+        html: The series page.
+
+    Returns:
+        The names, comma-separated; empty when the page credits nobody.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    credited = []
+    for item in soup.select("div.creditBox ul.credit li"):
+        role, sep, name = " ".join(item.get_text().split()).partition("／")
+        if sep and name.strip():
+            credited.append(f"{name.strip()} ({role.strip()})")
+    return ", ".join(credited)
+
+
 class Starts(Extractor):
     """Fetch episodes from the comic sections of スターツ出版's sites."""
 
     NAME = "starts"
     HOSTS = ("novema.jp", "www.berrys-cafe.jp", "www.no-ichigo.jp")
+    PUBLISHER = "スターツ出版"
     URL_FORMS = (
         "https://www.berrys-cafe.jp/comic/serial/n<serial>/n<story>/<page>",
         "https://www.berrys-cafe.jp/comic/serial/n<serial>",
@@ -186,6 +205,8 @@ class Starts(Extractor):
         # The series page names the series and orders its episodes; a bulk
         # run would fetch it once per episode otherwise.
         self._listings: dict[str, tuple[str, list[Story]]] = {}
+        #: The credits of each series page read, by URL.
+        self._credits: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -306,6 +327,8 @@ class Starts(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata={"comic_data": data, "story": asdict(story) if story else None, "images": images},
+            writer=self._credits.get(series_url(origin, serial), ""),
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -331,6 +354,7 @@ class Starts(Extractor):
         if url not in self._listings:
             res = self._get(url)
             self._listings[url] = parse_listing(res.content, origin, serial)
+            self._credits[url] = parse_credits(res.content)
         return self._listings[url]
 
     def _images(

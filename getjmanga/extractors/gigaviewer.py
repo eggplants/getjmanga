@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlparse
 from xml.etree import ElementTree as ET
 
@@ -64,6 +64,12 @@ def descramble(image: Image.Image, div: int = DIV, mul: int = MUL) -> Image.Imag
     return out
 
 
+def _author(page: BeautifulSoup) -> str:
+    """The series header's author line, the names joined however the site joins them."""
+    heading = page.find("h2", class_="series-header-author")
+    return heading.get_text(strip=True) if isinstance(heading, Tag) else ""
+
+
 class GigaViewer(Extractor):
     """Fetch episodes from a site running GigaViewer."""
 
@@ -96,6 +102,27 @@ class GigaViewer(Extractor):
         "https://<host>/series/<id>/first_episode",
         "https://<host>/rss/series/<id>",
     )
+    PUBLISHERS: ClassVar[dict[str, str]] = {
+        "comic-action.com": "双葉社",
+        "comic-days.com": "講談社",
+        "comic-earthstar.com": "アース・スター エンターテイメント",
+        "comic-gardo.com": "オーバーラップ",
+        "comic-ogyaaa.com": "ホーム社",
+        "comic-seasons.com": "文藝春秋",
+        "comic-trail.com": "芳文社",
+        "comic-y-ours.com": "少年画報社",
+        "comic-zenon.com": "コアミックス",
+        "comicborder.com": "リイド社",
+        "feelweb.jp": "祥伝社",
+        "ichicomi.com": "一迅社",
+        "kuragebunch.com": "新潮社",
+        "magcomi.com": "マッグガーデン",
+        "mangatime-square.com": "芳文社",
+        "ourfeel.jp": "シュークリーム",
+        "shonenjumpplus.com": "集英社",
+        "tonarinoyj.jp": "集英社",
+        "www.sunday-webry.com": "小学館",
+    }
 
     def __init__(self, session: Client | None = None) -> None:
         """Build an extractor.
@@ -179,7 +206,7 @@ class GigaViewer(Extractor):
             raise UnsupportedUrlError(msg)
         url = url.removesuffix(".json")
 
-        episode_json = self._episode_json(url)
+        episode_json, page = self._episode_page(url)
         product = episode_json["readableProduct"]
         kind = product["typeName"]
         if kind == "magazine":
@@ -208,6 +235,8 @@ class GigaViewer(Extractor):
             prev_url=product.get("prevReadableProductUri"),
             next_url=product.get("nextReadableProductUri"),
             metadata=episode_json,
+            writer=_author(page),
+            publisher=self.publisher(url),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -252,20 +281,22 @@ class GigaViewer(Extractor):
             raise LoginError(msg)
         self._logged_in_origins.add(origin)
 
-    def _episode_json(self, url: str) -> dict[str, Any]:
+    def _episode_page(self, url: str) -> tuple[dict[str, Any], BeautifulSoup]:
+        """The episode JSON the page embeds, and the page itself for what the JSON leaves out."""
         for attempt in range(_EPISODE_JSON_RETRY):
             res = self._get(url)
             if "text/html" not in res.headers.get("content-type", ""):
                 msg = f"{url} answered {res.headers.get('content-type')!r}, not a page."
                 raise NotAnEpisodePageError(msg)
 
-            script = BeautifulSoup(res.content, "html.parser").find("script", id="episode-json")
+            page = BeautifulSoup(res.content, "html.parser")
+            script = page.find("script", id="episode-json")
             if isinstance(script, Tag):
                 value = script.attrs.get("data-value")
                 if value is None:
                     msg = f"the episode JSON on {url} is empty."
                     raise NotAnEpisodePageError(msg)
-                return dict(json.loads(str(value)))
+                return dict(json.loads(str(value))), page
 
             if attempt + 1 < _EPISODE_JSON_RETRY:
                 time.sleep(_EPISODE_JSON_RETRY_INTERVAL * (attempt + 1))

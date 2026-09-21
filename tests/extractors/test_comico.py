@@ -60,6 +60,11 @@ CONTENT = {
     "orientation": "TTB",
     "chapterUnit": "episode",
     "chapterFileFormat": "image",
+    "authors": [
+        {"id": 2, "name": "ケイト・ウォーカー", "role": "original_creator", "sort": 2},
+        {"id": 1, "name": "えいだ恭子", "role": "creator", "sort": 1},
+    ],
+    "publisherName": "SBCr",
 }
 # The work page lists chapters in order; the API hands them over that way too.
 CHAPTERS = [
@@ -243,6 +248,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_chapter(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "最悪な鬱小説を書き直してみせます"
     assert episode.episode_title == "第 1 話"
+    assert (episode.writer, episode.publisher) == ("えいだ恭子, ケイト・ウォーカー (原作)", "SBCr")
     # Decrypted, in `sort` order, with the signed query the CDN checks.
     assert [page.url for page in episode.pages] == [
         f"{CDN}/1_x.jpg/dims/crop/x2000+0+0/optimize?{PARAMETER}",
@@ -277,6 +283,7 @@ def test_a_locked_chapter_has_no_pages_but_still_a_next_chapter(client):
     assert episode.pages == ()
     assert episode.series_title == "最悪な鬱小説を書き直してみせます"
     assert episode.episode_title == "第 4 話"
+    assert (episode.writer, episode.publisher) == ("えいだ恭子, ケイト・ウォーカー (原作)", "SBCr")
     assert (episode.prev_url, episode.next_url) == (
         f"{BASE_URL}/comic/13956/chapter/3/product",
         f"{BASE_URL}/comic/13956/chapter/5/product",

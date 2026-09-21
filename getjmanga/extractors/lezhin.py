@@ -67,6 +67,26 @@ def episode_url(title_id: str, chapter_id: str) -> str:
     return f"{BASE_URL}/comic/{title_id}/chapter/{chapter_id}/viewer"
 
 
+#: Where a work page inlines its authors: the flight payload escapes its quotes.
+_AUTHORS = re.compile(r'\\"author\\":\{\\"data\\":\[(?P<data>.*?)\]\}')
+_AUTHOR_NAME = re.compile(r'\\"name\\":\\"(?P<name>[^"\\]*)\\"')
+
+
+def authors_of(html: str) -> list[str]:
+    """The author names a work page's inlined `comicDetailData` lists, in order.
+
+    Args:
+        html: The work page.
+
+    Returns:
+        The names; empty when the page inlines none.
+    """
+    match = _AUTHORS.search(html)
+    if match is None:
+        return []
+    return [name for name in _AUTHOR_NAME.findall(match["data"]) if name]
+
+
 def _results(status: int, body: dict[str, Any]) -> dict[str, Any]:
     """The `results` of a successful API answer, `{}` for any other."""
     results = body.get("results") if status == HTTPStatus.OK else None
@@ -90,6 +110,7 @@ class Lezhin(Extractor):
 
     NAME = "lezhin"
     HOSTS = ("lezhin.jp",)
+    PUBLISHER = "レジンエンターテインメント"
     URL_FORMS = (
         "https://lezhin.jp/comic/<title>/chapter/<hash>/viewer",
         "https://lezhin.jp/comic/<title>/chapter/<hash>",
@@ -115,6 +136,8 @@ class Lezhin(Extractor):
         self._token: str | None = None
         #: The XOR key pages are unmasked with, replaced once `_discover_key()` found a newer one.
         self._key = XOR_KEY
+        #: The credits of each work page read, by title id.
+        self._credits: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -244,7 +267,21 @@ class Lezhin(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata={"info": info, "viewer": viewer, "error": None if pages else body.get("message")},
+            writer=self._writer(title_id),
+            publisher=self.PUBLISHER,
         )
+
+    def _writer(self, title_id: str) -> str:
+        """The authors the work page renders, read once per work.
+
+        No API answers with them: the Next.js page inlines its
+        `comicDetailData`, whose `author.data` lists the names, in a flight
+        payload, so they are picked out of that.
+        """
+        if title_id not in self._credits:
+            html = self._get(f"{BASE_URL}/comic/{title_id}").text
+            self._credits[title_id] = ", ".join(authors_of(html))
+        return self._credits[title_id]
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
         """Fetch one page from the presigned URL and unmask it.

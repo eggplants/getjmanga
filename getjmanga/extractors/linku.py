@@ -148,6 +148,8 @@ class LinkU(Extractor):
         #: Title id to its name and chapter list, for the sites whose viewer
         #: answer names neither, so a bulk run reads each title once.
         self._titles: dict[int, tuple[str, list[Chapter]]] = {}
+        #: Title id to its credits, for the sites whose title page names them.
+        self._credits: dict[int, str] = {}
 
     @classmethod
     def chapter_url(cls, title_id: int, chapter_id: int) -> str:
@@ -189,21 +191,22 @@ class LinkU(Extractor):
             cls.chapter_url(title_id, after.id) if after else None,
         )
 
-    @classmethod
-    def _locked(cls, url: str, title_id: int, series_title: str, chapters: list[Chapter], chapter_id: int) -> Episode:
+    def _locked(self, url: str, title_id: int, series_title: str, chapters: list[Chapter], chapter_id: int) -> Episode:
         """Describe a chapter the site would not open, from the title's chapter list."""
         title = next((chapter.title for chapter in chapters if chapter.id == chapter_id), "") or str(chapter_id)
         return Episode(
             url=url,
             series_title=series_title or str(title_id),
             episode_title=title,
-            prev_url=cls._neighbour_urls(title_id, chapters, chapter_id)[0],
-            next_url=cls._neighbour_urls(title_id, chapters, chapter_id)[1],
+            prev_url=self._neighbour_urls(title_id, chapters, chapter_id)[0],
+            next_url=self._neighbour_urls(title_id, chapters, chapter_id)[1],
             metadata={
                 "title_id": title_id,
                 "chapter_id": chapter_id,
                 "chapters": [{"id": c.id, "title": c.title, "free": c.free} for c in chapters],
             },
+            writer=self._credits.get(title_id, ""),
+            publisher=self.PUBLISHER,
         )
 
     @staticmethod
@@ -237,6 +240,7 @@ class MangaOne(LinkU):
 
     NAME = "mangaone"
     HOSTS = ("manga-one.com",)
+    PUBLISHER = "小学館"
     URL_FORMS = (
         "https://manga-one.com/manga/<title-id>/chapter/<chapter-id>",
         "https://manga-one.com/manga/<title-id>/chapter/first",
@@ -359,6 +363,8 @@ class MangaOne(LinkU):
                 "free": not raw(current, 16),
                 "chapters": [{"id": c.id, "title": c.title, "free": c.free} for c in chapters],
             },
+            writer=string(title, 5),
+            publisher=self.PUBLISHER,
         )
 
     def _chapter_list(self, title_id: int) -> list[Chapter]:
@@ -424,6 +430,7 @@ class FlowerComics(LinkU):
 
     NAME = "flowercomics"
     HOSTS = ("flowercomics.jp",)
+    PUBLISHER = "小学館"
     URL_FORMS = (
         "https://flowercomics.jp/chapter/<chapter-id>",
         "https://flowercomics.jp/title/<title-id>",
@@ -515,6 +522,7 @@ class FlowerComics(LinkU):
         landed = _FLOWER_TITLE_PATH.match(urlparse(str(res.url)).path)
         if landed is not None:
             series_title, chapters = _flower_title(res.text)
+            self._credits[int(landed["title"])] = _flower_credits(res.text)
             return self._locked(url, int(landed["title"]), series_title, chapters, chapter_id)
 
         viewer = flight_object(flight_text(res.text), "viewerSection")
@@ -539,7 +547,15 @@ class FlowerComics(LinkU):
                 "orientation": viewer.get("orientation"),
                 "right_to_left": viewer.get("directionRightToLeft"),
             },
+            writer=self._writer(title_id),
+            publisher=self.PUBLISHER,
         )
+
+    def _writer(self, title_id: int) -> str:
+        """The authors the title page credits, read once per title; a chapter page names none."""
+        if title_id not in self._credits:
+            self._credits[title_id] = _flower_credits(self._get(f"{FLOWERCOMICS_URL}/title/{title_id}").text)
+        return self._credits[title_id]
 
     @staticmethod
     def _pages(viewer: dict[str, Any]) -> Iterator[Page]:
@@ -551,6 +567,13 @@ class FlowerComics(LinkU):
             yield Page(
                 url=str(entry["src"]), extra={"key": str(crypto.get("key") or ""), "iv": str(crypto.get("iv") or "")}
             )
+
+
+def _flower_credits(html: str) -> str:
+    """The authors a title page's `fanLetter` block names, comma-separated."""
+    fan_letter = flight_object(flight_text(html), "fanLetter") or {}
+    names = [str(a.get("name") or "") for a in fan_letter.get("authors") or [] if isinstance(a, dict)]
+    return ", ".join(name for name in names if name)
 
 
 def _flower_title(html: str) -> tuple[str, list[Chapter]]:
@@ -596,6 +619,7 @@ class GanganOnline(LinkU):
 
     NAME = "ganganonline"
     HOSTS = ("www.ganganonline.com",)
+    PUBLISHER = "スクウェア・エニックス"
     URL_FORMS = (
         "https://www.ganganonline.com/title/<title-id>/chapter/<chapter-id>",
         "https://www.ganganonline.com/title/<title-id>",
@@ -709,6 +733,8 @@ class GanganOnline(LinkU):
                 "author": data.get("author"),
                 "left_start": data.get("ifLeftStart"),
             },
+            writer=str(data.get("author") or ""),
+            publisher=self.PUBLISHER,
         )
 
     def _page_props(self, url: str) -> tuple[dict[str, Any], bool]:
@@ -789,6 +815,7 @@ class MangaPark(LinkU):
 
     NAME = "mangapark"
     HOSTS = ("manga-park.com",)
+    PUBLISHER = "白泉社"
     URL_FORMS = (
         "https://manga-park.com/title/<title-id>/<chapter-id>",
         "https://manga-park.com/title/<title-id>",
@@ -906,6 +933,8 @@ class MangaPark(LinkU):
                 "page_start": data.get("page_start"),
                 "logged_in": bool(payload.get("is_logged_in")),
             },
+            writer=locked.writer,
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -956,6 +985,7 @@ class MangaPark(LinkU):
                 msg = f"no title {title_id} on manga-park.com (HTTP {res.status_code})."
                 raise NotAnEpisodePageError(msg)
             self._titles[title_id] = _park_title(res.text)
+            self._credits[title_id] = _park_credits(res.text)
         return self._titles[title_id]
 
     def _status(self) -> dict[str, Any]:
@@ -975,6 +1005,13 @@ class MangaPark(LinkU):
                         height=int(image.get("height") or 0),
                         extra={"key": str(image.get("key") or "")},
                     )
+
+
+def _park_credits(html: str) -> str:
+    """The title header's `.author` line, as the page writes it (`原作：X　作画：Y`)."""
+    soup = BeautifulSoup(html, "html.parser")
+    author = soup.select_one("h1.txtColorSubject + p.author")
+    return author.get_text(strip=True) if author is not None else ""
 
 
 def _park_title(html: str) -> tuple[str, list[Chapter]]:
@@ -1020,6 +1057,7 @@ class MangaLab(LinkU):
 
     NAME = "mangalab"
     HOSTS = ("manga-lab.net",)
+    PUBLISHER = "白泉社"
     URL_FORMS = (
         "https://manga-lab.net/title/viewer/<chapter-id>",
         "https://manga-lab.net/title/<title-id>",
@@ -1129,6 +1167,8 @@ class MangaLab(LinkU):
                 "begin_with_blank_page": bool(integer(chapter, 5)),
                 "chapters": [{"id": c.id, "title": c.title, "free": c.free} for c in chapters],
             },
+            writer=string(author, 2),
+            publisher=self.PUBLISHER,
         )
 
     def _title(self, title_id: int) -> tuple[str, list[Chapter]]:

@@ -230,6 +230,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert episode.next_url == NEXT_URL
     assert episode.readable
     assert episode.metadata["author"] == "ゆりかわ"
+    assert (episode.writer, episode.publisher) == ("ゆりかわ", "小学館")
     assert episode.metadata["updated"] == "更新日: 2025/4/9"
     assert episode.metadata["prev_url"] is None
     assert episode.metadata["images"] == [page.url for page in episode.pages]

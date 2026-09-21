@@ -134,6 +134,7 @@ class Corona(Extractor):
 
     NAME = "corona"
     HOSTS = ("to-corona-ex.com",)
+    PUBLISHER = "TOブックス"
     URL_FORMS = (
         "https://to-corona-ex.com/episodes/<episode>",
         "https://to-corona-ex.com/comics/<comic>",
@@ -157,6 +158,8 @@ class Corona(Extractor):
         self._key_refreshed = False
         #: The Firebase id token `login()` obtained, sent as a bearer token afterwards.
         self._token: str | None = None
+        #: The credits of each work asked about, by comic id.
+        self._credits: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -293,7 +296,25 @@ class Corona(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata={"episode": described, "neighbours": neighbours},
+            writer=self._writer(str(described.get("comic_id") or ""), canonical),
+            publisher=self.PUBLISHER,
         )
+
+    def _writer(self, comic_id: str, referer: str) -> str:
+        """The work's `authors` as `/comics/<id>` credits them, `名前 (役割)` each, asked for once per work."""
+        if not comic_id:
+            return ""
+        if comic_id not in self._credits:
+            res = self._api(f"{API_URL}/comics/{comic_id}", referer)
+            body = res.json() if res.status_code == HTTPStatus.OK else {}
+            authors = body.get("authors") if isinstance(body, dict) else None
+            credited = []
+            for author in authors or []:
+                name, role = str(author.get("name") or "").strip(), str(author.get("role") or "").strip()
+                if name:
+                    credited.append(f"{name} ({role})" if role else name)
+            self._credits[comic_id] = ", ".join(credited)
+        return self._credits[comic_id]
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
         """Fetch one page and put its tiles back in order.

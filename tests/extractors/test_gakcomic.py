@@ -66,6 +66,11 @@ def work_html(blocks, title="うまくなる卓球"):
       <h1 class="pg-book-meta__title">
         {title}<div class="pg-book-meta__buttons"><span class="count-box">4</span></div>
       </h1>
+      <h2 class="pg-book-meta__editor-title">編著者</h2>
+      <ul class="pg-book-meta__editor-lists">
+        <li class="pg-book-meta__editor-list">大富寺航（まんが）</li>
+        <li class="pg-book-meta__editor-list">山口隆一（ぐっちぃ）【ＷＲＭ】（監修）</li>
+      </ul>
       <div class="pg-book-episodes js-book-episodes">{"".join(blocks)}</div>
       </body></html>"""
 
@@ -291,6 +296,10 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     episode = gakcomic.episode(EPISODE_URL)
 
     assert episode.series_title == "うまくなる卓球"
+    assert (episode.writer, episode.publisher) == (
+        "大富寺航（まんが）, 山口隆一（ぐっちぃ）【ＷＲＭ】（監修）",
+        "Gakken",
+    )
     assert episode.episode_title == "第１章"
     assert [page.url for page in episode.pages] == [
         f"{LIBRARY}OEBPS/text/book_000.xhtml",

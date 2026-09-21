@@ -53,7 +53,7 @@ from getjmanga.viewers.publus import pages as publus_pages
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
 
-    from httpx import Response
+    from httpx import Client, Response
 
 BASE_URL = "https://manga-5.com"
 #: The viewer's license call; the `cid` of the viewer URL goes in decoded.
@@ -216,6 +216,8 @@ class Listing:
     items: tuple[tuple[str, str], ...]
     #: Whether the pager offers a page after this one.
     has_next: bool
+    #: The work's own `ul.author-list` entries, comma-separated.
+    writer: str = ""
 
 
 def product_url(product_id: str) -> str:
@@ -337,10 +339,13 @@ def parse_listing(html: str | bytes) -> Listing:
     )
     pager_next = soup.select_one("li.to-next")
     has_next = isinstance(pager_next, Tag) and "disabled" not in (pager_next.get("class") or [])
+    authors = soup.select_one("ul.author-list")
+    names = [a.get_text(strip=True) for a in authors.select("li.author a")] if isinstance(authors, Tag) else []
     return Listing(
         title=" ".join(heading.get_text().split()) if isinstance(heading, Tag) else "",
         items=items,
         has_next=has_next,
+        writer=", ".join(name for name in names if name),
     )
 
 
@@ -415,6 +420,17 @@ class Manga5(Extractor):
     )
     #: How many listing pages a work is allowed to have before the walk gives up.
     MAX_LISTING_PAGES: ClassVar[int] = 500
+    PUBLISHER = "レベルファイブ"
+
+    def __init__(self, session: Client | None = None) -> None:
+        """Build an extractor.
+
+        Args:
+            session: A session to reuse. A retrying one is made when omitted.
+        """
+        super().__init__(session)
+        #: The credits of each work whose listing was read, by content id.
+        self._credits: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -524,6 +540,8 @@ class Manga5(Extractor):
                 prev_url=data.prev_url,
                 next_url=data.next_url,
                 metadata={"viewer": data.raw, "license": license_},
+                writer=self._writer(series_id(product_id)),
+                publisher=self.PUBLISHER,
             )
         if not base.endswith("/"):
             base += "/"
@@ -537,7 +555,15 @@ class Manga5(Extractor):
             prev_url=data.prev_url,
             next_url=data.next_url,
             metadata={"viewer": data.raw, "license": license_, **described},
+            writer=self._writer(series_id(product_id)),
+            publisher=self.PUBLISHER,
         )
+
+    def _writer(self, content_id: str) -> str:
+        """The credits off the work page's first listing page, read once per work."""
+        if content_id not in self._credits:
+            next(self._listings(content_id), None)
+        return self._credits.get(content_id, "")
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
         """Fetch one page and unshuffle its tiles, whichever shuffle it has.
@@ -593,6 +619,7 @@ class Manga5(Extractor):
         listing_url = content_url(content_id)
         for page in range(1, self.MAX_LISTING_PAGES + 1):
             listing = parse_listing(self._get(listing_url, params={"order": "asc", "p": page}).content)
+            self._credits.setdefault(content_id, listing.writer)
             yield listing
             if not listing.has_next:
                 break
@@ -622,4 +649,6 @@ class Manga5(Extractor):
             prev_url=prev_url if found else None,
             next_url=next_url,
             metadata={"listing": {"content_id": series_id(product_id), "found": found}},
+            writer=self._credits.get(series_id(product_id), ""),
+            publisher=self.PUBLISHER,
         )

@@ -103,9 +103,12 @@ def json_response(fake_response, payload, status_code=HTTPStatus.OK):
 
 
 @pytest.fixture
-def client(fake_session):
+def client(fake_session, fake_response):
     def make(routes):
-        session = fake_session(routes)
+        # The work's credits come off `/web/title/detail`, asked for once per work.
+        session = fake_session(
+            {**routes, TITLE_API: routes.get(TITLE_API, json_response(fake_response, title_payload()))}
+        )
         return MagaPoke(session), session
 
     return make
@@ -207,6 +210,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert episode.url == EPISODE_URL
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == EPISODE_TITLE
+    assert (episode.writer, episode.publisher) == ("藤沢とおる", "講談社")
     assert [page.url for page in episode.pages] == [PAGE_1, PAGE_2]
     assert all(page.extra == {"seed": SEED} for page in episode.pages)
     assert episode.next_url == NEXT_URL
@@ -215,9 +219,9 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert episode.metadata["viewer"]["scramble_seed"] == SEED_TEXT
 
     # The episode is looked up on the plain API host, the viewer on the secure one, both signed.
-    assert session.calls == [EPISODE_API, VIEWER_API]
-    assert session.params_seen == [{"episode_id": "439321"}, {"episode_id": "439321"}]
-    for headers in session.headers_seen:
+    assert session.calls == [EPISODE_API, VIEWER_API, TITLE_API]
+    assert session.params_seen == [{"episode_id": "439321"}, {"episode_id": "439321"}, {"title_id": "3251"}]
+    for headers in session.headers_seen[:2]:
         assert headers["x-manga-hash"] == service_hash({"episode_id": "439321"})
         assert headers["x-manga-is-crawler"] == "false"
         assert headers["x-manga-platform"] == "3"

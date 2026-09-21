@@ -189,6 +189,7 @@ class Vcomi(Extractor):
 
     NAME = "vcomi"
     HOSTS = ("vcomi.jp",)
+    PUBLISHER = "Vスクロールコミックス"
     URL_FORMS = (
         "https://vcomi.jp/episodes/<id>",
         "https://vcomi.jp/series/<id>",
@@ -322,6 +323,13 @@ class Vcomi(Extractor):
                 "prevEpisode": data.get("prevEpisode"),
                 "viewer": viewer,
             },
+            # `authors: [{author: {name}}]`, the site's own nesting.
+            writer=", ".join(
+                name
+                for item in series.get("authors") or []
+                if (name := str(_dict(_dict(item).get("author")).get("name") or ""))
+            ),
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

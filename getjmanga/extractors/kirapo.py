@@ -54,6 +54,8 @@ class Listing:
     title: str
     #: Reader URL -> the episode's name as the list shows it (`第1話`).
     episodes: dict[str, str]
+    #: The `作者` links, `役割：名前` each, as `名前 (役割)`.
+    writer: str = ""
 
 
 class Kirapo(Extractor):
@@ -67,6 +69,7 @@ class Kirapo(Extractor):
 
     NAME = "kirapo"
     HOSTS = ("kirapo.jp",)
+    PUBLISHER = "フレックスコミックス"
     URL_FORMS = (
         "https://kirapo.jp/pt/<imprint>/<slug>/<id>/viewer",
         "https://kirapo.jp/<imprint>/titles/<slug>",
@@ -192,6 +195,8 @@ class Kirapo(Extractor):
                 "recommend": str(container.get("data-binbsp-recommend") or ""),
                 "ptimg": [ptimg for ptimg, _ in pages],
             },
+            writer=listing.writer if listing else "",
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -233,8 +238,18 @@ class Kirapo(Extractor):
             self._listings[key] = Listing(
                 title=heading.get_text(strip=True) if isinstance(heading, Tag) else "",
                 episodes=_episode_entries(soup, key),
+                writer=_credits(soup),
             )
         return self._listings[key]
+
+
+def _credits(soup: BeautifulSoup) -> str:
+    """The links under the `作者` heading, `役割：名前` each, as `名前 (役割)`."""
+    credited = []
+    for anchor in soup.select('a[href*="/authors/"]'):
+        role, sep, name = anchor.get_text(strip=True).partition("：")
+        credited.append(f"{name} ({role})" if sep and name else role)
+    return ", ".join(credit for credit in credited if credit)
 
 
 def _episode_entries(soup: BeautifulSoup, url: str) -> dict[str, str]:

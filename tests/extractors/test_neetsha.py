@@ -188,6 +188,7 @@ def test_episode_reads_a_story(client, fake_response):
     ]
     assert episode.next_url == NEXT_URL
     assert episode.metadata["author"] == "ネルソン"
+    assert (episode.writer, episode.publisher) == ("ネルソン", "新都社")
     assert episode.metadata["magazine"] == "週刊ヤングVIP"
     assert episode.metadata["work_url"] == WORK_URL
     assert episode.metadata["prev_url"] is None

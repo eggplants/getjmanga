@@ -51,9 +51,18 @@ VIEWER_HTML = f"""
 LAST_HTML = VIEWER_HTML.replace("1185884", "1185887")
 LOCKED_HTML = re.sub(r"'img': \[.*?\]", "'img': [\n        ]", VIEWER_HTML, flags=re.DOTALL)
 
+PRODUCT_HTML = """
+<html><body>
+<h1 class="PCM-productTitle">ひげ</h1>
+<ul class="PCM-productAuthor PCM-st_hidden" id="js_author">
+<li><a href="/web/author/product/list/6686/K">しめさば</a></li></ul>
+<ul class="PCM-productPub"><li><a href="/web/partner/product/list/112/K">KADOKAWA</a></li></ul>
+</body></html>
+"""
+
 EPISODE_LIST_HTML = """
 <html><head>
-<meta property="og:title" content="ひげ｜無料漫画（まんが）ならピッコマ｜しめさば">
+<meta property="og:title" content="ひげ｜無料漫画（まんが）ならピッコマ｜しめさば ぶーた 足立いまる">
 </head><body>
 <ul id="js_episodeList">
   <li class="PCM-epList_read">
@@ -119,6 +128,7 @@ def client(fake_session, fake_response):
             ("/web/viewer/", fake_response(text=VIEWER_HTML)),
             ("/web/product/8195/episodes?etype=E", fake_response(text=EPISODE_LIST_HTML)),
             ("/web/product/8195/episodes?etype=V", fake_response(text=VOLUME_LIST_HTML)),
+            ("/web/product/8195", fake_response(text=PRODUCT_HTML)),
         ):
             merged.setdefault(needle, response)
         session = fake_session(merged)
@@ -202,6 +212,7 @@ def test_episode_reads_the_titles_and_the_pages(client):
 
     assert episode.series_title == "ひげ(しめさば)"
     assert episode.episode_title == "第1話 その一"
+    assert (episode.writer, episode.publisher) == ("しめさば, ぶーた, 足立いまる", "KADOKAWA")
     assert [page.url for page in episode.pages] == [
         f"https:{IMAGE_URL}",
         f"https:{IMAGE_URL}".replace("i00001", "i00002"),

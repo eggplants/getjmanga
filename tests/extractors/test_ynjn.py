@@ -149,6 +149,14 @@ def webp_bytes(image):
     return raw.getvalue()
 
 
+# The work page's Nuxt payload, cut down: one flat array, values by index.
+TITLE_HTML = (
+    '<html><body><script type="application/json" data-nuxt-data="nuxt-app" data-ssr="true" id="__NUXT_DATA__">'
+    '[{"title":1},{"author":2,"name":4,"titleId":5},[3],"ソウマトウ","シャドーハウス",931]'
+    "</script></body></html>"
+)
+
+
 @pytest.fixture
 def client(fake_session, fake_response):
     """A `YanJan` over a session answering the viewer, the listing and a scrambled page."""
@@ -164,6 +172,7 @@ def client(fake_session, fake_response):
                 payload=NOT_FOUND, status_code=HTTPStatus.INTERNAL_SERVER_ERROR
             ),
             "public.ynjn.jp": fake_response(webp_bytes(scramble(tiled_image())), content_type="binary/octet-stream"),
+            f"{BASE_URL}/title/": fake_response(text=TITLE_HTML),
         }
         session = fake_session({**routes, **(extra or {})})
         return YanJan(session), session
@@ -247,6 +256,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == "シャドーハウス"
+    assert (episode.writer, episode.publisher) == ("ソウマトウ", "集英社")
     assert episode.episode_title == "第1話 ケイトとエミリコ"
     assert [page.url for page in episode.pages] == PAGE_URLS
     assert [(page.width, page.height) for page in episode.pages] == [(844, 1200), (844, 1200)]
@@ -259,6 +269,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert session.calls == [
         f"{API_URL}/viewer?title_id=931&episode_id=63568",
         f"{API_URL}/title/931/episode?is_get_all=true",
+        f"{BASE_URL}/title/931",
     ]
     assert session.params_seen[0] is None
     assert session.headers_seen[0]["Origin"] == BASE_URL
@@ -283,6 +294,7 @@ def test_locked_episode_has_no_pages_and_the_next_from_the_listing(client):
     assert session.calls == [
         f"{API_URL}/viewer?title_id=931&episode_id=80142",
         f"{API_URL}/title/931/episode?is_get_all=true",
+        f"{BASE_URL}/title/931",
     ]
 
 

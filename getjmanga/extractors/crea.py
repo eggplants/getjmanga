@@ -57,6 +57,7 @@ class Crea(Extractor):
 
     NAME = "crea"
     HOSTS = ("crea.bunshun.jp",)
+    PUBLISHER = "文藝春秋"
     URL_FORMS = (
         "https://crea.bunshun.jp/articles/-/<id>",
         "https://crea.bunshun.jp/list/<series>",
@@ -178,6 +179,8 @@ class Crea(Extractor):
                 "summary_url": _button_link(body, _SUMMARY_LABEL, page_url),
                 "images": [page.url for page in pages],
             },
+            writer=_text(soup, "article-head__author"),
+            publisher=self.PUBLISHER,
         )
 
     def _listing_urls(self, url: str) -> list[str]:

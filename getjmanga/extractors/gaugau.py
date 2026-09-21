@@ -42,6 +42,7 @@ class Gaugau(Extractor):
 
     NAME = "gaugau"
     HOSTS = ("gaugau.futabanet.jp",)
+    PUBLISHER = "双葉社"
     URL_FORMS = (
         "https://gaugau.futabanet.jp/list/work/<work-id>/episodes/<n>",
         "https://gaugau.futabanet.jp/list/work/<work-id>/reader/comics/<content-id>",
@@ -141,6 +142,7 @@ class Gaugau(Extractor):
 
         series_title = _series_title(soup, work_id)
         episode_title = _episode_title(soup)
+        writer = _credits(soup)
         viewer = soup.select_one(f"#{_VIEWER_ID}[data-ptbinb][data-ptbinb-cid]")
         prev_url, next_url = self._neighbours(url, work_id, kind)
 
@@ -155,6 +157,8 @@ class Gaugau(Extractor):
                 prev_url=prev_url,
                 next_url=next_url,
                 metadata={"work_id": work_id, "locked": True},
+                writer=writer,
+                publisher=self.PUBLISHER,
             )
 
         content_id = str(viewer.attrs["data-ptbinb-cid"])
@@ -185,6 +189,8 @@ class Gaugau(Extractor):
                 "view_mode": content.item.get("ViewMode"),
                 "title": content.item.get("Title"),
             },
+            writer=writer,
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -253,6 +259,21 @@ def _series_title(soup: BeautifulSoup, work_id: str) -> str:
     # "公式-<series> <episode> | 作品詳細 | <site>"
     heading = heading.split(" | ", 1)[0].strip().removeprefix("公式-").strip()
     return heading or work_id
+
+
+def _credits(soup: BeautifulSoup) -> str:
+    """The `役割：<a>名前</a>` runs under the episode heading, as `名前 (役割)` each."""
+    body = soup.select_one("div.detailHead__body span")
+    if not isinstance(body, Tag):
+        return ""
+    credited = []
+    for anchor in body.find_all("a"):
+        label = anchor.previous_sibling
+        role = str(label).strip().rstrip("：:") if isinstance(label, str) else ""
+        name = anchor.get_text(strip=True)
+        if name:
+            credited.append(f"{name} ({role})" if role else name)
+    return ", ".join(credited)
 
 
 def _episode_title(soup: BeautifulSoup) -> str:

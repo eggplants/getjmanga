@@ -47,9 +47,18 @@ def viewer_response(chapter_id=79232, pages=None, chapters=CHAPTERS):
     viewer_data += encode_bytes_field(2, encode_bytes_field(3, b"")) + encode_bytes_field(2, encode_bytes_field(4, b""))
     group = encode_bytes_field(1, encode_bytes_field(3, "issue")) + b"".join(chapter_message(*c) for c in chapters)
     manga = encode_varint_field(1, 4066) + encode_bytes_field(2, "氷舞のアウフギーサー")
+    authorships = b"".join(
+        encode_bytes_field(
+            6,
+            encode_bytes_field(1, encode_varint_field(1, n) + encode_bytes_field(2, name))
+            + encode_bytes_field(2, role),
+        )
+        for n, name, role in ((858, "笠間裕之", "原作"), (1132, "相馬一", "作画"))
+    )
     return (
         encode_bytes_field(2, viewer_data)
         + encode_bytes_field(5, group)
+        + authorships
         + encode_bytes_field(11, manga)
         + encode_varint_field(12, chapter_id)
     )
@@ -115,6 +124,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_chapter(client):
 
     assert episode.series_title == "氷舞のアウフギーサー"
     assert episode.episode_title == "1話（1）"
+    assert (episode.writer, episode.publisher) == ("笠間裕之 (原作), 相馬一 (作画)", "芳文社")
     assert [page.url for page in episode.pages] == [
         "https://img.comic-fuz.com/f/x/0.jpeg.enc?h=a",
         "https://img.comic-fuz.com/f/x/1.jpeg.enc?h=b",

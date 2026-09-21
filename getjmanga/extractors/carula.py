@@ -19,8 +19,10 @@ first. Signing in to note.com is not implemented.
 
 from __future__ import annotations
 
+import csv
 import re
 from http import HTTPStatus
+from io import StringIO
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -32,6 +34,8 @@ from getjmanga.extractor import Episode, Extractor, Page, neighbours
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
+
+    from httpx import Client
 
 _CATALOGUE_HOST = "carula.jp"
 _NOTE_HOST = "note.com"
@@ -51,8 +55,32 @@ _TITLE = re.compile(r"^(?P<before>.*?)『(?P<series>[^』]+)』(?P<after>.*)$", 
 _NOTE_API = f"https://{_NOTE_HOST}/api/v3/notes/{{key}}"
 _MAGAZINE_API = f"https://{_NOTE_HOST}/api/v1/layout/magazine/{{key}}/section"
 _NOTE_URL = f"https://{_NOTE_HOST}/{CREATOR}/n/{{key}}"
+#: The catalogue the site renders: one work per row, its title and up to three credited authors.
+CATALOGUE_URL = f"https://{_CATALOGUE_HOST}/works.csv"
 
 _API_HEADERS: dict[str, str] = {**Extractor.HEADERS, "Accept": "application/json, text/plain, */*"}
+
+
+def parse_catalogue(text: str) -> dict[str, str]:
+    """The credits of every work in `works.csv`, by title.
+
+    Args:
+        text: The CSV, whose header names `タイトル`, `著者1`..`著者3` and `クレジット1`..`クレジット3`.
+
+    Returns:
+        `{title: "名前 (役割), 名前 (役割)"}`, a name without a credit on its own.
+    """
+    catalogue: dict[str, str] = {}
+    for row in csv.DictReader(StringIO(text)):
+        credited = []
+        for n in (1, 2, 3):
+            name, role = (row.get(f"著者{n}") or "").strip(), (row.get(f"クレジット{n}") or "").strip()
+            if name:
+                credited.append(f"{name} ({role})" if role else name)
+        title = (row.get("タイトル") or "").strip()
+        if title and credited:
+            catalogue[title] = ", ".join(credited)
+    return catalogue
 
 
 def split_title(name: str, fallback: str) -> tuple[str, str]:
@@ -141,6 +169,17 @@ class Carula(Extractor):
         f"https://{_NOTE_HOST}/{CREATOR}/m/<key>",
         f"https://{_CATALOGUE_HOST}/series/<id>",
     )
+    PUBLISHER = "世界文化ブックス"
+
+    def __init__(self, session: Client | None = None) -> None:
+        """Build an extractor.
+
+        Args:
+            session: A session to reuse. A retrying one is made when omitted.
+        """
+        super().__init__(session)
+        #: The catalogue's credits by work title, once read.
+        self._catalogue: dict[str, str] | None = None
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -243,7 +282,19 @@ class Carula(Extractor):
             prev_url=_NOTE_URL.format(key=preceding) if preceding else None,
             next_url=_NOTE_URL.format(key=following) if following else None,
             metadata=note,
+            writer=self.credits(series_title),
+            publisher=self.PUBLISHER,
         )
+
+    def credits(self, title: str) -> str:
+        """Who the catalogue credits the work `title` to: `名前 (役割)` each, the roles as the CSV gives them.
+
+        The catalogue is read once per extractor. A work the note account
+        names differently from the catalogue gets no credits.
+        """
+        if self._catalogue is None:
+            self._catalogue = parse_catalogue(self._get(CATALOGUE_URL).text)
+        return self._catalogue.get(title, "")
 
     def _article_key(self, url: str) -> str:
         """The note article key `url` names, following a legacy catalogue redirect."""

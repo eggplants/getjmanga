@@ -56,6 +56,18 @@ def unmask(data: bytes, mask: int) -> bytes:
     return data.translate(bytes(byte ^ key for byte in range(256)))
 
 
+def _authors(listing: dict[str, Any]) -> str:
+    """The series' `authors`, `名前 (役割)` each, the role as the site gives it (`著`, `原作`)."""
+    credited = []
+    for author in listing.get("authors") or []:
+        if not isinstance(author, dict):
+            continue
+        name, role = str(author.get("name") or "").strip(), str(author.get("role") or "").strip()
+        if name:
+            credited.append(f"{name} ({role})" if role else name)
+    return ", ".join(credited)
+
+
 def episode_url(manga_id: str | int, episode_id: str | int) -> str:
     """The canonical URL of an episode.
 
@@ -89,6 +101,7 @@ class Mangabox(Extractor):
 
     NAME = "mangabox"
     HOSTS = ("mangabox.me", "www.mangabox.me")
+    PUBLISHER = "マンガボックス"
     URL_FORMS = (
         "https://www.mangabox.me/reader/<manga>/episodes/<episode>/",
         "https://www.mangabox.me/reader/<manga>/",
@@ -221,6 +234,8 @@ class Mangabox(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata={"episode": entry, "images": images},
+            writer=_authors(listing),
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

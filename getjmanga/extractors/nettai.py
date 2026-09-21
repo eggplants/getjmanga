@@ -79,6 +79,8 @@ class Listing:
     titles: Mapping[str, str]
     #: Whether the pager offers a page after this one.
     has_next: bool
+    #: The `.detail__author__list` entries, comma-separated.
+    writer: str = ""
 
 
 def viewer_url(cid: str) -> str:
@@ -150,11 +152,13 @@ def parse_listing(html: str | bytes) -> Listing | None:
     # The pager's "next" is always written out; on the last page its `li` is hidden.
     pager_next = soup.select_one("li.pagenation__item:not(.is-hidde) > a.pagenation__item__link--next")
     has_next = isinstance(pager_next, Tag)
+    authors = [a.get_text(strip=True) for a in soup.select(".detail__author__list .detail__author__item")]
     return Listing(
         title=" ".join(heading.get_text().split()),
         urls=tuple(urls),
         titles=titles,
         has_next=has_next,
+        writer=", ".join(name for name in authors if name),
     )
 
 
@@ -163,6 +167,7 @@ class Nettai(Extractor):
 
     NAME = "nettai"
     HOSTS = ("www.comicnettai.com",)
+    PUBLISHER = "光文社"
     URL_FORMS = (
         "https://www.comicnettai.com/publus/viewer.html?cid=<cid>",
         "https://www.comicnettai.com/book/<id>",
@@ -277,6 +282,7 @@ class Nettai(Extractor):
             "license": license_,
             "last_page": last_page,
         }
+        writer = listing.writer if listing is not None else ""
         if not licensed:
             return Episode(
                 url=canonical,
@@ -285,6 +291,8 @@ class Nettai(Extractor):
                 prev_url=prev_url,
                 next_url=colophon.next_url if colophon is not None else None,
                 metadata=metadata,
+                writer=writer,
+                publisher=self.PUBLISHER,
             )
 
         content_url = str(license_["url"])
@@ -297,6 +305,8 @@ class Nettai(Extractor):
             prev_url=prev_url,
             next_url=colophon.next_url if colophon is not None else None,
             metadata={**metadata, "configuration": pack.content["configuration"]},
+            writer=writer,
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

@@ -99,6 +99,8 @@ class Ohta(Extractor):
 
     NAME = "ohta"
     HOSTS = (WORK_HOST, CONTENT_HOST, "yondemill.jp")
+    #: The site's own; a YONDEMILL content page names its label, which wins.
+    PUBLISHER = "太田出版"
     URL_FORMS = (
         "https://www.yondemill.jp/contents/<id>",
         "https://webcomic.ohtabooks.com/<slug>/",
@@ -213,6 +215,8 @@ class Ohta(Extractor):
                 prev_url=prev_url,
                 next_url=next_url,
                 metadata={**metadata, "locked": True},
+                writer=_credit(content.author),
+                publisher=content.label or self.PUBLISHER,
             )
         return Episode(
             url=canonical,
@@ -230,6 +234,8 @@ class Ohta(Extractor):
                 "shop_url": opened.info.item.get("ShopURL") or None,
                 "address_list": opened.book.body.get("AddressList"),
             },
+            writer=_credit(content.author),
+            publisher=content.label or self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -265,6 +271,15 @@ class Ohta(Extractor):
                 return work.title, listed
             return split_title(content.title, work.title)
         return split_title(content.title)
+
+
+def _credit(author: str) -> str:
+    """YONDEMILL's `<name> <role>` author line (`雁須磨子 著`) as `名前 (役割)`."""
+    return _AUTHOR_LINE.sub(r"\1 (\2)", author.strip())
+
+
+#: A name, then the role after the last run of whitespace.
+_AUTHOR_LINE = re.compile(r"^(.*\S)\s+(\S+)$")
 
 
 def _neighbour_urls(work: Work | None, content_id: str) -> tuple[str | None, str | None]:

@@ -66,6 +66,7 @@ class Sukupara(Extractor):
 
     NAME = "sukupara"
     HOSTS = ("sukupara.jp",)
+    PUBLISHER = "竹書房"
     URL_FORMS = (
         "https://sukupara.jp/plus/mag_detail.php?manga_id=<id>&story_id=<id>",
         "https://sukupara.jp/plus/mag_top.php?manga_id=<id>",
@@ -190,6 +191,8 @@ class Sukupara(Extractor):
                 "page_count": len(seen),
                 "images": image_urls,
             },
+            writer=first.author,
+            publisher=self.PUBLISHER,
         )
 
 
@@ -206,6 +209,9 @@ class _ReadingPage:
         og_title = soup.find("meta", property="og:title")
         content = str(og_title["content"]) if isinstance(og_title, Tag) and og_title.get("content") else ""
         self.og_title = content.removesuffix(_SITE_SUFFIX).strip()
+        # `<title>`: `「<series>」<story>｜<author>｜<magazine>｜<site>`.
+        parts = [part.strip() for part in (soup.title.get_text() if soup.title else "").split("｜")]
+        self.author = parts[1] if len(parts) >= _TITLE_PARTS else ""
 
         self.image_url: str | None = None
         area = soup.find("div", class_="magarea")
@@ -216,6 +222,10 @@ class _ReadingPage:
         self.next_page = _button(soup, "next-page-btn", base)
         self.next_story = _button(soup, "after-story-btn", base)
         self.prev_story = _button(soup, "before-story-btn", base)
+
+
+#: How many `｜`-separated parts a reading page's `<title>` has.
+_TITLE_PARTS = 4
 
 
 def _button(soup: BeautifulSoup, element_id: str, base: str) -> str | None:

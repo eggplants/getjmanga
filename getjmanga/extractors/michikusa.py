@@ -60,6 +60,8 @@ class Listing:
     title: str
     #: Episode URL -> the episode's title (`"<number>　<subtitle>"`), oldest first.
     episodes: dict[str, str]
+    #: The `作者プロフィール` name.
+    writer: str = ""
 
     @property
     def urls(self) -> tuple[str, ...]:
@@ -113,7 +115,8 @@ def parse_listing(html: str | bytes, url: str) -> Listing:
         labels.setdefault(canonical, "")
         if len(label) > len(labels[canonical]):
             labels[canonical] = label
-    return Listing(title=title, episodes=labels)
+    author = soup.select_one("#authorName")
+    return Listing(title=title, episodes=labels, writer=author.get_text(strip=True) if author is not None else "")
 
 
 class Michikusa(Extractor):
@@ -127,6 +130,7 @@ class Michikusa(Extractor):
 
     NAME = "michikusa"
     HOSTS = (HOST,)
+    PUBLISHER = "トゥーヴァージンズ"
     URL_FORMS = (
         "https://michikusacomics.jp/wp-content/uploads/data/<work>/<episode>/index.html",
         "https://michikusacomics.jp/product/<slug>",
@@ -256,6 +260,8 @@ class Michikusa(Extractor):
                 "work_url": work_url,
                 "ptimg": [ptimg for ptimg, _ in pages],
             },
+            writer=listing.writer if listing else "",
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

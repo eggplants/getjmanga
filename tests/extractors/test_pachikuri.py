@@ -212,6 +212,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == "うさぎのモフィ"
+    assert (episode.writer, episode.publisher) == ("コンドウ アキ", "主婦と生活社")
     assert episode.episode_title == "第710話 夏の思い出"
     assert [page.url for page in episode.pages] == [
         SCALED_IMAGE,

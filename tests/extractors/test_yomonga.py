@@ -77,6 +77,7 @@ def work_html(episode_no=1, content_id="10788", episode_title="Chapter.1 1巻_�
     <div class="main-wrapper" id="title-introduce">
         <div class="intr"><div class="intr-text">
             <div class="intr-title">きらめきの大和くん☆</div>
+            <a href="https://www.yomonga.com/titles/?author_id=441"><span>バニラ梨央</span></a>
             <div class="intr-title2">売れっ子アイドル×お疲れOLのゆるゆるラブ（？）コメディー開幕！</div>
         </div></div>
     </div>
@@ -234,6 +235,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == "きらめきの大和くん☆"
+    assert (episode.writer, episode.publisher) == ("バニラ梨央 (漫画)", "ぶんか社")
     assert episode.episode_title == "Chapter.1 1巻_第1話-1"
     assert [page.url for page in episode.pages] == [f"{SERVER}/img/images/a.jpg", f"{SERVER}/img/images/b.jpg"]
     assert episode.pages[0].width == 392

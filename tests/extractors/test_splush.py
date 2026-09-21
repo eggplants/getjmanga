@@ -194,6 +194,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == "そんなのズルいよ蒼汰くん"
+    assert (episode.writer, episode.publisher) == ("まめなえ", "イースト・プレス")
     assert episode.episode_title == "第一話（前編）"
     assert [page.url for page in episode.pages] == [
         "https://www.splush.jp/wp-content/uploads/2025/12/souta01_01tobira.jpg",

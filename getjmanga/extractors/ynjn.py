@@ -12,6 +12,7 @@ an empty `pages` list and an `action_sheet` naming the price.
 
 from __future__ import annotations
 
+import json
 import re
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -66,6 +67,40 @@ def descramble(image: Image.Image) -> Image.Image:
     return out
 
 
+#: The Nuxt payload a work page inlines: one flat array, every value an index into it.
+_NUXT_DATA = re.compile(
+    r'<script type="application/json"[^>]*id="__NUXT_DATA__"[^>]*>(?P<json>.*?)</script>', re.DOTALL
+)
+
+
+def title_authors(html: str) -> list[str]:
+    """The `author` names of the title a work page describes.
+
+    Args:
+        html: The work page.
+
+    Returns:
+        The names, in order; empty when the page inlines no title.
+    """
+    match = _NUXT_DATA.search(html)
+    if match is None:
+        return []
+    try:
+        data = json.loads(match["json"])
+    except ValueError:
+        return []
+    if not isinstance(data, list):
+        return []
+    for node in data:
+        # The title object keys its `author` list by index, like everything else in the payload.
+        if isinstance(node, dict) and "author" in node and "titleId" in node:
+            names = data[node["author"]] if isinstance(node["author"], int) and node["author"] < len(data) else []
+            return [
+                str(data[i]) for i in (names if isinstance(names, list) else []) if isinstance(i, int) and i < len(data)
+            ]
+    return []
+
+
 def episode_url(title_id: str | int, episode_id: str | int) -> str:
     """The canonical URL of an episode.
 
@@ -84,6 +119,7 @@ class YanJan(Extractor):
 
     NAME = "ynjn"
     HOSTS = ("ynjn.jp",)
+    PUBLISHER = "集英社"
     URL_FORMS = (
         "https://ynjn.jp/viewer/<title>/<episode>",
         "https://ynjn.jp/title/<title>",
@@ -103,6 +139,8 @@ class YanJan(Extractor):
         # The episode list of a work, kept per title: a bulk run through a
         # series asks for it once per locked episode.
         self._listings: dict[str, list[dict[str, Any]]] = {}
+        #: The authors each work page names, by title id.
+        self._credits: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -218,7 +256,16 @@ class YanJan(Extractor):
             prev_url=episode_url(title_id, prev_id) if prev_id else None,
             next_url=episode_url(title_id, next_id) if next_id else None,
             metadata=data,
+            writer=self._writer(title_id),
+            publisher=self.PUBLISHER,
         )
+
+    def _writer(self, title_id: str) -> str:
+        """The authors the work page names, read once per work: no API answers with them."""
+        if title_id not in self._credits:
+            res = self._session.get(f"{BASE_URL}/title/{title_id}", headers=self.HEADERS, timeout=self.TIMEOUT)
+            self._credits[title_id] = ", ".join(title_authors(res.text)) if res.is_success else ""
+        return self._credits[title_id]
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
         """Fetch one page from the CDN and transpose its tiles back.

@@ -304,6 +304,7 @@ def test_episode_reads_the_titles_and_the_pages(client):
     assert episode.url == KIJI_URL
     assert episode.series_title == "dollly"
     assert episode.episode_title == "【漫画】聖剣"
+    assert (episode.writer, episode.publisher) == ("dollly", "バーグハンバーグバーグ")
     assert [page.url for page in episode.pages] == [f"{UPLOADS}/page{index:02d}.jpg" for index in range(1, 4)]
     assert episode.next_url is None
     assert episode.readable

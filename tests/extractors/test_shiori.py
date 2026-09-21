@@ -94,6 +94,12 @@ def series_html(items, *, title="ルンルン"):
 {listing}
 </ul>
 </section>
+<section class="product-profile">
+<h2 class="section-title"><img alt="著者プロフィール" src="/title-profile.png"></h2>
+<div class="col2"><div class="text"><div class="scrollable"><div class="comment">
+<h3>三崎 島</h3><p>魚座、O型。</p>
+</div></div></div></div>
+</section>
 <section class="product-sns"><ul>
 <li><a href="https://x.com/share?url={SERIES_URL}" class="sns-x">X</a></li>
 </ul></section>
@@ -204,6 +210,7 @@ def test_episode_reads_the_titles_and_the_pages(client):
 
     assert episode.series_title == "ルンルン"
     assert episode.episode_title == "1．おしごとのひのあさ"
+    assert (episode.writer, episode.publisher) == ("三崎 島", "大洋図書")
     assert [page.url for page in episode.pages] == [f"{UPLOADS}/syouzou_h.jpg", f"{UPLOADS}/asa1.jpg"]
     assert all(page.extra == {} for page in episode.pages)
     assert episode.next_url == NEXT_URL
@@ -213,8 +220,9 @@ def test_episode_reads_the_titles_and_the_pages(client):
         "prev_url": None,
         "images": [f"{UPLOADS}/syouzou_h.jpg", f"{UPLOADS}/asa1.jpg"],
     }
-    assert session.calls == [EPISODE_URL]
-    assert session.params_seen == [None]
+    # The author comes off the work page, read once.
+    assert session.calls == [EPISODE_URL, SERIES_URL]
+    assert session.params_seen == [None, None]
     assert "User-Agent" in session.headers_seen[0]
 
 
@@ -321,8 +329,8 @@ def test_download_writes_the_pages(client, tmp_path):
     assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.jpg", "1.jpg"]
     with Image.open(result.save_dir / "0.jpg") as image:
         assert image.size == (8, 8)
-    assert session.calls[1:] == [f"{UPLOADS}/syouzou_h.jpg", f"{UPLOADS}/asa1.jpg"]
-    assert session.headers_seen[1]["Referer"] == EPISODE_URL
+    assert session.calls[2:] == [f"{UPLOADS}/syouzou_h.jpg", f"{UPLOADS}/asa1.jpg"]
+    assert session.headers_seen[2]["Referer"] == EPISODE_URL
 
 
 # --- the real site --------------------------------------------------------------------

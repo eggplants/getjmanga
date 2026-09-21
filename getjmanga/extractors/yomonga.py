@@ -21,7 +21,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urljoin, urlparse
 
 from bs4 import BeautifulSoup
@@ -32,6 +32,8 @@ from getjmanga.extractor import Episode, Extractor, Page
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from httpx import Client
     from PIL import Image
 
@@ -77,6 +79,8 @@ class WorkPage:
     info_url: str | None
     #: The readable episodes, oldest first.
     episodes: tuple[Listed, ...]
+    #: The authors the page links (`?author_id=`), comma-separated.
+    writer: str = ""
 
     def listed(self, number: int) -> Listed | None:
         """The listed episode with `number`, or None when the list has none."""
@@ -152,6 +156,11 @@ def parse_work_page(html: str | bytes, url: str) -> WorkPage:
         content_id=cid["cid"],
         info_url=urljoin(url, str(viewer["data-ptbinb"])) if isinstance(viewer, Tag) else None,
         episodes=tuple(episodes[key] for key in sorted(episodes)),
+        writer=", ".join(
+            dict.fromkeys(
+                a.get_text(strip=True) for a in soup.select('a[href*="author_id="]') if a.get_text(strip=True)
+            )
+        ),
     )
 
 
@@ -166,6 +175,7 @@ class Yomonga(Extractor):
 
     NAME = "yomonga"
     HOSTS = ("www.yomonga.com",)
+    PUBLISHER = "ぶんか社"
     URL_FORMS = (
         "https://www.yomonga.com/titles/<id>/?episode=<n>",
         "https://www.yomonga.com/titles/<id>/?episode=<n>&cid=<content-id>",
@@ -280,6 +290,8 @@ class Yomonga(Extractor):
                 prev_url=prev_url,
                 next_url=next_url,
                 metadata={"title_id": title_id, "episode_no": number, "locked": True},
+                writer=work.writer,
+                publisher=self.PUBLISHER,
             )
         if work.info_url is None:
             msg = f"no SpeedBinb viewer on {page_url}."
@@ -317,6 +329,8 @@ class Yomonga(Extractor):
                 "publisher": item.get("Publisher"),
                 "view_mode": item.get("ViewMode"),
             },
+            writer=_authors(item) or work.writer,
+            publisher=str(item.get("Publisher") or "") or self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -348,6 +362,18 @@ class Yomonga(Extractor):
         work = parse_work_page(res.content, page_url)
         self._episodes[title_id] = work.episodes
         return work.episodes
+
+
+def _authors(item: Mapping[str, Any]) -> str:
+    """The reader item's `Authors`, `名前 (役割)` each when a role is given."""
+    credited = []
+    for author in item.get("Authors") or []:
+        if not isinstance(author, dict):
+            continue
+        name, role = str(author.get("Name") or "").strip(), str(author.get("Role") or "").strip()
+        if name:
+            credited.append(f"{name} ({role})" if role else name)
+    return ", ".join(credited)
 
 
 def _episode_number(url: str) -> int | None:

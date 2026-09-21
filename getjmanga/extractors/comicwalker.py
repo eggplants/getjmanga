@@ -68,6 +68,7 @@ class ComicWalker(Extractor):
 
     NAME = "comicwalker"
     HOSTS = ("comic-walker.com",)
+    PUBLISHER = "KADOKAWA"
     URL_FORMS = (
         "https://comic-walker.com/detail/<work>/episodes/<episode>",
         "https://comic-walker.com/detail/<work>",
@@ -202,6 +203,8 @@ class ComicWalker(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata={"work": work.get("work"), "episode": entry, "viewer": viewer},
+            writer=_authors(work.get("work") or {}),
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -275,6 +278,16 @@ class ComicWalker(Extractor):
         res.raise_for_status()
         body = _json_or_none(res)
         return body if isinstance(body, dict) else None
+
+
+def _authors(work: dict[str, Any]) -> str:
+    """The work's `authors`, each `名前 (役割)` the way the work page credits them."""
+    credited = []
+    for author in work.get("authors") or []:
+        name, role = str(author.get("name") or "").strip(), str(author.get("role") or "").strip()
+        if name:
+            credited.append(f"{name} ({role})" if role else name)
+    return ", ".join(credited)
 
 
 def _json_or_none(res: Response) -> Any:  # noqa: ANN401 (whatever JSON the site sent)

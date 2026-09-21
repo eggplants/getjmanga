@@ -51,7 +51,12 @@ ENTRIES = [
 
 # The site's answer to `/api/contents/details/work`, cut down to what is read.
 WORK = {
-    "work": {"id": "018d6d33-0000-7000-8000-000000000000", "code": "KC_001981_S", "title": "月華国奇医伝"},
+    "work": {
+        "id": "018d6d33-0000-7000-8000-000000000000",
+        "code": "KC_001981_S",
+        "title": "月華国奇医伝",
+        "authors": [{"id": "018d6a39-2116-7e8b-bf68-590cee908ff4", "name": "ひむか透留", "role": "著者"}],
+    },
     "followerCount": 0,
     "firstEpisodes": {"total": 3, "result": ENTRIES},
     "latestEpisodes": {"total": 3, "result": list(reversed(ENTRIES))},
@@ -190,6 +195,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "月華国奇医伝"
     assert episode.episode_title == "第一話"
+    assert (episode.writer, episode.publisher) == ("ひむか透留 (著者)", "KADOKAWA")
     # Pages come back in `page` order, whatever order the site listed them in.
     assert [page.url for page in episode.pages] == [MANUSCRIPTS[1]["drmImageUrl"], MANUSCRIPTS[0]["drmImageUrl"]]
     assert episode.pages[0].extra == {"drm_mode": "xor", "drm_hash": "62e07285b272877b"}

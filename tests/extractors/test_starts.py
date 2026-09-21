@@ -31,6 +31,13 @@ SERIES_HTML = f"""
 <dt class="comicTit">イジワル同居人は御曹司!?</dt>
 <dd class="comicCatch">catch</dd>
 </dl></section>
+<div class="creditBox"><ul class="credit">
+<li>作画／タクヘイ</li>
+<li>
+    原作／<a href="https://www.berrys-cafe.jp/member/n85053">雨宮れん</a>
+</li>
+<li>キャラクター原案／RAHWIA</li>
+</ul><ul class="credit"><li class="tag">タグ</li></ul></div>
 <section class="section comicSerial"><div class="comicSerialList">
 <article class="cs">
     <img src="/img/serial-comic/53/26/thumb.jpg" alt="13話-②">
@@ -245,6 +252,10 @@ def test_episode_reads_the_titles_the_pages_and_the_next(client):
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == "イジワル同居人は御曹司!?"
+    assert (episode.writer, episode.publisher) == (
+        "タクヘイ (作画), 雨宮れん (原作), RAHWIA (キャラクター原案)",
+        "スターツ出版",
+    )
     assert episode.episode_title == "12話-②"
     assert [page.url for page in episode.pages] == [
         f"{CONTENT}/cover.jpg?t={UPDATED_AT}",

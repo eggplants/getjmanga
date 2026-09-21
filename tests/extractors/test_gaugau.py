@@ -53,9 +53,14 @@ def episode_html(*, viewer=True, title="第1話(1)　", series=True):
         else ""
     )
     heading = f'<h1 class="detailHead__title">{title}</h1>' if title is not None else ""
+    credited = """<div class="detailHead__body">2026年04月15日<span>
+        漫画：<a href="https://gaugau.futabanet.jp/list/author/x">華井さきち</a>
+        著者：<a href="https://gaugau.futabanet.jp/list/author/y">八木山蒼</a>
+        イラスト：<a href="https://gaugau.futabanet.jp/list/author/z">壱子みるく亭</a>
+    </span></div>"""
     return f"""<html><head>
 <title>公式-宝石の聖女 第1話(1) | 無料・試し読み豊富、Web漫画・コミックサイト がうがうモンスター＋</title>
-</head><body>{content}{heading}{crumb}</body></html>"""
+</head><body>{content}{heading}{credited}{crumb}</body></html>"""
 
 
 def listing_html(orders=(3, 2, 1), work_id=WORK_ID):
@@ -198,6 +203,10 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     episode = gaugau.episode(EPISODE_URL)
 
     assert episode.series_title == "宝石の聖女"
+    assert (episode.writer, episode.publisher) == (
+        "華井さきち (漫画), 八木山蒼 (著者), 壱子みるく亭 (イラスト)",
+        "双葉社",
+    )
     assert episode.episode_title == "第1話(1)"
     assert [page.url for page in episode.pages] == [f"{SERVER}/pages/a.jpg/M_H.jpg", f"{SERVER}/pages/b.jpg/M_H.jpg"]
     assert episode.pages[0].width == 392

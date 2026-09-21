@@ -79,6 +79,7 @@ class Meets(Extractor):
 
     NAME = "meets"
     HOSTS = ("challenge-mee.manga-meets.jp", "manga-meets.jp")
+    PUBLISHER = "集英社"
     URL_FORMS = (
         "https://manga-meets.jp/comics/<dir_name>/<sort_volume>",
         "https://manga-meets.jp/comics/<dir_name>",
@@ -217,6 +218,8 @@ class Meets(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata={"comic": comic, "episode": entry, "viewer": viewer},
+            writer=", ".join(str(name) for name in comic.get("authors") or [] if name),
+            publisher=self.PUBLISHER,
         )
 
     def _listing(self, origin: str, dir_name: str, referer: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:

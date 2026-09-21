@@ -259,6 +259,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "なんか、花火"
     assert episode.episode_title == "第1話"
+    assert (episode.writer, episode.publisher) == ("上野ポテト", "ホーム社")
     assert episode.next_url == NEXT_URL
     assert [page.width for page in episode.pages] == [392, 392]
     page = urlparse(episode.pages[0].url)

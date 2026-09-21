@@ -38,6 +38,11 @@ SERIES_HTML = f"""
 <html><head><title>{SERIES_TITLE} / COMICメテオ - きら星ポータル きらポ</title></head><body>
 <main>
 <h2>{SERIES_TITLE}</h2>
+<h3 id="author">作者</h3>
+<div class="group-button-r2 mt-4 mb-5">
+  <a class="button-gray m-0 my-3 white-space-unset" href="https://kirapo.jp/authors/1000158">漫画：タッ公</a>
+  <a class="button-gray m-0 my-3 white-space-unset" href="https://kirapo.jp/authors/1000159">原作：延野正行</a>
+</div>
 <div class="title-header-area">
   <div class="header-side">
     <div class="fs-6 fw-bold latest-episode-title">第45話</div>
@@ -207,6 +212,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, f
     assert episode.url == EPISODE_URL
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == "第1話"
+    assert (episode.writer, episode.publisher) == ("タッ公 (漫画), 延野正行 (原作)", "フレックスコミックス")
     assert [page.url for page in episode.pages] == [
         "https://kirapo.jp/pt/meteor/aroundforty/1017660/data/0001.ptimg.json",
         "https://kirapo.jp/pt/meteor/aroundforty/1017660/data/0002.ptimg.json",

@@ -106,7 +106,9 @@ def listing_html(title, items, *, has_next):
     disabled = "" if has_next else " disabled"
     return f"""<html><body>
 <h1 class="comic-title">{title}</h1>
+<ul class="author-list"><li class="author"><a href="/author/x">餅月あんこ</a></li></ul>
 <div class="book-product-list">{rows}</div>
+<ul class="author-list"><li class="author"><a href="/author/y">よその作者</a></li></ul>
 <ul class="pagination-list right">
   <li class="pagination-list-item to-next{disabled}"><a href="javascript:void(0);" title="次のページへ"></a></li>
 </ul>
@@ -397,6 +399,7 @@ def test_episode_reads_a_koma_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == "作品No.1"
+    assert (episode.writer, episode.publisher) == ("餅月あんこ", "レベルファイブ")
     assert episode.next_url == f"{BASE_URL}/product/00850002"
     assert [page.url for page in episode.pages] == [
         f"{KOMA_BASE}picture/26(01)_001.jpg?{AUTH}",
@@ -506,6 +509,7 @@ def test_refused_license_means_locked_but_keeps_the_viewer_titles(client, fake_r
     assert not episode.readable
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == "作品No.1"
+    assert (episode.writer, episode.publisher) == ("餅月あんこ", "レベルファイブ")
     assert episode.next_url == f"{BASE_URL}/product/00850002"
     assert episode.metadata == {"viewer": VIEWER_DATA, "license": REFUSED_LICENSE}
 

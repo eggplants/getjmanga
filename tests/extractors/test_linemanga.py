@@ -49,6 +49,7 @@ WEBTOON_HTML = f"""<!DOCTYPE html><html><head><title>x</title></head><body>
       var OPTION = {{
           API_PATH: '',
           productName: 'Let&#39;s レベルMAX',
+          authorName: 'WAN.Z(redice studio)(脚色)・Maslow(原作)・swingbat(作画)',
           isLoggedIn: false,
           nickname: "",
           show_modal: 0,
@@ -164,7 +165,23 @@ NOT_FOUND_HTML = "<html><head><title>ページが見つかりません｜LINE �
 
 
 def book(book_id, name, volume, price=0):
-    return {"id": book_id, "name": name, "volume": volume, "episode_volume": volume, "selling_price": price}
+    return {
+        "id": book_id,
+        "name": name,
+        "volume": volume,
+        "episode_volume": volume,
+        "selling_price": price,
+        "authors": [{"id": "Z0001457", "name": "WAN.Z(redice studio)(脚色)・Maslow(原作)・swingbat(作画)"}],
+    }
+
+
+WORK_HTML = """<html><body><dl class="MdMNG04Meta">
+<dt class="mdMNG04Dt03">出版社</dt>
+<dd class="mdMNG04Dd03">
+    <a href="/search_product/publisher_list?publisher_id=Z0000013&referer=periodic">
+        LINE WEBTOON
+    </a>
+</dd></dl></body></html>"""
 
 
 # `/api/book/product_list` for the serial, cut down.
@@ -240,6 +257,8 @@ def client(fake_session, fake_response):
             f"{BASE_URL}/book/detail?id=Z0000001": fake_response(text="<html></html>", url=SERIES_URL),
             f"{BASE_URL}/book/detail?id=Z9999999": fake_response(text=NOT_FOUND_HTML, status_code=HTTPStatus.NOT_FOUND),
             f"{PERIODIC_LIST_URL}Z0001684": fake_response(payload=LISTING),
+            f"{BASE_URL}/product/periodic?id=Z0001684": fake_response(text=WORK_HTML),
+            f"{BASE_URL}/product/periodic?id=S113701": fake_response(text="<html></html>"),
             f"{PERIODIC_LIST_URL}Z9999999": fake_response(payload={}, status_code=HTTPStatus.NOT_FOUND),
             f"{PERIODIC_LIST_URL}S113701": fake_response(payload={}, status_code=HTTPStatus.NOT_FOUND),
             f"{INDIES_LIST_URL}20421": fake_response(payload=INDIES_LISTING),
@@ -347,13 +366,18 @@ def test_episode_reads_a_webtoon(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "Let's レベルMAX"
     assert episode.episode_title == "プロローグ. すべての始まり"
+    assert (episode.writer, episode.publisher) == (
+        "WAN.Z(redice studio)(脚色)・Maslow(原作)・swingbat(作画)",
+        "LINE WEBTOON",
+    )
     assert len(episode.pages) == 2
     assert episode.pages[0].url.endswith("FFeZ7qqIlvhe4o8usLAUlGac.jpg")
     assert (episode.prev_url, episode.next_url) == (None, f"{BASE_URL}/book/viewer?id=Z0090128")
     assert episode.metadata["option"]["bookId"] == "Z0090127"
     assert json.dumps(episode.metadata)
-    # The viewer page names the next episode; the previous one comes off the work's listing.
-    assert session.calls == [EPISODE_URL, f"{PERIODIC_LIST_URL}Z0001684"]
+    # The viewer page names the next episode; the previous one comes off the
+    # work's listing, and the publisher off the work page.
+    assert session.calls == [EPISODE_URL, f"{PERIODIC_LIST_URL}Z0001684", f"{BASE_URL}/product/periodic?id=Z0001684"]
 
 
 def test_episode_reads_a_print_comic_with_its_blocks(client):
@@ -372,6 +396,8 @@ def test_episode_reads_an_indies_work(client):
     assert episode.url == INDIES_URL
     assert episode.series_title == "クレイト！"
     assert episode.episode_title == "クレイと仮想空間"
+    # An indies work is its author's own; the site stands as its publisher.
+    assert episode.publisher == "LINE Digital Frontier"
     assert len(episode.pages) == 1
     assert episode.next_url is None
 
@@ -391,15 +417,24 @@ def test_locked_episode_has_no_pages_but_keeps_its_titles_and_the_next(client):
     assert not episode.readable
     assert episode.series_title == "俺だけレベルMAXなビギナー"
     assert episode.episode_title == "国立中央博物館（２）"
+    assert (episode.writer, episode.publisher) == (
+        "WAN.Z(redice studio)(脚色)・Maslow(原作)・swingbat(作画)",
+        "LINE WEBTOON",
+    )
     assert (episode.prev_url, episode.next_url) == (
         f"{BASE_URL}/book/viewer?id=Z0090128",
         f"{BASE_URL}/book/viewer?id=Z0090136",
     )
     assert episode.metadata["book"]["selling_price"] == 67
     # The viewer said 404, `/book/detail` named the work, and its listing was read with a Referer.
-    assert session.calls == [LOCKED_URL, f"{BASE_URL}/book/detail?id=Z0090134", f"{PERIODIC_LIST_URL}Z0001684"]
-    assert session.headers_seen[-1]["Referer"] == LOCKED_URL
-    assert session.headers_seen[-1]["X-Requested-With"] == "XMLHttpRequest"
+    assert session.calls == [
+        LOCKED_URL,
+        f"{BASE_URL}/book/detail?id=Z0090134",
+        f"{PERIODIC_LIST_URL}Z0001684",
+        f"{BASE_URL}/product/periodic?id=Z0001684",
+    ]
+    assert session.headers_seen[-2]["Referer"] == LOCKED_URL
+    assert session.headers_seen[-2]["X-Requested-With"] == "XMLHttpRequest"
 
 
 def test_last_locked_episode_has_no_next(client):

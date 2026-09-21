@@ -44,6 +44,7 @@ class ComicEssay(Extractor):
 
     NAME = "comicessay"
     HOSTS = ("www.comic-essay.com",)
+    PUBLISHER = "KADOKAWA"
     URL_FORMS = (
         "https://www.comic-essay.com/read/<series>/entry-<id>.html",
         "https://www.comic-essay.com/read/<series>/<id>.html",
@@ -171,6 +172,8 @@ class ComicEssay(Extractor):
                 "prev_url": _pager_link(detail, "_btn-pager-left", url),
                 "images": image_urls,
             },
+            writer=_credits(soup),
+            publisher=self.PUBLISHER,
         )
 
     def _fetch_page(self, url: str, kind: str) -> Response:
@@ -194,6 +197,15 @@ def _episode_links(soup: BeautifulSoup, url: str) -> list[str]:
             if _EPISODE_PATH.match(urlparse(absolute).path) and absolute not in links:
                 links.append(absolute)
     return links
+
+
+def _credits(soup: BeautifulSoup) -> str:
+    """The book's credits below the comic, `役割：名前` each, as `名前 (役割)`."""
+    credited = []
+    for item in soup.select("div.book-detail-list__author span.book-detail-list__author--item"):
+        role, sep, name = item.get_text(strip=True).partition("：")
+        credited.append(f"{name.strip()} ({role.strip()})" if sep and name.strip() else role.strip())
+    return ", ".join(credit for credit in credited if credit)
 
 
 def _text(root: Tag, class_name: str) -> str:

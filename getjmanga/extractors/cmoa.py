@@ -73,6 +73,9 @@ _LINEUP_SELECTOR = "ul.title_vol_easy_box > li"
 _BREADCRUMB_SELECTOR = ".brCramb a[href]"
 # The volume's own heading on a title page.
 _HEADING_SELECTOR = "h1.titleName"
+# The work's authors under the heading, one link each, and the publisher's breadcrumb.
+_AUTHOR_SELECTOR = "div.title_details_author_name a"
+_PUBLISHER_SELECTOR = '.brCramb a[href^="/search/publisher/"]'
 
 # The content id's shape: a kind digit, the title id and the volume number.
 _CONTENT_ID = re.compile(r"^(?P<kind>\d)(?P<title>\d{10})(?P<vol>\d{4})$")
@@ -89,10 +92,27 @@ class Volume:
 
 @dataclass(frozen=True)
 class Listing:
-    """What a title page says: the series title and its volumes, oldest first."""
+    """What a title page says: the series title, who it is by and its volumes, oldest first."""
 
     title: str
     volumes: tuple[Volume, ...]
+    writer: str = ""
+    publisher: str = ""
+
+
+@dataclass(frozen=True)
+class ListingPage:
+    """One page of a title's lineup."""
+
+    #: The series title: the breadcrumb's, else the heading's, else the id.
+    title: str
+    #: The volumes listed on the page, in order.
+    volumes: tuple[Volume, ...]
+    #: The last page number the pagination links name; this page's when there is none.
+    last: int
+    #: The work's authors, comma-separated, and the publisher the breadcrumb names.
+    writer: str = ""
+    publisher: str = ""
 
 
 @dataclass(frozen=True)
@@ -122,7 +142,7 @@ def title_and_volume_of(content_id: str) -> tuple[str, int] | None:
     return str(int(match["title"])), int(match["vol"])
 
 
-def parse_listing_page(html: str | bytes, title_id: str) -> tuple[str, list[Volume], int]:
+def parse_listing_page(html: str | bytes, title_id: str) -> ListingPage:
     """Read one page of a title's lineup.
 
     Args:
@@ -130,9 +150,8 @@ def parse_listing_page(html: str | bytes, title_id: str) -> tuple[str, list[Volu
         title_id: The title's id, to tell its own links from the recommendations'.
 
     Returns:
-        The series title (the breadcrumb's, else the heading's, else the id),
-        the volumes listed on the page in order, and the last page number the
-        pagination links name (this page's when there is none).
+        The page: the series title, the volumes on it, the last page number,
+        and who the work is by and published by.
     """
     soup = BeautifulSoup(html, "html.parser")
     title = ""
@@ -159,7 +178,14 @@ def parse_listing_page(html: str | bytes, title_id: str) -> tuple[str, list[Volu
         page = query.get("page")
         if page and _TITLE_PATH.match(href.path) and query.get("disp_mode", ["easy"]) == ["easy"]:
             last = max(last, int(page[0]))
-    return title or title_id, volumes, last
+    publisher = soup.select_one(_PUBLISHER_SELECTOR)
+    return ListingPage(
+        title=title or title_id,
+        volumes=tuple(volumes),
+        last=last,
+        writer=", ".join(anchor.get_text(strip=True) for anchor in soup.select(_AUTHOR_SELECTOR)),
+        publisher=publisher.get_text(strip=True) if isinstance(publisher, Tag) else "",
+    )
 
 
 def _parse_volume(item: Tag, title_id: str) -> Volume | None:
@@ -198,6 +224,7 @@ class Cmoa(Extractor):
     """
 
     NAME = "cmoa"
+    PUBLISHER = "NTTソルマーレ"
     HOSTS = (HOST,)
     URL_FORMS = (
         "https://www.cmoa.jp/title/<title-id>/vol/<n>/",
@@ -344,6 +371,8 @@ class Cmoa(Extractor):
                 prev_url=prev_url,
                 next_url=next_url,
                 metadata={**metadata, "locked": True},
+                writer=listing.writer if listing else "",
+                publisher=(listing.publisher if listing else "") or self.PUBLISHER,
             )
 
         book = speedbinb.page_list(self, content, referer=reader_url, params=forwarded)
@@ -361,6 +390,8 @@ class Cmoa(Extractor):
                 "contents_server": content.server,
                 "info": content.info,
             },
+            writer=listing.writer if listing else "",
+            publisher=(listing.publisher if listing else "") or self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -409,7 +440,7 @@ class Cmoa(Extractor):
     def _listing(self, title_id: str) -> Listing:
         """Read a title's lineup, once per title."""
         if title_id not in self._listings:
-            title = ""
+            title = writer = publisher = ""
             volumes: list[Volume] = []
             page, last = 1, 1
             while page <= last and page <= _MAX_LISTING_PAGES:
@@ -423,14 +454,17 @@ class Cmoa(Extractor):
                     msg = f"no title {title_id} on {HOST} (HTTP 404)."
                     raise NotAnEpisodePageError(msg)
                 res.raise_for_status()
-                page_title, found, last = parse_listing_page(res.content, title_id)
-                title = title or page_title
-                new = [volume for volume in found if all(volume.content_id != known.content_id for known in volumes)]
+                found = parse_listing_page(res.content, title_id)
+                title, writer, publisher = title or found.title, writer or found.writer, publisher or found.publisher
+                last = found.last
+                new = [v for v in found.volumes if all(v.content_id != known.content_id for known in volumes)]
                 if not new:
                     break
                 volumes.extend(new)
                 page += 1
-            self._listings[title_id] = Listing(title=title or title_id, volumes=tuple(volumes))
+            self._listings[title_id] = Listing(
+                title=title or title_id, volumes=tuple(volumes), writer=writer, publisher=publisher
+            )
         return self._listings[title_id]
 
 

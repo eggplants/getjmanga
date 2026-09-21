@@ -47,6 +47,7 @@ from getjmanga.viewers.kmanga import descramble, service_hash
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from httpx import Client
     from PIL import Image
 
 _TITLE_PATH = re.compile(r"^/title/(?P<title>\d{5})/?$")
@@ -109,6 +110,17 @@ class MagaPoke(Extractor):
         "https://pocket.shonenmagazine.com/title/<title id>/episode/<episode id>",
         "https://pocket.shonenmagazine.com/title/<title id>",
     )
+    PUBLISHER = "講談社"
+
+    def __init__(self, session: Client | None = None) -> None:
+        """Build an extractor.
+
+        Args:
+            session: A session to reuse. A retrying one is made when omitted.
+        """
+        super().__init__(session)
+        #: `author_text` of each work asked about, by title id.
+        self._credits: dict[int, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -214,6 +226,8 @@ class MagaPoke(Extractor):
                 prev_url=_episode_url(title_id, prev_id) if prev_id is not None else None,
                 next_url=_episode_url(title_id, next_id) if next_id is not None else None,
                 metadata={**metadata, "viewer": viewer},
+                writer=self._writer(title_id),
+                publisher=self.PUBLISHER,
             )
 
         raw_seed = viewer.get("scramble_seed")
@@ -232,7 +246,16 @@ class MagaPoke(Extractor):
             prev_url=_episode_url(int(prev_title or title_id), int(prev_id)) if prev_id is not None else None,
             next_url=_episode_url(int(next_title or title_id), int(next_id)) if next_id is not None else None,
             metadata={**metadata, "viewer": viewer},
+            writer=self._writer(title_id),
+            publisher=self.PUBLISHER,
         )
+
+    def _writer(self, title_id: int) -> str:
+        """The work's `author_text`, asked for once per work; the episode API names no author."""
+        if title_id not in self._credits:
+            title = self._title(title_id) or {}
+            self._credits[title_id] = str(title.get("author_text") or "")
+        return self._credits[title_id]
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
         """Fetch one page and unscramble it when the episode has a seed.
@@ -254,6 +277,8 @@ class MagaPoke(Extractor):
         if status == HTTPStatus.BAD_REQUEST and data.get("response_code") == _TITLE_NOT_FOUND:
             return None
         title = data.get("web_title")
+        if isinstance(title, dict):
+            self._credits[title_id] = str(title.get("author_text") or "")
         return title if isinstance(title, dict) else None
 
     def _listed_ids(self, title_id: int, episode_id: int) -> tuple[int | None, int | None]:

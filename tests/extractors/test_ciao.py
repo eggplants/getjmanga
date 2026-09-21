@@ -251,6 +251,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, readabl
     assert episode.url == EPISODE_URL
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == "第2話"
+    assert (episode.writer, episode.publisher) == ("永尾柚乃, えびなしお", "小学館")
     assert [page.url for page in episode.pages] == [PAGE_1, PAGE_2]
     assert all(page.extra == {"seed": SEED, "version": 2} for page in episode.pages)
     assert (episode.prev_url, episode.next_url) == (episode_url(813, 32964), NEXT_URL)

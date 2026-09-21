@@ -269,6 +269,8 @@ class Work:
     url: str
     title: str
     items: tuple[Item, ...]
+    #: The `編著者` entries, as the page writes them, the role in fullwidth parentheses after each name.
+    writer: str = ""
 
     def episode_url(self, item: Item) -> str:
         """The URL the extractor gives an episode of the work."""
@@ -310,6 +312,7 @@ class Gakcomic(Extractor):
 
     NAME = "gakcomic"
     HOSTS = ("gakcomic.gakken.jp",)
+    PUBLISHER = "Gakken"
     URL_FORMS = (
         "https://gakcomic.gakken.jp/comic/page-<slug>/#episode-<id>",
         "https://gakcomic.gakken.jp/viewer/?content_id=<content-id>",
@@ -422,6 +425,8 @@ class Gakcomic(Extractor):
                 prev_url=work.prev_url(index),
                 next_url=work.next_url(index),
                 metadata=metadata,
+                writer=work.writer,
+                publisher=self.PUBLISHER,
             )
         content = self._open(item.content_id)
         return Episode(
@@ -432,6 +437,8 @@ class Gakcomic(Extractor):
             prev_url=work.prev_url(index),
             next_url=work.next_url(index),
             metadata={**metadata, "content_id": item.content_id, **content.info},
+            writer=work.writer,
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -490,7 +497,8 @@ class Gakcomic(Extractor):
                     urljoin(url, str(image["src"])) if isinstance(image, Tag) and not content_id else "",
                 ),
             )
-        return Work(url, title, tuple(items))
+        writer = ", ".join(li.get_text(strip=True) for li in soup.select("ul.pg-book-meta__editor-lists li"))
+        return Work(url, title, tuple(items), writer)
 
     # --- the viewer ----------------------------------------------------------------
 
@@ -509,6 +517,8 @@ class Gakcomic(Extractor):
                     prev_url=work.prev_url(index),
                     next_url=work.next_url(index),
                     metadata={**metadata, "episode_id": work.items[index].id, "work_url": work.url},
+                    writer=work.writer,
+                    publisher=self.PUBLISHER,
                 )
         title = str(content.info.get("title") or content_id)
         match = _EPUB_TITLE.match(title)
@@ -519,6 +529,7 @@ class Gakcomic(Extractor):
             episode_title=episode_title,
             pages=self._pages(content_id, content),
             metadata=metadata,
+            publisher=self.PUBLISHER,
         )
 
     def _open(self, content_id: str) -> Content:

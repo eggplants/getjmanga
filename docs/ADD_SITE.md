@@ -120,6 +120,8 @@ class Example(Extractor):
     )
     CONFIG_KEY = "example"                 # `[site.example]` in config.toml signs in on every host;
                                            # leave it out when each host has accounts of its own
+    PUBLISHER = "例社"                      # who is behind the site, as docs/SUPPORTED_SITES.md names them;
+                                           # `PUBLISHERS = {host: name}` when the hosts belong to different ones
     # Only when the site wants more than the browser-like defaults.
     HEADERS: ClassVar[dict[str, str]] = {**Extractor.HEADERS, "X-Requested-With": "XMLHttpRequest"}
 
@@ -162,6 +164,8 @@ class Example(Extractor):
             prev_url=prev_url,          # None at the start of the series
             next_url=next_url,          # None at the end of the series
             metadata=raw_json,          # whatever the site said; written by --metadata
+            writer=credits,             # `名前 (役割), 名前 (役割)` as the site credits the work; "" when it does not
+            publisher=self.PUBLISHER,   # or what the page names, on a site that carries several publishers
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -197,6 +201,11 @@ ways the offline tests will not catch.
 - **`Episode.metadata` is JSON-serialisable** for the same reason.
 - **Titles are raw.** Do not sanitise `series_title` or `episode_title`; the
   downloader does that, and keeps a `/` readable as `／`.
+- **Credits are names, comma-separated.** `writer` joins everyone the site
+  credits with `, `, each as `名前 (役割)` when the site gives a role and as
+  the bare name otherwise; a site that writes the credits as one line keeps
+  that line. `-C` writes `writer` and `publisher` into the archive's
+  `ComicInfo.xml`, so a work page read only for them is read once per work.
 - **`suitable()` is cheap and offline.** It runs against every URL on the
   command line for every extractor; a regex on the URL, never a request.
 - **`series_urls()` returns episode URLs `episode()` accepts**, deduplicated,

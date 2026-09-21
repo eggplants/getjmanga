@@ -58,6 +58,9 @@ def episode_html(
 </div>
 </div></div>
 <div class="book-detail-list__thum"><img src="https://cdn.kdkw.jp/cover_1000/322605/322605001099.jpg" alt="cover"></div>
+<div class="book-detail-list__author">
+<span class="book-detail-list__author--item">著者：お腹すい汰</span>
+</div>
 </body></html>"""
 
 
@@ -192,6 +195,7 @@ def test_episode_reads_the_titles_and_the_pages(client):
 
     assert episode.series_title == "ちゃんぺんとママぺんの平凡だけど幸せな日々 4"
     assert episode.episode_title == "第1話　だって揚げパンだから"
+    assert (episode.writer, episode.publisher) == ("お腹すい汰 (著者)", "KADOKAWA")
     assert [page.url for page in episode.pages] == [f"{ARCHIVE}/ef92.jpg", f"{ARCHIVE}/1c9d.jpg"]
     assert all(page.extra == {} for page in episode.pages)
     assert episode.next_url == NEXT_URL

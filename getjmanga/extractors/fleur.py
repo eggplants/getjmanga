@@ -27,6 +27,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
+    from httpx import Client
     from PIL import Image
 
 _EPISODE_PATH = re.compile(r"^/manga/(?P<id>[A-Za-z0-9_-]+)\.html$")
@@ -57,10 +58,21 @@ class Fleur(Extractor):
 
     NAME = "fleur"
     HOSTS = ("comic.mf-fleur.jp",)
+    PUBLISHER = "KADOKAWA"
     URL_FORMS = (
         "https://comic.mf-fleur.jp/manga/<id>.html",
         "https://comic.mf-fleur.jp/lineup_magazine/<id>/",
     )
+
+    def __init__(self, session: Client | None = None) -> None:
+        """Build an extractor.
+
+        Args:
+            session: A session to reuse. A retrying one is made when omitted.
+        """
+        super().__init__(session)
+        #: The credits of each work page read, by URL.
+        self._credits: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -155,6 +167,7 @@ class Fleur(Extractor):
         ]
         prev_url = self._pager(soup, url, "_prev")
         next_url = self._pager(soup, url, "_next")
+        work = soup.select_one(".manga-header__name a[href]")
 
         return Episode(
             url=url,
@@ -168,7 +181,18 @@ class Fleur(Extractor):
                 "images": served,
                 "prev_url": self._pager(soup, url, "_prev"),
             },
+            writer=self._writer(urljoin(url, str(work["href"]))) if isinstance(work, Tag) else "",
+            publisher=self.PUBLISHER,
         )
+
+    def _writer(self, work_url: str) -> str:
+        """The authors the work page links in `.cb-author`, read once per work; an episode names none itself."""
+        if work_url not in self._credits:
+            soup = self._page(work_url)
+            self._credits[work_url] = ", ".join(
+                link.get_text(strip=True) for link in soup.select(".cb-author a.cb-author__link")
+            )
+        return self._credits[work_url]
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
         """Fetch one page, at full size when the CMS still has the original.

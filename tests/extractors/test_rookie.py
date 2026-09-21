@@ -196,6 +196,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_url(fake_session, fake_
     assert (episode.prev_url, episode.next_url) == (f"{SERIES_URL}/OmkvmYUVcfQ", NEXT_URL)
     assert episode.metadata["episode_id"] == "4208947663164044699"
     assert episode.metadata["author"] == "ハルル"
+    assert (episode.writer, episode.publisher) == ("ハルル", "集英社")
     assert episode.metadata["published"] == "2026年05月20日"
     assert episode.metadata["page_structure"]["single"][0]["type"] == "main"
     assert session.calls == [EPISODE_URL, SERIES_URL]

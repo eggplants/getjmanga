@@ -100,6 +100,18 @@ def listing_html(ids, *, last):
     return f'<html><body><div class="book-product-list">{items}</div><ul>{pager}</ul></body></html>'
 
 
+CONTENT_HTML = """
+<html><body>
+<ul class="author-list">
+  <li class="author">原作：<a href="/author/%E6%81%B5">恵ノ島すず</a></li>
+  <li class="author">作画：<a href="/author/%E4%BB%8A">今中千尋</a></li>
+  <li class="author">キャラクター原案：<a href="/author/%E3%81%88">えいひ</a></li>
+</ul>
+<div class="book-product-list"></div>
+<ul class="author-list"><li class="author"><a href="/author/x">河合朗</a></li></ul>
+</body></html>
+"""
+
 LOGIN_REFUSED = """
 <html><body><div class="text-warning-list">
 <p class="text-warning">メールアドレスまたはパスワードが違います。(1002)</p>
@@ -145,6 +157,7 @@ def client(fake_session, fake_response, monkeypatch):
             "/product/01700010": fake_response(text="<html></html>", url=VIEWER_URL),
             "/product/01700008": fake_response(text=LOCKED_PRODUCT_HTML),
             "/product/": fake_response(text=MISSING_PRODUCT_HTML),
+            "/content/": fake_response(text=CONTENT_HTML),
             LICENSE_URL: fake_response(payload=LICENSE),
             "configuration_pack.json": fake_response(text="{}"),
             "p-0001.xhtml/": fake_response(jpeg_bytes(scramble(clean, seeds)), content_type="image/jpeg"),
@@ -211,6 +224,10 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == "第1話"
     assert (episode.prev_url, episode.next_url) == (None, f"{BASE_URL}/product/01700002")
+    assert (episode.writer, episode.publisher) == (
+        "恵ノ島すず (原作), 今中千尋 (作画), えいひ (キャラクター原案)",
+        "幻冬舎コミックス",
+    )
     assert [page.url for page in episode.pages] == [
         f"{CONTENT_URL}OEBPS/text/p-0001.xhtml/0.jpeg",
         f"{CONTENT_URL}OEBPS/text/p-0002.xhtml/0.jpeg",

@@ -117,6 +117,10 @@ def series_page(items):
     return f"""
 <html><head><title>コーヴァ -KOHVA- - WEB読み | ファイアCROSS</title></head><body>
 <main class="main"><h1 class="ebook-series-title sp-px-10">コーヴァ -KOHVA-</h1>
+<ul class="ebook-series-author sp-px-10">
+<li class="ebook-series-author-item"><span class="ebook-series-author-type">漫画</span>
+<a href="https://firecross.jp/search?t=1&amp;author=Konata">Konata</a></li>
+</ul>
 <div class="ebookSeries_episodeList">{"".join(items)}</div></main></body></html>
 """
 
@@ -243,6 +247,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, f
     assert episode.url == EPISODE_URL
     assert episode.series_title == "コーヴァ -KOHVA-"
     assert episode.episode_title == "第1話"
+    assert (episode.writer, episode.publisher) == ("Konata (漫画)", "ホビージャパン")
     assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert episode.readable
     assert [page.url.split("?", 1)[1].split("&param=")[0] for page in episode.pages] == [

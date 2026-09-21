@@ -205,6 +205,8 @@ class Work:
     urls: tuple[str, ...]
     #: The title of each episode, by URL.
     titles: dict[str, str]
+    #: The credits, `名前 (役割)` each, as the page lists them.
+    writer: str = ""
 
 
 class AlphaPolis(Extractor):
@@ -219,6 +221,7 @@ class AlphaPolis(Extractor):
         "https://www.alphapolis.co.jp/manga/<user-id>/<manga-id>",
     )
     CONFIG_KEY = "alphapolis"
+    PUBLISHER = "アルファポリス"
     HEADERS: ClassVar[dict[str, str]] = {**Extractor.HEADERS, "Referer": f"{BASE_URL}/"}
 
     def __init__(self, session: Client | None = None) -> None:
@@ -355,6 +358,8 @@ class AlphaPolis(Extractor):
             url=url,
             series_title=str(manga.get("title") or "").strip() or work_url.rsplit("/", 1)[-1],
             episode_title=str(episode.get("mainTitle") or episode.get("title") or "").strip() or episode_no,
+            writer=self.work(work_url).writer,
+            publisher=self.PUBLISHER,
             pages=tuple(
                 Page(
                     url=str(image["url"]),
@@ -464,7 +469,9 @@ class AlphaPolis(Extractor):
             if url not in titles:
                 urls.append(url)
             titles[url] = str(entry.get("mainTitle") or entry.get("shortTitle") or "").strip()
-        work = Work(title=title.strip() or work_url.rsplit("/", 1)[-1], urls=tuple(urls), titles=titles)
+        work = Work(
+            title=title.strip() or work_url.rsplit("/", 1)[-1], urls=tuple(urls), titles=titles, writer=_writer(soup)
+        )
         self._works[work_url] = work
         return work
 
@@ -511,12 +518,32 @@ class AlphaPolis(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata={"locked": True},
+            writer=work.writer,
+            publisher=self.PUBLISHER,
         )
 
 
 def _viewer_config(html: str) -> dict[str, Any] | None:
     """Read the viewer's JSON configuration off an episode page."""
     return _embedded_json(BeautifulSoup(html, "html.parser"), "app-manga-viewer")
+
+
+def _writer(soup: BeautifulSoup) -> str:
+    """The credits of a work page: an official work's `div.authors` links, each
+    followed by its `/役割`, or a user work's single `a.p-content-info__author`."""
+    authors = soup.select_one("div.author-label div.authors")
+    if isinstance(authors, Tag):
+        credited = []
+        for link in authors.find_all("a"):
+            role = link.next_sibling
+            while role is not None and not (isinstance(role, str) and role.strip()):
+                role = role.next_sibling
+            name = link.get_text(strip=True)
+            role_text = role.strip().lstrip("/") if isinstance(role, str) else ""
+            credited.append(f"{name} ({role_text})" if role_text else name)
+        return ", ".join(credited)
+    author = soup.select_one("a.p-content-info__author")
+    return author.get_text(strip=True) if isinstance(author, Tag) else ""
 
 
 def _embedded_json(soup: BeautifulSoup, element_id: str) -> dict[str, Any] | None:

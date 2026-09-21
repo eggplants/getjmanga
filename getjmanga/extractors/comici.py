@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urljoin, urlparse
@@ -82,6 +82,8 @@ class Viewer:
     next_url: str | None
     prev_url: str | None = None
     member_jwt: str = ""
+    #: The series header's credits, `名前 (役割)` each.
+    writer: str = ""
     # `data-content-id`, which sites that serve several imprints off one domain
     # (rimacomiplus.jp) set. `contentsInfo` answers `bad contentId` without it;
     # sites that leave the attribute off reject the parameter, so it is only
@@ -91,6 +93,19 @@ class Viewer:
     # client-side. None when the page had a viewer and `contentsInfo` has to
     # be asked for them.
     inline_pages: tuple[dict[str, Any], ...] | None = None
+
+
+def _credits(soup: BeautifulSoup) -> str:
+    """The series header's `.g-author` entries: a name, and its `(役割)` when the site gives one."""
+    credited = []
+    for author in soup.select(".series-h-credit-user .g-author"):
+        name = author.select_one(".g-author-name")
+        role = author.select_one(".g-author-role")
+        name_text = name.get_text(strip=True) if isinstance(name, Tag) else ""
+        role_text = role.get_text(strip=True).strip("()") if isinstance(role, Tag) else ""
+        if name_text:
+            credited.append(f"{name_text} ({role_text})" if role_text else name_text)
+    return ", ".join(credited)
 
 
 def parse_scramble(scramble: str) -> list[int]:
@@ -198,6 +213,39 @@ class Comici(Extractor):
         "https://<host>/<imprint>/series/<id>",
     )
     CONFIG_KEY = "comici-plus"
+    PUBLISHERS: ClassVar[dict[str, str]] = {
+        "asacomi.jp": "朝日新聞出版",
+        "bibibi-comic.com": "ツインエンジン",
+        "bigcomics.jp": "小学館",
+        "championcross.jp": "秋田書店",
+        "comic-growl.com": "ブシロードワークス",
+        "comic-room-base.com": "コミックルーム",
+        "comic-ryu.jp": "徳間書店",
+        "comic.j-nbooks.jp": "実業之日本社",
+        "comicpash.jp": "主婦と生活社",
+        "comicride.jp": "マイクロマガジン社",
+        "comics.comici.jp": "コミチ",
+        "comics.manga-bang.com": "Amazia",
+        "comirela.com": "スターツ出版",
+        "ebookstore.corkagency.com": "コルク",
+        "g-comi.jp": "ジーオーティー",
+        "hanayume.com": "白泉社",
+        "hayacomic.jp": "早川書房",
+        "heros-web.com": "ヒーローズ",
+        "kansai.mag-garden.co.jp": "マッグガーデン",
+        "kimicomi.com": "キルタイムコミュニケーション",
+        "manga-zegra.com": "スターツ出版",
+        "mangabu.jp": "ファムエンタテイメント",
+        "mangalt.jp": "リイド社",
+        "mangaspa.nikkan-spa.jp": "扶桑社",
+        "namicomic.jp": "ウェイブ",
+        "piacomic.jp": "ぴあ",
+        "rimacomiplus.jp": "集英社",
+        "studio.booklista.co.jp": "ブックリスタ",
+        "takecomic.jp": "竹書房",
+        "younganimal.com": "白泉社",
+        "youngchampion.jp": "秋田書店",
+    }
     HEADERS: ClassVar[dict[str, str]] = {
         **Extractor.HEADERS,
         "sec-ch-ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
@@ -295,6 +343,8 @@ class Comici(Extractor):
             prev_url=viewer.prev_url,
             next_url=viewer.next_url,
             metadata={"viewer_id": viewer.viewer_id, "api_base": viewer.api_base, "pages": raw},
+            writer=viewer.writer,
+            publisher=self.publisher(viewer.url),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -375,9 +425,11 @@ class Comici(Extractor):
         res = self._get(url, headers=self._headers(url, _DOCUMENT_HEADERS))
         soup = BeautifulSoup(res.content, "html.parser")
 
+        # The series header credits the work on every site, hydrated or not.
+        writer = _credits(soup)
         element = soup.find(id=_VIEWER_ID)
         if not isinstance(element, Tag):
-            return self._viewer_from_api(url)
+            return replace(self._viewer_from_api(url), writer=writer)
 
         viewer_id = str(element.attrs.get("data-comici-viewer-id", "")) or None
         if viewer_id is None:
@@ -405,6 +457,7 @@ class Comici(Extractor):
             episode_title=episode_title,
             prev_url=urljoin(url, prev_id) if prev_id else None,
             next_url=urljoin(url, next_id) if next_id else None,
+            writer=writer,
         )
 
     def pages(self, viewer: Viewer, member_jwt: str | None = None) -> list[dict[str, Any]]:

@@ -37,8 +37,8 @@ _SLUG = r"(?!(?:page|feed)(?:/|$))[^/]+"
 _EPISODE_PATH = re.compile(rf"^/(?P<section>manga|petitprincess)/(?P<series>{_SLUG})/(?P<id>{_SLUG})/?$")
 _SERIES_PATH = re.compile(rf"^/(?P<section>manga|petitprincess|author)/(?P<series>{_SLUG})/?$")
 
-# The book name is written `『<title>』<author>`; the title is what is kept.
-_BOOK_TITLE = re.compile(r"『(?P<title>.+)』")
+# The book name is written `『<title>』<author>`.
+_BOOK_TITLE = re.compile(r"『(?P<title>.+)』(?P<author>.*)$")
 
 #: What the announcement under the pages says once an episode's free period is over.
 EXPIRED_NOTICE = "公開期限が終了"
@@ -54,6 +54,7 @@ class Souffle(Extractor):
 
     NAME = "souffle"
     HOSTS = ("souffle.life",)
+    PUBLISHER = "秋田書店"
     URL_FORMS = (
         "https://souffle.life/manga/<series>/<id>",
         "https://souffle.life/petitprincess/<series>/<id>",
@@ -197,6 +198,8 @@ class Souffle(Extractor):
                 "prev_url": _button_link(soup, "sf-before_btn", url),
                 "images": image_urls,
             },
+            writer=title_match["author"].strip() if title_match else "",
+            publisher=self.PUBLISHER,
         )
 
     def _ajax_episode_urls(self, url: str, author: str) -> list[str]:

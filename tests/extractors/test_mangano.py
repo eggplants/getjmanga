@@ -287,6 +287,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.metadata["images"] == [template(SOURCE_1), template(SOURCE_2)]
     assert episode.metadata["scroll_direction"] == "RIGHT_TO_LEFT"
     assert episode.metadata["author"] == "Teruteru Ponite"
+    assert (episode.writer, episode.publisher) == ("Teruteru Ponite", "はてな")
 
     # An anonymous Firebase sign-up first, then the query with its token.
     assert session.posts[0] == (SIGN_UP_URL, {"returnSecureToken": True})

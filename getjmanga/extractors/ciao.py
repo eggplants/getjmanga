@@ -144,6 +144,7 @@ class Ciao(Extractor):
 
     NAME = "ciao"
     HOSTS = ("ciao.shogakukan.co.jp",)
+    PUBLISHER = "小学館"
     URL_FORMS = (
         "https://ciao.shogakukan.co.jp/comics/title/<title>/episode/<episode>",
         "https://ciao.shogakukan.co.jp/comics/title/<title>/",
@@ -281,6 +282,8 @@ class Ciao(Extractor):
             prev_url=episode_url(title_id, prev_id) if prev_id is not None else None,
             next_url=episode_url(title_id, next_id) if next_id is not None else None,
             metadata={"episode": entry, "title": title, "viewer": viewer},
+            writer=_authors(title),
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -353,6 +356,12 @@ class Ciao(Extractor):
 
     def _api_headers(self, params: Mapping[str, str]) -> dict[str, str]:
         return {**self.HEADERS, _HASH_HEADER: service_hash(params), _CRAWLER_HEADER: "false"}
+
+
+def _authors(title: Mapping[str, Any]) -> str:
+    """The work's authors: `author_list` when the API sends it, else the comma-separated `author_text`."""
+    names = title.get("author_list") or str(title.get("author_text") or "").split(",")
+    return ", ".join(str(name).strip() for name in names if str(name).strip())
 
 
 def _json_or_none(res: Response) -> Any:  # noqa: ANN401 (whatever JSON the site sent)

@@ -58,8 +58,8 @@ _OLD_EPISODE_PATH = re.compile(r"^/(?P<work>[\w-]+)/p(?P<number>\d+)\.html$")
 _SERIES_PATH = re.compile(r"^/(?P<work>[\w-]+)(?:/(?:index\.html|list\.html)?)?$")
 # A Movable Type page title: a page counter, the episode's title, a page mark on some works.
 _MT_TITLE = re.compile(r"^\s*(?:\d+\s*[:\uff1a]\s*)?(?P<title>.*?)(?:\s*《\d+》)?\s*$", re.DOTALL)
-# An older work's `<title>`: the work in 『』, then the author.
-_OLD_SERIES_TITLE = re.compile(r"『(?P<title>.+?)』")
+# An older work's `<title>`: the work in 『』, then the author, then the site after a `|`.
+_OLD_SERIES_TITLE = re.compile(r"『(?P<title>.+?)』\s*(?P<author>[^|]*)")
 
 
 @dataclass(frozen=True)
@@ -128,6 +128,8 @@ class OldEpisodePage:
     series_title: str
     #: The next update the page itself links, https, or None.
     next_url: str | None
+    #: The author, named after the title in the `<title>`.
+    writer: str = ""
 
 
 @dataclass(frozen=True)
@@ -279,6 +281,7 @@ def parse_old_episode(html: str | bytes, url: str) -> OldEpisodePage:
         prev_url=_https(urljoin(url, str(prev_anchor["href"]))) if isinstance(prev_anchor, Tag) else None,
         series_title=title_match["title"].strip() if title_match else _text(soup.title).split("|", 1)[0].strip(),
         next_url=_https(urljoin(url, str(next_anchor["href"]))) if isinstance(next_anchor, Tag) else None,
+        writer=title_match["author"].strip() if title_match else "",
     )
 
 
@@ -362,6 +365,7 @@ class Laza(Extractor):
 
     NAME = "laza"
     HOSTS = ("laza.mandarake.co.jp",)
+    PUBLISHER = "まんだらけ"
     URL_FORMS = (
         "http://laza.mandarake.co.jp/<work>/manga/<page>.html",
         "http://laza.mandarake.co.jp/<work>/p<n>.html",
@@ -478,6 +482,8 @@ class Laza(Extractor):
                 "label": listing.labels.get(start, ""),
                 "pages": [{"url": page.url, "title": page.title, "images": list(page.images)} for page in pages],
             },
+            # A Movable Type work names nobody on its pages.
+            publisher=self.PUBLISHER,
         )
 
     def _mt_pages(self, start: str, listing: MtListing) -> tuple[list[MtPage], str | None]:
@@ -551,6 +557,8 @@ class Laza(Extractor):
                     {"url": strip.url, "caption": strip.caption, "images": list(strip.images)} for strip in strips
                 ],
             },
+            writer=page.writer,
+            publisher=self.PUBLISHER,
         )
 
     def _mt_listing(self, base: str) -> MtListing:

@@ -121,6 +121,7 @@ class Drecomi(Extractor):
 
     NAME = "drecomi"
     HOSTS = ("drecomi-plus.jp",)
+    PUBLISHER = "ドリコム"
     URL_FORMS = (
         "https://drecomi-plus.jp/series/<series>/episodes/<episode>",
         "https://drecomi-plus.jp/series/<series>",
@@ -136,6 +137,8 @@ class Drecomi(Extractor):
         super().__init__(session)
         #: The bearer token `login()` obtained; the API takes it on every request.
         self._token: str | None = None
+        #: The credits of each series asked about, by code.
+        self._credits: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -265,7 +268,23 @@ class Drecomi(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata={"episode": detail, "viewer": viewer, "next": following},
+            writer=self._writer(series_code),
+            publisher=self.PUBLISHER,
         )
+
+    def _writer(self, series_code: str) -> str:
+        """The series' `authors` as `/series/<code>` credits them, `名前 (役割)` each, asked for once per series."""
+        if series_code not in self._credits:
+            res = self._api(f"/series/{series_code}")
+            body = _json_or_none(res) if res.status_code == HTTPStatus.OK else None
+            authors = body.get("authors") if isinstance(body, dict) else None
+            credited = []
+            for author in authors or []:
+                name, role = str(author.get("name") or "").strip(), str(author.get("role") or "").strip()
+                if name:
+                    credited.append(f"{name} ({role})" if role else name)
+            self._credits[series_code] = ", ".join(credited)
+        return self._credits[series_code]
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
         """Fetch one page file from the CDN, check it and decrypt it.

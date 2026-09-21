@@ -116,6 +116,7 @@ class Cycomi(Extractor):
 
     NAME = "cycomi"
     HOSTS = ("cycomi.com",)
+    PUBLISHER = "Cygames"
     URL_FORMS = (
         "https://cycomi.com/viewer/chapter/<chapter>",
         "https://cycomi.com/title/<title>",
@@ -272,6 +273,8 @@ class Cycomi(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata={"chapter": chapter, "pages": pages_data},
+            writer=str(chapter.get("author") or ""),
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

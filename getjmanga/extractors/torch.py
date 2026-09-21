@@ -25,7 +25,7 @@ import re
 from dataclasses import dataclass
 from http import HTTPStatus
 from typing import TYPE_CHECKING
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qs, urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
@@ -63,6 +63,8 @@ class Viewer:
     #: The episodes the footer names as previous and next, absolute, or None at either end.
     prev_url: str | None
     next_url: str | None
+    #: The author, off the tweet the share button drafts: `『<work>／<author>』`.
+    writer: str = ""
 
 
 @dataclass(frozen=True)
@@ -145,7 +147,22 @@ def parse_viewer(html: str | bytes, url: str) -> Viewer:
         images=tuple(images),
         prev_url=_footer_link(footer, "prev", url),
         next_url=_footer_link(footer, "next", url),
+        writer=_shared_author(soup),
     )
+
+
+#: The tweet the share button drafts: `『<work>／<author>』<episode>`.
+_SHARE_TEXT = re.compile(r"『[^』／]+／(?P<author>[^』]+)』")
+
+
+def _shared_author(soup: BeautifulSoup) -> str:
+    """The author named in the share button's tweet, the only place a story page names one."""
+    for anchor in soup.select('a[href*="twitter.com/share"]'):
+        text = parse_qs(urlparse(str(anchor["href"])).query).get("text", [""])[0]
+        match = _SHARE_TEXT.search(text)
+        if match:
+            return match["author"].strip()
+    return ""
 
 
 def _footer_link(footer: Tag | None, direction: str, url: str) -> str | None:
@@ -232,6 +249,7 @@ class Torch(Extractor):
 
     NAME = "torch"
     HOSTS = ("to-ti.in",)
+    PUBLISHER = "リイド社"
     URL_FORMS = (
         "https://to-ti.in/story/<slug>",
         "https://to-ti.in/product/<slug>",
@@ -319,6 +337,8 @@ class Torch(Extractor):
                 "images": list(viewer.images),
                 "next_url": viewer.next_url,
             },
+            writer=viewer.writer,
+            publisher=self.PUBLISHER,
         )
 
     def _fetch_page(self, url: str) -> Response:

@@ -120,6 +120,8 @@ class Story:
     #: The previous and the next post of the same work, when the page names them.
     prev_url: str | None
     next_url: str | None
+    #: `p.p-work_author`.
+    author: str = ""
 
 
 def episode_url(href: str) -> str | None:
@@ -225,6 +227,7 @@ def parse_story(html: str | bytes, url: str) -> Story:
         series_title = header.get_text(strip=True)
 
     images = tuple(urljoin(url, str(img["src"])) for img in content.select("img[src]"))
+    author = soup.select_one("p.p-work_author")
     return Story(
         url=url,
         title=(title.get_text(strip=True).removesuffix(_TITLE_SUFFIX) if isinstance(title, Tag) else ""),
@@ -235,6 +238,7 @@ def parse_story(html: str | bytes, url: str) -> Story:
         images=images,
         prev_url=_neighbour(soup, url, "prev"),
         next_url=_neighbour(soup, url, "next"),
+        author=author.get_text(strip=True) if isinstance(author, Tag) else "",
     )
 
 
@@ -260,6 +264,7 @@ class Pie(Extractor):
 
     NAME = "pie"
     HOSTS = (HOST,)
+    PUBLISHER = "パイ インターナショナル"
     URL_FORMS = (
         "https://comics.pie.co.jp/story/<slug>",
         "https://comics.pie.co.jp/series/<slug>/",
@@ -397,7 +402,10 @@ class Pie(Extractor):
                 "series_url": story.series_url,
                 "updated": story.updated,
                 "prev_url": story.prev_url,
+                "author": story.author,
             },
+            writer=story.author,
+            publisher=self.PUBLISHER,
         )
 
     def _content(self, canonical: str) -> Episode:
@@ -429,6 +437,8 @@ class Pie(Extractor):
                 prev_url=prev_url,
                 next_url=next_url,
                 metadata={**metadata, "locked": True},
+                writer=str(metadata["author"]),
+                publisher=self.PUBLISHER,
             )
         return Episode(
             url=canonical,
@@ -445,6 +455,8 @@ class Pie(Extractor):
                 "view_mode": opened.info.item.get("ViewMode"),
                 "shop_url": opened.info.item.get("ShopURL") or None,
             },
+            writer=str(metadata["author"]),
+            publisher=self.PUBLISHER,
         )
 
     def _work(self, url: str) -> Work:

@@ -172,6 +172,9 @@ def client(fake_session, fake_response):
                 payload=detail("CD20013-001-003", 3, "第2話（1）", 80)
             ),
             f"{API_URL}/episodes/": fake_response(payload=NOT_FOUND, status_code=HTTPStatus.NOT_FOUND),
+            f"{API_URL}/series/CD20013": fake_response(
+                payload={"authors": [{"id": 105, "name": "米倉をこめ", "role": "漫画"}], "code": "CD20013"}
+            ),
             f"{API_URL}/episodes?series_code=CD20013&": fake_response(payload=listing(ENTRIES)),
             f"{API_URL}/episodes?series_code=": fake_response(
                 payload={"error": "Series not found", "code": "SERIES_NOT_FOUND"}, status_code=HTTPStatus.NOT_FOUND
@@ -291,6 +294,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "毒姫は呪われた指先に春を乞う"
     assert episode.episode_title == "第1話（1）"
+    assert (episode.writer, episode.publisher) == ("米倉をこめ (漫画)", "ドリコム")
     # Pages come back in `page_number` order, whatever order the session listed them in.
     assert [page.url for page in episode.pages] == [PAGES[1]["image_url"], PAGES[0]["image_url"]]
     assert episode.pages[0].extra == {
@@ -315,6 +319,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
         f"{API_URL}/episodes/CD20013-001-001",
         f"{API_URL}/episodes/CD20013-001-001/next",
         f"{API_URL}/episodes",
+        f"{API_URL}/series/CD20013",
     ]
     assert session.posts == [(f"{API_URL}/viewer/episodes/CD20013-001-001/session", None)]
     assert all(headers["Accept"] == "application/json" for headers in session.headers_seen)

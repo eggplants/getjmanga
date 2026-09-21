@@ -19,11 +19,19 @@ IMAGE_BASE = "https://to-ti.in/wp-content/uploads/img/story/item146"
 # A comic episode as the theme renders it: a blank leading page, the pages as
 # lazy-loaded `span[img-url]`s, info pages after them, and the footer that
 # names the work, the episode and the next one.
+# The share button's tweet, URL-encoded: `『フェイバリッツ FAVORITES／mememe』-#01- @_to_ti`.
+SHARE_TEXT = (
+    "%E3%80%8E%E3%83%95%E3%82%A7%E3%82%A4%E3%83%90%E3%83%AA%E3%83%83%E3%83%84+FAVORITES"
+    "%EF%BC%8Fmememe%E3%80%8F-%2301-+%40_to_ti"
+)
 EPISODE_HTML = f"""
 <html><head><title>トーチweb フェイバリッツ FAVORITES 【#01】</title></head><body>
 <div id="wrapper">
 <div id="viewer" class="manga bind_right start_left">
-<header class="viewer_ui"><h1><a href="https://to-ti.in/">トーチ</a></h1></header>
+<header class="viewer_ui"><h1><a href="https://to-ti.in/">トーチ</a></h1>
+<ul class="share"><li><a href="http://twitter.com/share?url=https%3A%2F%2Fto-ti.in%2Fstory%2Ffv_01&text={SHARE_TEXT}"
+ target="_blank">tw</a></li></ul>
+</header>
 <section id="viewer_container"><div id="viewer_main"><div class="scroll_bar"><div class="scroll">
 <div class="page page_content">
 <div class="manga_page blank"></div>
@@ -213,6 +221,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next(fake_session, fake_resp
     episode = Torch(session).episode(EPISODE_URL)
 
     assert episode.series_title == "フェイバリッツ FAVORITES"
+    assert (episode.writer, episode.publisher) == ("mememe", "リイド社")
     assert episode.episode_title == "#01"
     # In DOM order, deduplicated, relative paths resolved; the store and the
     # "other works" thumbnails on the info pages are not pages.

@@ -71,7 +71,11 @@ def _episode_html(*, heading, prev_url=None, next_url=None, images=((IMAGE_1, 70
   <div class="small">更新日 <time class="updated entry-time" datetime="2023-08-30">08月30日</time></div>
 </section>
 <footer class="article-footer"><nav class="footer-nav row">{nav}</nav></footer>
-</article></main>
+</article>
+<div class="author-info container"><div class="col-xs-12 text-center"><h3>
+    :
+    黄島点心	</h3></div></div>
+</main>
 <script>{gallery}</script>
 <script src="https://leedcafe.com/wp-content/plugins/a9-web-comic/public/js/a9-web-comic-public.js"></script>
 </body></html>"""
@@ -305,6 +309,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert episode.metadata["number"] == 2
     assert episode.metadata["work_url"] == WORK_URL
     assert episode.metadata["updated"] == "2023-08-30"
+    assert (episode.writer, episode.publisher) == ("黄島点心", "リイド社")
     assert episode.metadata["prev_url"] == FIRST_URL
     assert session.calls[0] == SECOND_URL
 

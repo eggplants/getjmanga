@@ -53,7 +53,7 @@ class Entry:
         return f"{self.label} {self.heading}".strip()
 
 
-def parse_work(html: str | bytes, base_url: str) -> tuple[str, list[Entry]]:
+def parse_work(html: str | bytes, base_url: str) -> tuple[str, str, list[Entry]]:
     """Read the work's title and its episode sections off a work or episode page.
 
     Args:
@@ -61,14 +61,16 @@ def parse_work(html: str | bytes, base_url: str) -> tuple[str, list[Entry]]:
         base_url: The page's URL, to resolve the image paths against.
 
     Returns:
-        The work's title and its episodes, in the order the page lists them.
+        The work's title, who it is by, and its episodes in the order the page lists them.
     """
     soup = BeautifulSoup(html, "html.parser")
     heading = soup.select_one("#comicDetail h3")
     series_title = heading.get_text(strip=True) if isinstance(heading, Tag) else ""
     if not series_title:
         series_title = _og_title(soup)
-    return series_title, list(_entries(soup, base_url))
+    author = soup.select_one("#comicDetail .author")
+    writer = author.get_text(strip=True) if isinstance(author, Tag) else ""
+    return series_title, writer, list(_entries(soup, base_url))
 
 
 def _entries(soup: BeautifulSoup, base_url: str) -> Iterator[Entry]:
@@ -96,6 +98,7 @@ class Gecchan(Extractor):
 
     NAME = "gecchan"
     HOSTS = ("nikkangecchan.jp",)
+    PUBLISHER = "秋田書店"
     URL_FORMS = (
         "https://nikkangecchan.jp/comics/<slug>/<n>",
         "https://nikkangecchan.jp/comics/<slug>",
@@ -145,7 +148,7 @@ class Gecchan(Extractor):
         if match is None:
             msg = f"{url} is not a work page."
             raise UnsupportedUrlError(msg)
-        _, entries = self._work(url)
+        _, _, entries = self._work(url)
         urls = [self._episode_url(url, match["slug"], entry.number) for entry in entries]
         if not urls:
             msg = f"the work at {url} lists no episode."
@@ -171,7 +174,7 @@ class Gecchan(Extractor):
             raise UnsupportedUrlError(msg)
         slug, number = match["slug"], int(match["number"])
 
-        series_title, entries = self._work(url)
+        series_title, writer, entries = self._work(url)
         if not 1 <= number <= len(entries):
             msg = f"{url} lists no episode {number}."
             raise NotAnEpisodePageError(msg)
@@ -193,20 +196,22 @@ class Gecchan(Extractor):
                 "heading": entry.heading,
                 "image": entry.image,
             },
+            writer=writer,
+            publisher=self.PUBLISHER,
         )
 
-    def _work(self, url: str) -> tuple[str, list[Entry]]:
-        """Fetch a work or episode page and read the listing off it."""
+    def _work(self, url: str) -> tuple[str, str, list[Entry]]:
+        """Fetch a work or episode page and read the titles, the credits and the listing off it."""
         res = self._session.get(url, headers=self.HEADERS, timeout=self.TIMEOUT)
         if res.status_code == HTTPStatus.NOT_FOUND:
             msg = f"{url} is not there (404)."
             raise NotAnEpisodePageError(msg)
         res.raise_for_status()
-        series_title, entries = parse_work(res.content, str(res.url or url))
+        series_title, writer, entries = parse_work(res.content, str(res.url or url))
         if not entries and not series_title:
             msg = f"no work on {url}."
             raise NotAnEpisodePageError(msg)
-        return series_title, entries
+        return series_title, writer, entries
 
     def _episode_url(self, url: str, slug: str, number: int) -> str:
         return f"{self._origin(url)}/comics/{slug}/{number}"

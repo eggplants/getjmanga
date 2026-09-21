@@ -45,6 +45,8 @@ SERIES_HTML = """
 <html><head><title>べじたぶるサンドイッチ - 路草</title></head><body>
 <article class="product">
   <h1 class="entry-title  page-title">べじたぶるサンドイッチ</h1>
+  <h4>作者プロフィール</h4>
+  <span id="authorName" class="authorName">齊藤万丈</span>
   <div class="latest_episode">
     <a href="https://michikusacomics.jp/wp-content/uploads/data/11_vegetable/03/index.html"><img src="latest.svg"></a>
   </div>
@@ -191,6 +193,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, f
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == "べじたぶるサンドイッチ"
+    assert (episode.writer, episode.publisher) == ("齊藤万丈", "トゥーヴァージンズ")
     assert episode.episode_title == "その１　つくしとわらび"
     assert [page.url for page in episode.pages] == [
         "https://michikusacomics.jp/wp-content/uploads/data/11_vegetable/01/data/0001.ptimg.json",

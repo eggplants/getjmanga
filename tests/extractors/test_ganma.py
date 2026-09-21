@@ -198,6 +198,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_story(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "ウルフちゃんは澄ましたい"
     assert episode.episode_title == "第2話 占いとお菓子"
+    assert (episode.writer, episode.publisher) == ("ホンノシオリ", "コミスマ")
     assert [page.url for page in episode.pages] == PAGES
     assert all(page.extra == {} for page in episode.pages)
     assert (episode.prev_url, episode.next_url) == (f"{BASE_URL}/web/reader/wolfchan/{STORY_1}/0", LOCKED_URL)

@@ -159,6 +159,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_chapter(client):
 
     assert episode.url == CHAPTER_URL
     assert episode.series_title == "【お試し読み】身代わり花嫁は、旦那様から溺愛されるようです。アンソロジーコミック　3"
+    assert (episode.writer, episode.publisher) == ("カバーイラスト：紫藤むらさき", "一迅社")
     assert episode.episode_title == "続編？知りません。　前編"
     assert [page.url for page in episode.pages] == [
         "https://contents.zerosumonline.com/chapter_page/3407/1.webp",

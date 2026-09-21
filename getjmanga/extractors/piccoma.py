@@ -129,6 +129,7 @@ class Piccoma(Extractor):
 
     NAME = "piccoma"
     HOSTS = ("piccoma.com",)
+    PUBLISHER = "カカオピッコマ"
     URL_FORMS = (
         "https://piccoma.com/web/viewer/<product-id>/<episode-id>",
         "https://piccoma.com/web/product/<product-id>/episodes",
@@ -147,6 +148,10 @@ class Piccoma(Extractor):
         self._logged_in = False
         self._lists: dict[tuple[str, EpisodeType], list[Entry]] = {}
         self._series_titles: dict[str, str] = {}
+        #: The authors a product's list page names in its title, by product id.
+        self._writers: dict[str, str] = {}
+        #: The publisher a product page names, by product id.
+        self._publishers: dict[str, str] = {}
 
     @property
     def logged_in(self) -> bool:
@@ -288,6 +293,8 @@ class Piccoma(Extractor):
                 "episode_type": episode_type,
                 "scrambled": scrambled,
             },
+            writer=self.writer(product_id),
+            publisher=self.publisher_of(product_id),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -362,9 +369,10 @@ class Piccoma(Extractor):
 
         res = self._get(f"{BASE_URL}/web/product/{product_id}/episodes?etype={episode_type}")
         soup = BeautifulSoup(res.content, "html.parser")
-        # The product page names the series; the viewer page of a locked
-        # episode does not, so it is worth keeping hold of.
+        # The product page names the series and its authors; the viewer page
+        # of a locked episode does not, so they are worth keeping hold of.
         self._series_titles.setdefault(product_id, _title_part(soup, 0))
+        self._writers.setdefault(product_id, _authors_part(soup))
         listing = soup.find(id="js_volumeList" if episode_type == "V" else "js_episodeList")
 
         entries: list[Entry] = []
@@ -390,6 +398,20 @@ class Piccoma(Extractor):
             self.entries(product_id)
         return self._series_titles.get(product_id) or product_id
 
+    def writer(self, product_id: str) -> str:
+        """The authors a series' list page names in its title, comma-separated, read once per series."""
+        if product_id not in self._writers:
+            self.entries(product_id)
+        return self._writers.get(product_id, "")
+
+    def publisher_of(self, product_id: str) -> str:
+        """The publisher a series' product page names (`ul.PCM-productPub`), read once per series."""
+        if product_id not in self._publishers:
+            soup = BeautifulSoup(self._get(f"{BASE_URL}/web/product/{product_id}").content, "html.parser")
+            link = soup.select_one("ul.PCM-productPub a")
+            self._publishers[product_id] = link.get_text(strip=True) if isinstance(link, Tag) else ""
+        return self._publishers[product_id] or self.PUBLISHER
+
     def _locked_episode(self, url: str, product_id: str, episode_id: str) -> Episode:
         """Describe an episode Piccoma would not open, from its series' list."""
         entry = None
@@ -404,6 +426,8 @@ class Piccoma(Extractor):
             prev_url=self._neighbours(product_id, episode_id, "E")[0],
             next_url=self._neighbours(product_id, episode_id, "E")[1],
             metadata={"product_id": product_id, "episode_id": episode_id, "episode_type": "E", "scrambled": False},
+            writer=self.writer(product_id),
+            publisher=self.publisher_of(product_id),
         )
 
     def _neighbours(self, product_id: str, episode_id: str, episode_type: EpisodeType) -> tuple[str | None, str | None]:
@@ -437,6 +461,20 @@ def _title_part(soup: BeautifulSoup, index: int) -> str:
         heading = soup.title.get_text()
     parts = [part.strip() for part in heading.split("｜") if part.strip()]
     return parts[index] if len(parts) > index + 1 else ""
+
+
+def _authors_part(soup: BeautifulSoup) -> str:
+    """The authors a product page's title ends with, space-separated there, comma-separated here."""
+    og = soup.find("meta", property="og:title")
+    heading = str(og.attrs.get("content", "")) if isinstance(og, Tag) else ""
+    if not heading and soup.title:
+        heading = soup.title.get_text()
+    parts = [part.strip() for part in heading.split("｜") if part.strip()]
+    return ", ".join(parts[2].split()) if len(parts) >= _PRODUCT_TITLE_PARTS else ""
+
+
+#: `"<series>｜<blurb>｜<authors>"`: how many parts a product page's title has.
+_PRODUCT_TITLE_PARTS = 3
 
 
 def _literal(value: str) -> str | int | bool:

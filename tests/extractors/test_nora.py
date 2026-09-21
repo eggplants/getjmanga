@@ -72,6 +72,11 @@ def work_page(*, episode_id=142, sub="", main="特別予告編", date="2026/05/2
     <header class="page-comic-detail-content-header">
       <p class="page-comic-detail-content-header-title">
         {SERIES_TITLE}          </p>
+      <dl class="page-comic-detail-content-header__name">
+        <dt>作家名：</dt>
+        <dd>
+                          林家志弦（漫画）                        </dd>
+      </dl>
     </header>
     <div class='page-comic-detail-content'>
       <nav aria-label="ソート順" class="page-comic-detail-sort"><ul class="page-comic-detail-sort-list">
@@ -205,6 +210,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == SERIES_TITLE
+    assert (episode.writer, episode.publisher) == ("林家志弦（漫画）", "Gakken")
     assert episode.episode_title == "特別予告編"
     assert [page.url for page in episode.pages] == [PAGE_1, PAGE_2]
     assert all(page.extra == {"seed": SEED} for page in episode.pages)

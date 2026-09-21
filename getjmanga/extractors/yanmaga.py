@@ -34,7 +34,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, quote, unquote, urljoin, urlparse
 
 from bs4 import BeautifulSoup
@@ -45,6 +45,8 @@ from getjmanga.extractor import Episode, Extractor, Page, neighbours
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from httpx import Client
     from PIL import Image
 
@@ -173,6 +175,7 @@ class YanMaga(Extractor):
 
     NAME = "yanmaga"
     HOSTS = (HOST,)
+    PUBLISHER = "講談社"
     URL_FORMS = (
         "https://yanmaga.jp/comics/<title>/<episode-id>",
         "https://yanmaga.jp/viewer/comics/<title>/<episode-id>?cid=<content-id>",
@@ -310,6 +313,8 @@ class YanMaga(Extractor):
                 "locked": False,
                 "info": content.info,
             },
+            writer=_authors(item),
+            publisher=str(item.get("Publisher") or "") or self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -386,7 +391,21 @@ class YanMaga(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata={"episode_id": episode_id, "content_id": content_id, "locked": True},
+            # A locked episode's page names no author; the viewer's item would.
+            publisher=self.PUBLISHER,
         )
+
+
+def _authors(item: Mapping[str, Any]) -> str:
+    """The viewer item's `Authors`, `名前 (役割)` each when a role is given."""
+    credited = []
+    for author in item.get("Authors") or []:
+        if not isinstance(author, dict):
+            continue
+        name, role = str(author.get("Name") or "").strip(), str(author.get("Role") or "").strip()
+        if name:
+            credited.append(f"{name} ({role})" if role else name)
+    return ", ".join(credited)
 
 
 def _episode_url_of(url: str) -> str:

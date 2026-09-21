@@ -223,6 +223,7 @@ class Omocoro(Extractor):
 
     NAME = "omocoro"
     HOSTS = ("omocoro.jp",)
+    PUBLISHER = "バーグハンバーグバーグ"
     URL_FORMS = (
         "https://omocoro.jp/kiji/<id>/",
         "https://omocoro.jp/comic/<id>/",
@@ -346,4 +347,6 @@ class Omocoro(Extractor):
                 "images": list(article.images),
                 "prose_between": article.prose_between,
             },
+            writer=", ".join(article.writers),
+            publisher=self.PUBLISHER,
         )

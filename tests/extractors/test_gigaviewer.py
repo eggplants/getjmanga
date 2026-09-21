@@ -62,7 +62,10 @@ def episode_json(**overrides):
 
 def episode_html(payload):
     value = json.dumps(payload, ensure_ascii=False).replace("&", "&amp;").replace('"', "&quot;")
-    return f'<html><body><script id="episode-json" type="text/json" data-value="{value}"></script></body></html>'
+    return (
+        '<html><body><h2 class="series-header-author">遠藤達哉</h2>'
+        f'<script id="episode-json" type="text/json" data-value="{value}"></script></body></html>'
+    )
 
 
 def tiled_image(side=DIV * MUL):
@@ -130,6 +133,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_url(fake_session, fake_
 
     assert episode.series_title == "SPY×FAMILY"
     assert episode.episode_title == "第1話"
+    assert (episode.writer, episode.publisher) == ("遠藤達哉", "集英社")
     assert [page.url for page in episode.pages] == ["https://cdn.example/1.jpg", "https://cdn.example/2.jpg"]
     assert episode.pages[0].width == 64
     assert (episode.prev_url, episode.next_url) == (PREV_URL, NEXT_URL)

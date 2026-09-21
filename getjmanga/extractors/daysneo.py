@@ -51,6 +51,7 @@ class DaysNeo(Extractor):
 
     NAME = "daysneo"
     HOSTS = ("daysneo.com",)
+    PUBLISHER = "講談社"
     URL_FORMS = (
         "https://daysneo.com/works/<id>/episode/<id>.html",
         "https://daysneo.com/works/<id>.html",
@@ -153,6 +154,8 @@ class DaysNeo(Extractor):
                     series_title=_text(soup.select_one("p.f150.b")) or match["work"],
                     episode_title=match["episode"],
                     metadata={"work_id": match["work"], "episode_id": match["episode"], "editors_only": True},
+                    writer=_text(soup.select_one("p.author")),
+                    publisher=self.PUBLISHER,
                 )
             msg = f"no viewer on {url}."
             raise NotAnEpisodePageError(msg)
@@ -180,6 +183,8 @@ class DaysNeo(Extractor):
             prev_url=prev_url,
             next_url=next_url,
             metadata=metadata,
+            writer=str(metadata["author"]),
+            publisher=self.PUBLISHER,
         )
 
 

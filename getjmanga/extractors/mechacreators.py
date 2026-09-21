@@ -137,6 +137,7 @@ class MechaCreators(Extractor):
 
     NAME = "mechacreators"
     HOSTS = ("creators.mechacomic.jp",)
+    PUBLISHER = "アムタス"
     URL_FORMS = (
         "https://creators.mechacomic.jp/title/<title-id>/chapter/<chapter-id>",
         "https://creators.mechacomic.jp/title/<title-id>",
@@ -241,6 +242,8 @@ class MechaCreators(Extractor):
                 "user": data.get("user"),
                 "titleId": title_id,
             },
+            writer=str((data.get("user") or {}).get("name") or ""),
+            publisher=self.PUBLISHER,
         )
 
     def _fetch(self, url: str) -> Response:

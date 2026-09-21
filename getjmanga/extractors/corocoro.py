@@ -179,6 +179,7 @@ class Corocoro(Extractor):
 
     NAME = "corocoro"
     HOSTS = ("www.corocoro.jp",)
+    PUBLISHER = "小学館"
     URL_FORMS = (
         "https://www.corocoro.jp/chapter/<chapter-id>/viewer",
         "https://www.corocoro.jp/title/<title-id>",
@@ -316,6 +317,7 @@ class Corocoro(Extractor):
             )
         preceding = chapter(raw(viewer, _VIEWER_PREV))
         following = chapter(raw(viewer, _VIEWER_NEXT))
+        authors = [author(buf) for buf in messages(viewer, _VIEWER_AUTHORS)]
         return Episode(
             url=episode_url(chapter_id),
             series_title=series["name"] or str(series["id"] or chapter_id),
@@ -327,12 +329,14 @@ class Corocoro(Extractor):
                 "result": result,
                 "scroll": integer(viewer, _VIEWER_SCROLL),
                 "title": series,
-                "authors": [author(buf) for buf in messages(viewer, _VIEWER_AUTHORS)],
+                "authors": authors,
                 "chapter": current,
                 "prev_chapter": chapter(raw(viewer, _VIEWER_PREV)) if raw(viewer, _VIEWER_PREV) else None,
                 "next_chapter": following if following["id"] else None,
                 "chapters": [chapter(buf) for buf in messages(viewer, _VIEWER_CHAPTERS)],
             },
+            writer=", ".join(f"{a['name']} ({a['role']})" if a["role"] else a["name"] for a in authors if a["name"]),
+            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

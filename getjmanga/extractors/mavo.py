@@ -236,6 +236,7 @@ class Mavo(Extractor):
 
     NAME = "mavo"
     HOSTS = ("mavo.takekuma.jp",)
+    PUBLISHER = "電脳マヴォ"
     URL_FORMS = (
         "http://mavo.takekuma.jp/viewer.php?id=<id>",
         "http://mavo.takekuma.jp/title.php?title=<id>",
@@ -342,6 +343,8 @@ class Mavo(Extractor):
                 "author": viewer.author,
                 "images": list(viewer.images),
             },
+            writer=viewer.author,
+            publisher=self.PUBLISHER,
         )
 
     def _listing(self, url: str) -> Listing:
