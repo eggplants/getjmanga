@@ -106,6 +106,22 @@ def test_download_saves_any_image_mode_as_jpeg(tmp_path, mode):
         assert saved.format == "JPEG"
 
 
+@pytest.mark.parametrize(("fmt", "mode", "saved_mode"), [("png", "RGBA", "RGBA"), ("webp", "RGBA", "RGBA")])
+def test_format_writes_one_file_per_page_keeping_the_alpha_channel(tmp_path, fmt, mode, saved_mode):
+    result = Downloader(Canned(episode(pages=2), mode=mode), tmp_path, fmt=fmt).download("u")
+
+    assert result.save_dir == tmp_path / "example.com" / "Series" / "Episode 1"
+    assert sorted(path.name for path in result.save_dir.iterdir()) == [f"0.{fmt}", f"1.{fmt}"]
+    with Image.open(result.save_dir / f"0.{fmt}") as saved:
+        assert (saved.format, saved.mode) == (fmt.upper(), saved_mode)
+
+
+def test_png_converts_a_mode_png_cannot_hold(tmp_path):
+    result = Downloader(Canned(episode(pages=1), mode="CMYK"), tmp_path, fmt="png").download("u")
+    with Image.open(result.save_dir / "0.png") as saved:
+        assert saved.mode == "RGB"
+
+
 def test_titles_are_made_safe_for_the_file_system(tmp_path):
     result = Downloader(Canned(episode(series_title="A/B: C?", episode_title="1/2")), tmp_path).download("u")
     assert result.save_dir == tmp_path / "example.com" / "A／B C" / "1／2"

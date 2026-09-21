@@ -23,6 +23,9 @@ from rich.progress import (
 if TYPE_CHECKING:
     from .extractor import Episode, Extractor
 
+#: The image format each page is saved as.
+Format = Literal["jpg", "png", "webp"]
+
 #: What became of an episode: written, left alone because it was already
 #: there, or locked behind a purchase, a wait or a login.
 Status = Literal["saved", "exists", "locked"]
@@ -54,6 +57,7 @@ class Downloader:
         only_first: bool = False,
         save_metadata: bool = False,
         progress: bool = False,
+        fmt: Format = "jpg",
     ) -> None:
         """Build a downloader.
 
@@ -64,6 +68,7 @@ class Downloader:
             only_first: Stop after the first page.
             save_metadata: Also write `metadata.json` next to the pages.
             progress: Draw a progress bar.
+            fmt: The image format to save each page as.
         """
         self.extractor = extractor
         self.save_path = Path(save_path)
@@ -71,6 +76,7 @@ class Downloader:
         self.only_first = only_first
         self.save_metadata = save_metadata
         self.progress = progress
+        self.fmt = fmt
 
     def download(self, url: str) -> Result:
         """Download one episode.
@@ -104,6 +110,7 @@ class Downloader:
         return urlparse(episode.url).hostname or self.extractor.NAME
 
     def _save_pages(self, episode: Episode, save_dir: Path) -> None:
+        """One image file per page, numbered from 0 and padded to the page count."""
         wanted = episode.pages[:1] if self.only_first else episode.pages
         width = len(str(len(wanted)))
         progress = Progress(
@@ -124,10 +131,18 @@ class Downloader:
             task = progress.add_task("[red]Downloading...", total=len(wanted))
             for index, page in enumerate(wanted):
                 image = self.extractor.image(page, episode)
-                if image.mode not in ("RGB", "L"):
-                    image = image.convert("RGB")
-                image.save(save_dir / f"{index:0{width}d}.jpg", quality=95)
+                if image.mode not in _MODES[self.fmt]:
+                    image = image.convert("RGBA" if self.fmt != "jpg" and "A" in image.mode else "RGB")
+                image.save(save_dir / f"{index:0{width}d}.{self.fmt}", quality=95)
                 progress.update(task, advance=1)
+
+
+#: The image modes each format writes as they are; anything else is converted first.
+_MODES: dict[Format, tuple[str, ...]] = {
+    "jpg": ("RGB", "L"),
+    "png": ("1", "L", "LA", "P", "RGB", "RGBA"),
+    "webp": ("RGB", "RGBA"),
+}
 
 
 def _dirname(title: str) -> str:

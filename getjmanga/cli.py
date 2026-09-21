@@ -14,7 +14,7 @@ from argparse import (
     RawDescriptionHelpFormatter,
 )
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, get_args
 from urllib.parse import urlparse
 
 from httpx import HTTPError
@@ -31,7 +31,7 @@ from .config import (
     set_site,
     store_work,
 )
-from .downloader import Downloader
+from .downloader import Downloader, Format
 from .errors import GetjmangaError, NotAnEpisodePageError, NothingReadableError
 from .extractors import EXTRACTORS, find_extractor, get_extractor
 from .search import numbered_pages, search
@@ -139,6 +139,13 @@ def parse_args(args: list[str] | None = None, *, patrol: bool = False) -> Namesp
         "-d", "--savedir", metavar="DIR", help="directory to save into (default: the config's savedir, else .)"
     )
     parser.add_argument("-f", "--first", action="store_true", help="download only the first page")
+    parser.add_argument(
+        "-F",
+        "--format",
+        choices=get_args(Format),
+        default="jpg",
+        help="image format to save each page as",
+    )
     parser.add_argument("-o", "--overwrite", action=BooleanOptionalAction, help="download again if it exists")
     parser.add_argument("-m", "--metadata", action="store_true", help="save episode metadata as json")
     parser.add_argument("-u", "--username", metavar="ID", help="id or email address to log in with")
@@ -510,6 +517,7 @@ class Runner:
             only_first=parsed.first,
             save_metadata=parsed.metadata,
             progress=not parsed.quiet,
+            fmt=parsed.format,
         )
         queue = episode_urls(extractor, url, quiet=parsed.quiet)
         visited = download(

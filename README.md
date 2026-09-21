@@ -66,6 +66,9 @@ jm -B https://shonenjumpplus.com/episode/13932016480028799982
 # login
 jm -u you@example.com https://piccoma.com/web/viewer/8195/1185884
 
+# save pages as png (or webp) instead of jpg
+jm -F png https://takecomic.jp/episodes/74f33031e13cd
+
 # every link on a page that some extractor takes
 jm -s https://shonenjumpplus.com/
 
@@ -138,7 +141,7 @@ from getjmanga import Downloader, find_extractor
 
 url = "https://takecomic.jp/episodes/74f33031e13cd"
 extractor = find_extractor(url)() # returns `Comici`
-result = Downloader(extractor, "out").download(url)
+result = Downloader(extractor, "out", fmt="png").download(url)
 print(result.status, result.save_dir, result.episode.next_url)
 ```
 

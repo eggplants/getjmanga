@@ -21,6 +21,7 @@ def test_parse_args_defaults():
     # -b, -d and -o are left to the config file until `apply_config` settles them.
     assert (parsed.bulk, parsed.savedir, parsed.overwrite) == (None, None, None)
     assert (parsed.first, parsed.metadata, parsed.quiet) == (False, False, False)
+    assert parsed.format == "jpg"
 
 
 def test_apply_config_fills_in_what_the_command_line_left_out():
@@ -285,6 +286,12 @@ def test_several_urls_share_one_extractor(recording):
     main(["https://mangabu.jp/episodes/0", "https://mangabu.jp/episodes/9"])
     assert len(recording.instances) == 1
     assert recording.instances[0].episodes == ["https://mangabu.jp/episodes/0", "https://mangabu.jp/episodes/9"]
+
+
+def test_format_reaches_the_downloader(recording, capsys, tmp_path):
+    main(["-F", "webp", "https://mangabu.jp/episodes/0"])
+    assert (tmp_path / "mangabu.jp" / "S" / "ep1" / "0.webp").exists()
+    assert "saved:" in capsys.readouterr().out
 
 
 def test_an_existing_episode_is_skipped(recording, capsys, tmp_path):
