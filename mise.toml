@@ -55,9 +55,13 @@ run = "uv run pdoc getjmanga -o ./site --docformat google"
 description = "Run pyproject-fmt"
 run = "uv run pyproject-fmt ./pyproject.toml"
 
+[tasks."check-config-example"]
+description = "Check example configuration file"
+run = "uv run jm config -c ./config.example.toml check"
+
 [tasks.pre-commit]
 description = "Run checks on pre-commit"
-depends = ["ruff", "ty", "pymarkdown", "pyproject-fmt"]
+depends = ["ruff", "ty", "pymarkdown", "pyproject-fmt", "check-config-example"]
 
 [tasks.ci]
 description = "Run CI checks"
