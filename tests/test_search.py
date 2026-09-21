@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from itertools import islice
+
 import pytest
 from httpx import HTTPStatusError
 
 from getjmanga.extractors import Comici, GigaViewer, Piccoma
-from getjmanga.search import downloadable_links, search
+from getjmanga.search import downloadable_links, numbered_pages, search
 
 PAGE = """
 <html><body>
@@ -55,3 +57,26 @@ def test_search_raises_on_a_failing_page(fake_session, fake_response):
     session = fake_session({"example.com": fake_response(status_code=404)})
     with pytest.raises(HTTPStatusError):
         search(session, "https://example.com/list")
+
+
+# --- [1-3] -------------------------------------------------------------------------------
+
+
+def test_a_url_without_a_range_is_not_expanded():
+    assert numbered_pages("https://example.com/list/1") is None
+
+
+def test_a_closed_range_names_each_page():
+    expanded = numbered_pages("https://example.com/list/up/[2-4]?sort=new")
+    assert expanded is not None
+    pages, open_ended = expanded
+    assert open_ended is False
+    assert list(pages) == [f"https://example.com/list/up/{n}?sort=new" for n in (2, 3, 4)]
+
+
+def test_an_open_range_never_runs_out_and_keeps_a_leading_zero():
+    expanded = numbered_pages("https://example.com/list/[08-]")
+    assert expanded is not None
+    pages, open_ended = expanded
+    assert open_ended is True
+    assert list(islice(pages, 4)) == [f"https://example.com/list/{n}" for n in ("08", "09", "10", "11")]

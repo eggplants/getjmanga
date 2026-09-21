@@ -34,7 +34,7 @@ from .config import (
 from .downloader import Downloader
 from .errors import GetjmangaError, NotAnEpisodePageError, NothingReadableError
 from .extractors import EXTRACTORS, find_extractor, get_extractor
-from .search import search
+from .search import numbered_pages, search
 from .session import make_session
 
 if TYPE_CHECKING:
@@ -122,7 +122,8 @@ def parse_args(args: list[str] | None = None, *, patrol: bool = False) -> Namesp
             "-s",
             "--search",
             action="store_true",
-            help="treat each url as a web page and download what it links to instead",
+            help="treat each url as a web page and download what it links to instead;"
+            " `[1-3]` in it means the pages numbered 1 to 3, `[1-]` every page from 1 on",
         )
         parser.add_argument(
             "-S",
@@ -539,24 +540,56 @@ class Runner:
     def search(self, url: str) -> None:
         """Download every link on the page at `url` that an extractor takes.
 
+        A `[1-3]` in the URL stands for the pages numbered 1 to 3, a `[1-]`
+        for every page from 1 on, up to the first that fails or has nothing
+        new. A numbered page that fails is reported and stepped over.
+
+        Raises:
+            NothingReadableError: The page, or every page of the range, links to nothing an extractor takes.
+            httpx.HTTPError: The page could not be fetched; a numbered page is only reported.
+        """
+        extractor = get_extractor(self.parsed.extractor) if self.parsed.extractor else None
+        expanded = numbered_pages(url)
+        if expanded is None:
+            self._search_page(url, extractor, set())
+            return
+        pages, open_ended = expanded
+        seen: set[str] = set()
+        for page in pages:
+            try:
+                seen.update(self._search_page(page, extractor, seen))
+            except (NothingReadableError, HTTPError) as exc:
+                if not open_ended:
+                    print(f"skip: {page}: {exc}", file=sys.stderr)
+                    continue
+                if not self.parsed.quiet:
+                    print(f"search: stopped at {page}: {exc}")
+                break
+        if not seen:
+            msg = f"nothing on {url} links to a page an extractor takes."
+            raise NothingReadableError(msg)
+
+    def _search_page(self, page: str, extractor: type[Extractor] | None, seen: set[str]) -> list[str]:
+        """Download what one page links to, apart from `seen`, and hand the links back.
+
         A link that fails is reported and stepped over, since a page links to
         more than what is readable.
 
         Raises:
-            NothingReadableError: The page links to nothing an extractor takes.
+            NothingReadableError: The page links to nothing new an extractor takes.
         """
-        parsed = self.parsed
-        links = search(self.session, url, get_extractor(parsed.extractor) if parsed.extractor else None)
+        links = [link for link in search(self.session, page, extractor) if link not in seen]
         if not links:
-            msg = f"nothing on {url} links to a page an extractor takes."
+            msg = f"nothing {'new ' if seen else ''}on {page} links to a page an extractor takes."
             raise NothingReadableError(msg)
-        if not parsed.quiet:
-            print(f"search: {len(links)} links found on {url}.")
+        if not self.parsed.quiet:
+            print(f"search: {len(links)} links found on {page}.")
         for link in links:
             try:
                 self.run(link)
             except (GetjmangaError, HTTPError) as exc:
                 print(f"skip: {link}: {exc}", file=sys.stderr)
+        return links
 
 
 def make_runner(parsed: Namespace) -> Runner:

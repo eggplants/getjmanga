@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import ClassVar
 
 import pytest
+from httpx import HTTPStatusError, Request, Response
 
 from getjmanga import __version__
 from getjmanga.cli import apply_config, download, extractor_list, main, parse_args
@@ -390,6 +391,46 @@ def test_search_hands_dash_e_on(monkeypatch, recording):
     with pytest.raises(SystemExit):
         main(["-s", "-e", "recording", "https://example.com/list"])
     assert seen == [recording]
+
+
+def test_search_walks_a_closed_range_and_steps_over_a_page_that_fails(monkeypatch, recording, capsys):
+    pages = {"1": ["https://mangabu.jp/episodes/1"], "3": ["https://mangabu.jp/episodes/3"]}
+
+    def fake_search(session, url, extractor=None):
+        if url.endswith("/4"):
+            raise HTTPStatusError("404", request=Request("GET", url), response=Response(404))
+        return pages.get(url.rsplit("/", 1)[1], [])
+
+    monkeypatch.setattr("getjmanga.cli.search", fake_search)
+    main(["-s", "https://example.com/list/[1-4]"])
+    assert recording.instances[0].episodes == ["https://mangabu.jp/episodes/1", "https://mangabu.jp/episodes/3"]
+    err = capsys.readouterr().err
+    assert "skip: https://example.com/list/2: nothing new on https://example.com/list/2 links to" in err
+    assert "skip: https://example.com/list/4: " in err
+
+
+def test_search_walks_an_open_range_until_a_page_has_nothing_new(monkeypatch, recording, capsys):
+    # Page 3 repeats page 2, the way a list answers a page number past its end.
+    pages = {"1": ["https://mangabu.jp/episodes/1"], "2": ["https://mangabu.jp/episodes/2"]}
+    visited = []
+
+    def fake_search(session, url, extractor=None):
+        visited.append(url)
+        return pages.get(url.rsplit("/", 1)[1], pages["2"])
+
+    monkeypatch.setattr("getjmanga.cli.search", fake_search)
+    main(["-s", "https://example.com/list/[1-]"])
+    assert visited == [f"https://example.com/list/{n}" for n in (1, 2, 3)]
+    assert recording.instances[0].episodes == ["https://mangabu.jp/episodes/1", "https://mangabu.jp/episodes/2"]
+    assert "search: stopped at https://example.com/list/3: nothing new on" in capsys.readouterr().out
+
+
+def test_search_with_nothing_on_any_page_of_the_range_fails(monkeypatch, recording, capsys):
+    monkeypatch.setattr("getjmanga.cli.search", lambda session, url, extractor=None: [])
+    with pytest.raises(SystemExit) as excinfo:
+        main(["-s", "https://example.com/list/[1-2]"])
+    assert excinfo.value.code == 1
+    assert "nothing on https://example.com/list/[1-2] links to" in capsys.readouterr().err
 
 
 def test_search_fetches_with_the_shared_session(monkeypatch, recording, fake_session, fake_response):
