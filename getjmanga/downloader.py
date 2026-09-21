@@ -162,6 +162,8 @@ class Downloader:
             [PageInfo.load(path) for path in files],
             title=episode.episode_title,
             series=episode.series_title,
+            writer=episode.writer,
+            publisher=episode.publisher,
             web=episode.url,
             format=ComicFormat.WEB_COMIC,
             language_iso="ja",

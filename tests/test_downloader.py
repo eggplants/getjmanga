@@ -38,6 +38,8 @@ def episode(pages=3, series_title="Series", episode_title="Episode 1"):
         pages=tuple(Page(url=f"https://cdn.example/{n}.jpg", extra={"n": n}) for n in range(pages)),
         next_url="https://example.com/ep/2",
         metadata={"raw": True},
+        writer="Author",
+        publisher="House",
     )
 
 
@@ -97,6 +99,7 @@ def test_download_writes_metadata_when_asked(tmp_path):
     assert metadata["series_title"] == "Series"
     assert metadata["next_url"] == "https://example.com/ep/2"
     assert metadata["metadata"] == {"raw": True}
+    assert (metadata["writer"], metadata["publisher"]) == ("Author", "House")
     assert [page["extra"]["n"] for page in metadata["pages"]] == [0, 1, 2]
 
 
@@ -134,6 +137,7 @@ def test_cbz_packs_the_saved_pages_as_they_are_under_the_series(tmp_path):
     comic = ComicInfo.from_cbz(result.archive)
     assert [page.suffix for page in comic] == [".png"] * 3
     assert (comic.title, comic.series, comic.web) == ("Episode 1", "Series", "https://example.com/ep/1")
+    assert (comic.writer, comic.publisher) == ("Author", "House")
     assert str(comic.language_iso) == "ja"
 
 

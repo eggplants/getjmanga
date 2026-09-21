@@ -75,6 +75,11 @@ class Episode:
     prev_url: str | None = None
     #: The episode as the site described it, written out by `--metadata`.
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    #: Who the work is by, as the site credits them -- several names joined
+    #: the way the site joins them. Empty when the site does not say.
+    writer: str = ""
+    #: Who publishes the work: what the site says, else the site's own publisher.
+    publisher: str = ""
 
     @property
     def readable(self) -> bool:
@@ -95,6 +100,11 @@ class Extractor(ABC):
     #: on every host of the extractor. Empty when accounts are per site, in
     #: which case only a `[site."<host>"]` section applies.
     CONFIG_KEY: ClassVar[str] = ""
+    #: The publisher behind the site, for `Episode.publisher` when the page
+    #: itself does not name one. Empty when the site is not a publisher's own.
+    PUBLISHER: ClassVar[str] = ""
+    #: The same per host, for an extractor whose hosts belong to different publishers.
+    PUBLISHERS: ClassVar[Mapping[str, str]] = {}
     #: Headers sent with every request.
     HEADERS: ClassVar[dict[str, str]] = HEADERS
     #: Seconds to wait for a response.
@@ -129,6 +139,18 @@ class Extractor(ABC):
         """
         parsed = urlparse(url)
         return parsed.scheme == "https" and parsed.hostname in cls.HOSTS
+
+    @classmethod
+    def publisher(cls, url: str) -> str:
+        """The publisher behind the site `url` is on.
+
+        Args:
+            url: A URL on one of `HOSTS`.
+
+        Returns:
+            The host's entry in `PUBLISHERS`, else `PUBLISHER`.
+        """
+        return cls.PUBLISHERS.get(urlparse(url).hostname or "", cls.PUBLISHER)
 
     def is_series(self, url: str) -> bool:  # noqa: ARG002
         """Report whether `url` names a whole series rather than one episode.

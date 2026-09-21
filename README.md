@@ -69,7 +69,7 @@ jm -u you@example.com https://piccoma.com/web/viewer/8195/1185884
 # save pages as png (or webp) instead of jpg
 jm -F png https://takecomic.jp/episodes/74f33031e13cd
 
-# also pack the saved pages into <series>/_cbz/<episode>.cbz
+# also pack the saved pages into <series>/_cbz/<episode>.cbz, with a ComicInfo.xml naming the work and its author
 jm -C https://takecomic.jp/episodes/74f33031e13cd
 
 # every link on a page that some extractor takes
@@ -146,6 +146,7 @@ url = "https://takecomic.jp/episodes/74f33031e13cd"
 extractor = find_extractor(url)() # returns `Comici`
 result = Downloader(extractor, "out", fmt="png", cbz=True).download(url)
 print(result.status, result.save_dir, result.archive, result.episode.next_url)
+print(result.episode.writer, result.episode.publisher)  # what the cbz's ComicInfo.xml credits
 ```
 
 An extractor on its own reads the site and writes nothing:

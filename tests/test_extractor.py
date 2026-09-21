@@ -75,6 +75,16 @@ def test_a_default_extractor_brings_its_own_session():
     assert Plain().session is not None
 
 
+def test_publisher_is_per_host_else_the_extractors_own():
+    class Imprints(Plain):
+        PUBLISHER = "house"
+        PUBLISHERS = {"a.example.com": "a"}  # noqa: RUF012
+
+    assert Imprints.publisher("https://a.example.com/ep/1") == "a"
+    assert Imprints.publisher("https://example.com/ep/1") == "house"
+    assert Plain.publisher("https://example.com/ep/1") == ""
+
+
 def test_episode_readable_means_it_has_pages():
     assert not Episode(url="u", series_title="s", episode_title="e").readable
     assert Episode(url="u", series_title="s", episode_title="e", pages=(Page(url="p"),)).readable
