@@ -7,6 +7,7 @@ bulk = false                  # whether `-b` is on unless `--no-bulk` is given
 both = false                  # whether `-B` is on unless `--no-both` is given; not with bulk
 format = "jpg"                # what `-F` defaults to: jpg, png or webp
 cbz = false                   # whether `-C` is on unless `--no-cbz` is given
+metadata = false              # whether `-m` is on unless `--no-metadata` is given
 
 [site."shonenjumpplus.com"]   # one GigaViewer site; each has an account of its own
 username = "you@example.com"
@@ -34,7 +35,7 @@ extractor's `CONFIG_KEY`, so a per-host section beats the shared one.
 
 `jm config` writes the file: `init` lays down a commented template, `site`
 asks for an account, and `savedir` / `overwrite` / `bulk` / `both` / `format` /
-`cbz` set the defaults (`bulk` and `both` rule each other out: setting one
+`cbz` / `metadata` set the defaults (`bulk` and `both` rule each other out: setting one
 clears the other).
 `-S`, `jm config patrol` and `jm patrol` keep the `[[patrol]]` entries. The
 writes go through tomlkit so the comments in a hand-edited file survive.
@@ -65,7 +66,7 @@ if TYPE_CHECKING:
 CONFIG_RELPATH = Path("getjmanga") / "config.toml"
 
 #: The top-level keys that stand in for a command line flag.
-Option = Literal["savedir", "overwrite", "bulk", "both", "format", "cbz"]
+Option = Literal["savedir", "overwrite", "bulk", "both", "format", "cbz", "metadata"]
 
 _T = TypeVar("_T", str, bool)
 
@@ -82,6 +83,7 @@ bulk = false
 both = false
 format = "jpg"
 cbz = false
+metadata = false
 
 # targets of `jm patrol`
 # patrol = [
@@ -161,6 +163,8 @@ class Config:
     format: Format | None = None
     #: Whether `-C` is on by default.
     cbz: bool = False
+    #: Whether `-m` is on by default.
+    metadata: bool = False
 
     def credentials(self, extractor: type[Extractor], url: str) -> Credentials | None:
         """The credentials to sign in to `url` with.
@@ -225,6 +229,7 @@ def load_config(path: Path | None = None) -> Config:
         both=both,
         format=cast("Format | None", fmt),
         cbz=_option(data, "cbz", bool, where) or False,
+        metadata=_option(data, "metadata", bool, where) or False,
     )
 
 
@@ -330,7 +335,7 @@ def set_option(name: Option, value: str | bool, path: Path | None = None) -> Pat
     """Write a top-level key, replacing the one already there.
 
     Args:
-        name: `savedir`, `overwrite`, `bulk`, `both`, `format` or `cbz`.
+        name: `savedir`, `overwrite`, `bulk`, `both`, `format`, `cbz` or `metadata`.
         value: A path for `savedir`, kept as given; `jpg`, `png` or `webp` for
             `format`; True or False for the others. Turning `bulk` on turns
             `both` off, and the other way round.
