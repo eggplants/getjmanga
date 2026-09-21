@@ -16,9 +16,9 @@
   <https://github.com/eggplants/getjmanga/pkgs/container/getjmanga>
 )
 
-Retrieve and save images from japanese web comic sites.
+Retrieve and save images from Japanese web comic sites.
 
-_Note: Redistribution of downloaded image data is prohibited. Please keep it to private use._
+_Do not redistribute the downloaded images. Keep them for private use._
 
 ## Supported sites
 
@@ -90,7 +90,7 @@ jm c site piccoma
 jm c savedir ~/manga
 jm c overwrite true
 jm c bulk false
-jm c both true      # -B by default. Turns bulk off, and the other way round
+jm c both true
 
 jm c patrol https://shonenjumpplus.com/episode/13932016480028799982
 jm c patrol -s https://shonenjumpplus.com/
@@ -98,16 +98,24 @@ jm c patrol -s https://shonenjumpplus.com/
 
 ### Patrol
 
-`jm -S` remembers what it downloaded as a `[[patrol]]` entry in the config file,
-and `jm patrol` / `jm p` goes through them: an episode is followed to the newest
-one and the entry moves along to the first episode still locked (so a wait-to-read
-episode is tried again next time), a series page is listed again, a `-s` page is
-scanned again. Episodes already there are skipped, so only what is new gets
-downloaded. `jm patrol` takes the download options (`-d`, `-o`, `-q`, ...) but no url.
+`jm -S` adds what it downloads to a list of works to watch for new episodes in the config file.
+
+`jm c patrol <url>` adds a url to the list but does not download it.
+
+`jm p` then goes through the list. It skips the episodes that are already saved, so it downloads only what is new.
+
+What `jm p` does with an entry depends on what the entry is:
+
+- For an episode, it follows the next links to the newest episode. The entry
+  then moves to the first episode that is still locked. As a result, a
+  wait-to-read episode gets one more try next time.
+- For a series page, it reads the episode list again.
+- For a page stored with `-s`, it scans the links again.
 
 ```toml
 patrol = [
-  { url = "https://shonenjumpplus.com/episode/13932016480028799982", title = "SPY×FAMILY" },
+  { url = "https://shonenjumpplus.com/episode/13932016480028799982", title = "阿波連さんははかれない" },
+  { url = "https://takecomic.jp/series/3f846451aff2d/1", title = "メイドインアビス" },
   { url = "https://shonenjumpplus.com/", search = true },
   ...
 ]
@@ -119,12 +127,12 @@ patrol = [
 from getjmanga import Downloader, find_extractor
 
 url = "https://takecomic.jp/episodes/74f33031e13cd"
-extractor = find_extractor(url)()      # -> Comici
+extractor = find_extractor(url)() # returns `Comici`
 result = Downloader(extractor, "out").download(url)
 print(result.status, result.save_dir, result.episode.next_url)
 ```
 
-An extractor on its own reads without writing anything:
+An extractor on its own reads the site and writes nothing:
 
 ```python
 from getjmanga import Comici
