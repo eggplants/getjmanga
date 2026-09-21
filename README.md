@@ -69,8 +69,10 @@ jm -u you@example.com https://piccoma.com/web/viewer/8195/1185884
 # every link on a page that some extractor takes
 jm -s https://shonenjumpplus.com/
 
-# numbered pages: 1 to 3, or from 1 on until a page has nothing new
+# numbered pages
+# 1 to 3
 jm -s "https://comic-ryu.jp/series/list/up/[1-3]"
+# from 1 on until a page has nothing to download
 jm -s "https://comic-ryu.jp/series/list/up/[1-]"
 
 # remember the work, then download what is new in every remembered work
