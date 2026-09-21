@@ -22,7 +22,9 @@ _Do not redistribute the downloaded images. Keep them for private use._
 
 ## Supported sites
 
-See [docs/SUPPORTED_SITES.md](docs/SUPPORTED_SITES.md).
+See [docs/SUPPORTED_SITES.md](
+  <https://github.com/eggplants/getjmanga/blob/master/docs/SUPPORTED_SITES.md>
+).
 
 ## Installation
 
@@ -78,7 +80,13 @@ jm patrol
 
 ### Configuration
 
-Use `jm config` / `jm c`.
+Use `jm c`.
+
+Default: `~/.config/getjmanga/config.toml`
+
+Example: [config.example.toml](
+  <https://github.com/eggplants/getjmanga/blob/master/config.example.toml>
+)
 
 ```shellsession
 jm c init
@@ -145,7 +153,9 @@ for url in comici.series_urls("https://takecomic.jp/series/b167ea507d35f"):
 
 ### Writing an extractor
 
-See [docs/ADD_SITE.md](docs/ADD_SITE.md).
+See [docs/ADD_SITE.md](
+  <https://github.com/eggplants/getjmanga/blob/master/docs/ADD_SITE.md>
+).
 
 ## License
 
