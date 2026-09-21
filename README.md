@@ -146,7 +146,7 @@ url = "https://takecomic.jp/episodes/74f33031e13cd"
 extractor = find_extractor(url)() # returns `Comici`
 result = Downloader(extractor, "out", fmt="png", cbz=True).download(url)
 print(result.status, result.save_dir, result.archive, result.episode.next_url)
-print(result.episode.writer, result.episode.publisher)  # what the cbz's ComicInfo.xml credits
+print(result.episode.writer, result.episode.publisher, result.episode.published)  # what the cbz's ComicInfo.xml says
 ```
 
 An extractor on its own reads the site and writes nothing:

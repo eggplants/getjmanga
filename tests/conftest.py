@@ -23,6 +23,7 @@ class FakeResponse:
         status_code=HTTPStatus.OK,
         url=None,
         content_type="text/html; charset=utf-8",
+        headers=None,
     ):
         self.content = content if text is None else text.encode()
         self.text = text if text is not None else content.decode(errors="replace")
@@ -31,7 +32,7 @@ class FakeResponse:
         self.is_success = self.status_code < HTTPStatus.BAD_REQUEST
         # None means "wherever it was asked for"; a value stands for a redirect.
         self.url = url
-        self.headers = {"content-type": content_type}
+        self.headers = {"content-type": content_type, **(headers or {})}
 
     def raise_for_status(self):
         if not self.is_success:
@@ -55,6 +56,7 @@ class FakeSession(Client):
         super().__init__()
         self.routes = routes
         self.calls = []
+        self.heads = []
         self.params_seen = []
         self.headers_seen = []
         self.posts = []
@@ -65,6 +67,18 @@ class FakeSession(Client):
         self.params_seen.append(kwargs.get("params"))
         self.headers_seen.append(kwargs.get("headers") or {})
         return self._route(url)
+
+    def head(self, url, **kwargs):
+        """Answer a HEAD like a GET, noted in `heads` rather than `calls`.
+
+        An unrouted URL is a 404: a HEAD only ever asks for an optional header,
+        so a script need not route the image just to read the episode.
+        """
+        self.heads.append((url, kwargs.get("headers") or {}))
+        try:
+            return self._route(url)
+        except AssertionError:
+            return FakeResponse(status_code=HTTPStatus.NOT_FOUND, url=url)
 
     def post(self, url, data=None, json=None, content=None, **_kwargs):
         body = data if data is not None else json
@@ -117,6 +131,12 @@ def fake_response():
 @pytest.fixture
 def fake_session():
     return FakeSession
+
+
+@pytest.fixture
+def uploaded():
+    """Headers of a page image uploaded on 2025-08-21 in Japan, for a site dated by `_dated_by_upload`."""
+    return {"last-modified": "Thu, 21 Aug 2025 08:16:41 GMT"}
 
 
 @pytest.fixture(autouse=True)

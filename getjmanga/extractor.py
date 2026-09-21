@@ -8,8 +8,11 @@ overrides only when it needs to.
 
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from datetime import date, datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from io import BytesIO
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 from urllib.parse import urlparse
@@ -25,6 +28,63 @@ if TYPE_CHECKING:
     from httpx import Client, Response
 
 T = TypeVar("T")
+
+#: The sites' own clock: a date is the day it was in Japan.
+JST = timezone(timedelta(hours=9), "JST")
+#: `2026年9月21日`, `2026/09/21`, `2026-09-21`, `2026.9.21`, with or without the time after.
+_DATE = re.compile(r"(?P<year>\d{4})[年/.\-](?P<month>\d{1,2})[月/.\-](?P<day>\d{1,2})")
+#: An epoch in milliseconds rather than seconds, going by its size.
+_EPOCH_MS = 10**11
+
+
+def published_on(value: object) -> date | None:
+    """The day, in Japan, a site's timestamp falls on.
+
+    Args:
+        value: What the site said: an ISO 8601 string (`2026-09-20T15:00:00Z`,
+            an offset, or none -- then taken as JST), an HTTP date
+            (`Thu, 21 Aug 2025 08:16:41 GMT`), a date written `2026/09/21`,
+            `2026-09-21`, `2026.9.21` or `2026年9月21日` (anything after the
+            day is ignored), or an epoch in seconds or milliseconds.
+
+    Returns:
+        The date, or None when `value` is empty or says no date.
+    """
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int | float):
+        return _epoch_day(value)
+    text = str(value).strip()
+    try:
+        moment = datetime.fromisoformat(text)
+    except ValueError:
+        return _http_day(text) or _written_day(text)
+    return (moment if moment.tzinfo is None else moment.astimezone(JST)).date()
+
+
+def _http_day(text: str) -> date | None:
+    try:
+        moment = parsedate_to_datetime(text)
+    except (TypeError, ValueError):
+        return None
+    return (moment if moment.tzinfo is None else moment.astimezone(JST)).date()
+
+
+def _epoch_day(value: float) -> date | None:
+    if value <= 0:
+        return None
+    seconds = value / 1000 if value >= _EPOCH_MS else value
+    return datetime.fromtimestamp(seconds, tz=JST).date()
+
+
+def _written_day(text: str) -> date | None:
+    match = _DATE.search(text)
+    if match is None:
+        return None
+    try:
+        return date(int(match["year"]), int(match["month"]), int(match["day"]))
+    except ValueError:
+        return None
 
 
 def neighbours(items: Sequence[T], current: T) -> tuple[T | None, T | None]:
@@ -80,6 +140,9 @@ class Episode:
     writer: str = ""
     #: Who publishes the work: what the site says, else the site's own publisher.
     publisher: str = ""
+    #: The day the episode came out, in Japan -- or, on a site that never says,
+    #: the day its first page was last uploaded. None when neither is known.
+    published: date | None = None
 
     @property
     def readable(self) -> bool:
@@ -286,6 +349,32 @@ class Extractor(ABC):
         """
         res = self._get(url, headers=headers, timeout=self.IMAGE_TIMEOUT)
         return Image.open(BytesIO(res.content))
+
+    def _dated_by_upload(self, episode: Episode) -> Episode:
+        """The episode, dated by when its first page was uploaded.
+
+        For a site that never says when an episode came out: the page image's
+        `Last-Modified` header, read with one HEAD request that carries the
+        episode as its Referer the way `image()` does. The upload usually
+        precedes the release by days, so the day is a floor, not the date.
+
+        Args:
+            episode: The episode as read off the site, undated.
+
+        Returns:
+            The episode with `published` set; unchanged when it has no pages
+            or the server sends no such header.
+        """
+        if not episode.pages:
+            return episode
+        res = self._session.head(
+            episode.pages[0].url,
+            headers={**self.HEADERS, "Referer": episode.url},
+            follow_redirects=True,
+            timeout=self.TIMEOUT,
+        )
+        uploaded = published_on(res.headers.get("last-modified")) if res.is_success else None
+        return replace(episode, published=uploaded) if uploaded else episode
 
     def _cookie(self, name: str, host: str) -> str | None:
         """The value of the session's cookie `name` that applies to `host`.

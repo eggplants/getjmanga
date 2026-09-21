@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, get_args
 from urllib.parse import urlparse
 
-from cbz import ComicInfo, PageInfo
+from cbz import ComicInfo, Manga, PageInfo
 from cbz import Format as ComicFormat
 from pathvalidate import sanitize_filename
 from rich.progress import (
@@ -115,7 +115,8 @@ class Downloader:
             save_dir.mkdir(parents=True, exist_ok=True)
             if self.save_metadata:
                 (save_dir / "metadata.json").write_text(
-                    json.dumps(asdict(episode), indent=4, ensure_ascii=False),
+                    # `default` is for the date; everything else the extractors hand over is plain JSON.
+                    json.dumps(asdict(episode), indent=4, ensure_ascii=False, default=str),
                     encoding="utf-8",
                 )
             self._save_pages(episode, save_dir)
@@ -158,13 +159,18 @@ class Downloader:
     def _pack(episode: Episode, save_dir: Path, archive: Path) -> None:
         """Every page image in `save_dir`, as it is, into `archive` with a `ComicInfo.xml`."""
         files = sorted(path for path in save_dir.iterdir() if path.suffix.lower() in _SUFFIXES)
+        published = episode.published
         comic = ComicInfo.from_pages(
             [PageInfo.load(path) for path in files],
             title=episode.episode_title,
             series=episode.series_title,
             writer=episode.writer,
             publisher=episode.publisher,
+            year=published.year if published else None,
+            month=published.month if published else None,
+            day=published.day if published else None,
             web=episode.url,
+            manga=Manga.YES,
             format=ComicFormat.WEB_COMIC,
             language_iso="ja",
         )

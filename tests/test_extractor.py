@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+from datetime import date
 from io import BytesIO
 
 import pytest
@@ -7,7 +9,7 @@ from httpx import HTTPStatusError
 from PIL import Image
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 
 
 class Plain(Extractor):
@@ -83,6 +85,51 @@ def test_publisher_is_per_host_else_the_extractors_own():
     assert Imprints.publisher("https://a.example.com/ep/1") == "a"
     assert Imprints.publisher("https://example.com/ep/1") == "house"
     assert Plain.publisher("https://example.com/ep/1") == ""
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("2026-09-20T15:00:00Z", date(2026, 9, 21)),  # midnight in Japan, the day before in UTC
+        ("2026-09-21T00:00:00+09:00", date(2026, 9, 21)),
+        ("2026-09-21T23:30:00", date(2026, 9, 21)),  # no offset: the site's own clock
+        ("2026-09-21", date(2026, 9, 21)),
+        ("2026/09/21", date(2026, 9, 21)),
+        ("2026.9.21", date(2026, 9, 21)),
+        ("2026年9月21日 00:00", date(2026, 9, 21)),
+        ("Sat, 20 Sep 2026 15:00:00 GMT", date(2026, 9, 21)),  # an HTTP date, UTC again
+        ("公開日: 2026/9/21", date(2026, 9, 21)),
+        (1789995600, date(2026, 9, 21)),  # epoch seconds
+        (1789995600000, date(2026, 9, 21)),  # epoch milliseconds
+        ("", None),
+        (None, None),
+        (0, None),
+        ("2026-13-45", None),
+        ("soon", None),
+    ],
+)
+def test_published_on_reads_what_the_sites_write(value, expected):
+    assert published_on(value) == expected
+
+
+def test_dated_by_upload_reads_the_last_modified_header(fake_session, fake_response):
+    session = fake_session(
+        {"cdn.example": fake_response(b"", headers={"last-modified": "Thu, 21 Aug 2025 08:16:41 GMT"})}
+    )
+    plain = Plain(session)
+    episode = plain._dated_by_upload(plain.episode("https://example.com/ep/1"))
+
+    assert episode.published == date(2025, 8, 21)
+    assert session.heads == [(episode.pages[0].url, {**Plain.HEADERS, "Referer": "https://example.com/ep/1"})]
+
+
+def test_dated_by_upload_leaves_the_episode_without_the_header(fake_session, fake_response):
+    plain = Plain(fake_session({"cdn.example": fake_response(b"")}))
+    assert plain._dated_by_upload(plain.episode("https://example.com/ep/1")).published is None
+
+    plain = Plain(fake_session({}))  # the HEAD is a 404
+    assert plain._dated_by_upload(plain.episode("https://example.com/ep/1")).published is None
+    assert plain._dated_by_upload(replace(plain.episode("https://example.com/ep/1"), pages=())).published is None
 
 
 def test_episode_readable_means_it_has_pages():

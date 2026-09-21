@@ -166,6 +166,7 @@ class Example(Extractor):
             metadata=raw_json,          # whatever the site said; written by --metadata
             writer=credits,             # `名前 (役割), 名前 (役割)` as the site credits the work; "" when it does not
             publisher=self.PUBLISHER,   # or what the page names, on a site that carries several publishers
+            published=published_on(released),  # the day it came out, from whatever the site writes; None when it does not
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -206,6 +207,14 @@ ways the offline tests will not catch.
   the bare name otherwise; a site that writes the credits as one line keeps
   that line. `-C` writes `writer` and `publisher` into the archive's
   `ComicInfo.xml`, so a work page read only for them is read once per work.
+- **`published` is a `date`, in Japan.** Hand `published_on()` whatever the
+  site writes -- an ISO timestamp, `2026/09/21`, `2026年9月21日`, an epoch --
+  and it turns it into the day it was in JST (`2026-09-20T15:00:00Z` is the
+  21st). `-C` writes it as the archive's Year / Month / Day. A site that
+  never says when an episode came out returns
+  `self._dated_by_upload(Episode(...))` instead: one HEAD on the first page
+  image, whose `Last-Modified` is the day it was uploaded -- close to the
+  release, never after it. Skip it where the CDN sends no such header.
 - **`suitable()` is cheap and offline.** It runs against every URL on the
   command line for every extractor; a regex on the URL, never a request.
 - **`series_urls()` returns episode URLs `episode()` accepts**, deduplicated,
