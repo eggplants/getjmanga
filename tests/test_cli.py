@@ -789,6 +789,55 @@ def test_config_refuses_a_broken_file(isolated_config, capsys):
     assert "not valid TOML" in capsys.readouterr().err
 
 
+def test_config_check_passes_a_sound_file(isolated_config, tmp_path, capsys):
+    write_config(
+        isolated_config,
+        f'savedir = "{tmp_path}"\nbulk = true\n[site.piccoma]\nusername = "u"\n'
+        '[[patrol]]\nurl = "https://mangabu.jp/episodes/1"\n[[patrol]]\nurl = "https://example.com/"\nsearch = true\n',
+    )
+    main(["c", "check"])
+    out, err = capsys.readouterr()
+    assert out == f"ok: {isolated_config} (1 sites, 2 patrol entries)\n"
+    assert err == ""
+
+
+def test_config_check_points_out_what_nothing_would_act_on(isolated_config, tmp_path, capsys):
+    write_config(
+        isolated_config,
+        f'save_dir = "x"\nsavedir = "{tmp_path / "file"}"\n[site."example.com"]\nusername = "u"\n'
+        '[[patrol]]\nurl = "https://mangabu.jp/episodes/1"\n[[patrol]]\nurl = "https://mangabu.jp/episodes/1"\n'
+        '[[patrol]]\nurl = "https://example.com/nothing"\n',
+    )
+    (tmp_path / "file").touch()
+    with pytest.raises(SystemExit) as excinfo:
+        main(["c", "check"])
+    assert excinfo.value.code == 1
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert [line.removeprefix(f"{isolated_config}: ") for line in err.splitlines()] == [
+        "save_dir: nothing reads it; the keys are savedir, overwrite, bulk, both, format, cbz, metadata, site, patrol.",
+        f"savedir: {tmp_path / 'file'} is not a directory.",
+        "[site.example.com]: no extractor reads it; see `getjmanga --list-extractors`.",
+        "[[patrol]] https://mangabu.jp/episodes/1: listed twice.",
+        "[[patrol]] https://example.com/nothing: no extractor takes it; see `getjmanga --list-extractors`.",
+    ]
+
+
+def test_config_check_wants_a_file(isolated_config, capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        main(["c", "check"])
+    assert excinfo.value.code == 1
+    assert f"{isolated_config} does not exist" in capsys.readouterr().err
+
+
+def test_config_check_refuses_a_broken_file(isolated_config, capsys):
+    write_config(isolated_config, "bulk = true\nboth = true\n")
+    with pytest.raises(SystemExit) as excinfo:
+        main(["c", "check"])
+    assert excinfo.value.code == 1
+    assert "bulk and both cannot both be true" in capsys.readouterr().err
+
+
 # --- -S and jm patrol ---------------------------------------------------------------------
 
 

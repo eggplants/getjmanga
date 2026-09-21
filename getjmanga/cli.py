@@ -21,6 +21,7 @@ from httpx2 import HTTPError
 
 from . import __version__
 from .config import (
+    KEYS,
     Config,
     Credentials,
     Work,
@@ -251,6 +252,7 @@ def parse_config_args(args: list[str]) -> Namespace:
     patrol = commands.add_parser("patrol", help="add a url for `getjmanga patrol`, without downloading it now")
     patrol.add_argument("url", help="an episode or series url, whose title is read from the site, or a page with -s")
     patrol.add_argument("-s", "--search", action="store_true", help="a web page to download the links of")
+    commands.add_parser("check", help="read the file back and point out what nothing would act on")
     if not args:
         parser.print_help()
         raise SystemExit(0)
@@ -265,6 +267,57 @@ def known_site_keys() -> set[str]:
         if extractor.CONFIG_KEY:
             keys.add(extractor.CONFIG_KEY)
     return keys
+
+
+def check_config(config: Config) -> list[str]:
+    """What in the config file nothing would act on, or would fail on.
+
+    `load_config` has already refused what does not parse; this is the rest: a
+    key nothing reads, a `savedir` that is not a directory, a `[site.<key>]` no
+    extractor reads, a `[[patrol]]` url no extractor takes or that is listed twice.
+
+    Args:
+        config: The config file, as `load_config` read it.
+
+    Returns:
+        One line per problem, in file order; empty when there is none.
+    """
+    problems = [f"{key}: nothing reads it; the keys are {', '.join(KEYS)}." for key in config.unknown]
+    if config.savedir is not None and config.savedir.exists() and not config.savedir.is_dir():
+        problems.append(f"savedir: {config.savedir} is not a directory.")
+    sites = known_site_keys()
+    problems.extend(
+        f"[site.{key}]: no extractor reads it; see `getjmanga --list-extractors`."
+        for key in config.sites
+        if key not in sites
+    )
+    seen: set[str] = set()
+    for work in config.patrol:
+        if work.url in seen:
+            problems.append(f"[[patrol]] {work.url}: listed twice.")
+        seen.add(work.url)
+        if not work.search and not any(extractor.suitable(work.url) for extractor in EXTRACTORS):
+            problems.append(f"[[patrol]] {work.url}: no extractor takes it; see `getjmanga --list-extractors`.")
+    return problems
+
+
+def check_main(path: Path | None) -> None:
+    """Run `jm config check`: one line per problem on stderr, or an `ok:` line.
+
+    Raises:
+        SystemExit: The file does not exist, or `check_config` found something.
+    """
+    config = load_config(path)
+    if config.path is None:
+        where = path if path is not None else default_config_path()
+        print(f"error: {where} does not exist; `getjmanga config init` creates it.", file=sys.stderr)
+        raise SystemExit(1)
+    problems = check_config(config)
+    for problem in problems:
+        print(f"{config.path}: {problem}", file=sys.stderr)
+    if problems:
+        raise SystemExit(1)
+    print(f"ok: {config.path} ({len(config.sites)} sites, {len(config.patrol)} patrol entries)")
 
 
 def ask_credentials(key: str) -> Credentials:
@@ -293,14 +346,17 @@ def config_main(args: list[str]) -> None:
     """Run `jm config ...`.
 
     Raises:
-        SystemExit: The file could not be written, no username was typed, or
-            the site `patrol` reads a title from could not be reached.
+        SystemExit: The file could not be written, no username was typed, the
+            site `patrol` reads a title from could not be reached, or `check`
+            found something wrong.
     """
     parsed = parse_config_args(args)
     try:
         if parsed.command == "init":
             path = init_config(parsed.config)
             print("created:", path)
+        elif parsed.command == "check":
+            check_main(parsed.config)
         elif parsed.command == "site":
             path = set_site(parsed.key, ask_credentials(parsed.key), parsed.config)
             print(f"saved: [site.{parsed.key}] in {path}")

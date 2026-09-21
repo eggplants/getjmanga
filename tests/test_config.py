@@ -111,9 +111,11 @@ def test_load_config_reads_the_patrol_entries(tmp_path):
     assert load_config(path).patrol == (Work("https://a/1", "A"), Work("https://b/", search=True))
 
 
-def test_load_config_ignores_other_tables(tmp_path):
-    path = write(tmp_path / "c.toml", '[other]\nx = 1\n[site.piccoma]\nusername = "u"\n')
-    assert list(load_config(path).sites) == ["piccoma"]
+def test_load_config_ignores_other_tables_but_remembers_their_keys(tmp_path):
+    path = write(tmp_path / "c.toml", 'save_dir = "x"\n[other]\nx = 1\n[site.piccoma]\nusername = "u"\n')
+    config = load_config(path)
+    assert list(config.sites) == ["piccoma"]
+    assert config.unknown == ("save_dir", "other")
 
 
 def test_load_config_rejects_bad_toml(tmp_path):

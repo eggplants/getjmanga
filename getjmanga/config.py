@@ -36,7 +36,9 @@ extractor's `CONFIG_KEY`, so a per-host section beats the shared one.
 `jm config` writes the file: `init` lays down a commented template, `site`
 asks for an account, and `savedir` / `overwrite` / `bulk` / `both` / `format` /
 `cbz` / `metadata` set the defaults (`bulk` and `both` rule each other out: setting one
-clears the other).
+clears the other). `check` reads it back and points out what nothing would act
+on: a key nothing reads, a `savedir` that is not a directory, a `[site.<key>]`
+no extractor reads, a `[[patrol]]` url no extractor takes.
 `-S`, `jm config patrol` and `jm patrol` keep the `[[patrol]]` entries. The
 writes go through tomlkit so the comments in a hand-edited file survive.
 """
@@ -67,6 +69,9 @@ CONFIG_RELPATH = Path("getjmanga") / "config.toml"
 
 #: The top-level keys that stand in for a command line flag.
 Option = Literal["savedir", "overwrite", "bulk", "both", "format", "cbz", "metadata"]
+
+#: Every top-level key something reads; anything else is a typo, for `jm config check` to point out.
+KEYS: tuple[str, ...] = (*get_args(Option), "site", "patrol")
 
 _T = TypeVar("_T", str, bool)
 
@@ -165,6 +170,8 @@ class Config:
     cbz: bool = False
     #: Whether `-m` is on by default.
     metadata: bool = False
+    #: The top-level keys nothing reads, in file order, for `jm config check` to point out.
+    unknown: tuple[str, ...] = ()
 
     def credentials(self, extractor: type[Extractor], url: str) -> Credentials | None:
         """The credentials to sign in to `url` with.
@@ -230,6 +237,7 @@ def load_config(path: Path | None = None) -> Config:
         format=cast("Format | None", fmt),
         cbz=_option(data, "cbz", bool, where) or False,
         metadata=_option(data, "metadata", bool, where) or False,
+        unknown=tuple(key for key in data if key not in KEYS),
     )
 
 

@@ -127,6 +127,10 @@ jm c metadata true
 
 jm c patrol https://shonenjumpplus.com/episode/13932016480028799982
 jm c patrol -s https://shonenjumpplus.com/
+
+# read the file back: a key nothing reads, a savedir that is not a directory,
+# a [site] no extractor reads, a patrol url no extractor takes or listed twice
+jm c check
 ```
 
 ## Patrol
