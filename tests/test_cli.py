@@ -18,16 +18,17 @@ def test_parse_args_defaults():
     parsed = parse_args(["https://mangabu.jp/episodes/1"])
     assert parsed.urls == ["https://mangabu.jp/episodes/1"]
     assert parsed.extractor is None
-    # -b, -d and -o are left to the config file until `apply_config` settles them.
+    # -b, -C, -d, -F and -o are left to the config file until `apply_config` settles them.
     assert (parsed.bulk, parsed.savedir, parsed.overwrite) == (None, None, None)
     assert (parsed.first, parsed.metadata, parsed.quiet) == (False, False, False)
-    assert (parsed.format, parsed.cbz) == ("jpg", False)
+    assert (parsed.format, parsed.cbz) == (None, None)
 
 
 def test_apply_config_fills_in_what_the_command_line_left_out():
     parsed = parse_args(["https://mangabu.jp/episodes/1"])
-    apply_config(parsed, Config(savedir=Path("/manga"), overwrite=True, bulk=True))
+    apply_config(parsed, Config(savedir=Path("/manga"), overwrite=True, bulk=True, format="webp", cbz=True))
     assert (parsed.savedir, parsed.overwrite, parsed.bulk, parsed.both) == (Path("/manga"), True, True, False)
+    assert (parsed.format, parsed.cbz) == ("webp", True)
 
 
 def test_bulk_and_both_rule_each_other_out(capsys):
@@ -61,12 +62,16 @@ def test_apply_config_falls_back_to_the_built_in_defaults():
     parsed = parse_args(["https://mangabu.jp/episodes/1"])
     apply_config(parsed, Config())
     assert (parsed.savedir, parsed.overwrite, parsed.bulk) == (".", False, False)
+    assert (parsed.format, parsed.cbz) == ("jpg", False)
 
 
 def test_the_command_line_beats_the_config_defaults():
-    parsed = parse_args(["-d", "here", "--no-overwrite", "--no-bulk", "https://mangabu.jp/episodes/1"])
-    apply_config(parsed, Config(savedir=Path("/manga"), overwrite=True, bulk=True))
+    parsed = parse_args(
+        ["-d", "here", "--no-overwrite", "--no-bulk", "-F", "png", "--no-cbz", "https://mangabu.jp/episodes/1"]
+    )
+    apply_config(parsed, Config(savedir=Path("/manga"), overwrite=True, bulk=True, format="webp", cbz=True))
     assert (parsed.savedir, parsed.overwrite, parsed.bulk) == ("here", False, False)
+    assert (parsed.format, parsed.cbz) == ("png", False)
 
 
 def test_parse_args_takes_several_urls():
@@ -531,6 +536,13 @@ def test_the_config_file_sets_overwrite(recording, isolated_config, tmp_path):
     assert recording.instances[0].images == 1
 
 
+def test_the_config_file_sets_format_and_cbz(recording, isolated_config, tmp_path):
+    write_config(isolated_config, 'format = "webp"\ncbz = true\n')
+    main(["https://mangabu.jp/episodes/0"])
+    assert (tmp_path / "mangabu.jp" / "S" / "ep1" / "0.webp").exists()
+    assert (tmp_path / "mangabu.jp" / "S" / "_cbz" / "ep1.cbz").exists()
+
+
 def test_no_bulk_turns_the_config_default_off(recording, isolated_config):
     write_config(isolated_config, "bulk = true\n")
     main(["--no-bulk", "https://mangabu.jp/episodes/0"])
@@ -678,12 +690,21 @@ def test_config_savedir_expands_the_home_directory(isolated_config):
 
 @pytest.mark.parametrize(
     ("name", "value", "expected"),
-    [("overwrite", "true", True), ("bulk", "false", False), ("both", "true", True)],
+    [("overwrite", "true", True), ("bulk", "false", False), ("both", "true", True), ("cbz", "true", True)],
 )
 def test_config_flags_take_true_or_false(isolated_config, name, value, expected, capsys):
     main(["c", name, value])
     assert getattr(load_config(), name) is expected
     assert f"saved: {name}" in capsys.readouterr().out
+
+
+def test_config_format_takes_an_image_format(isolated_config, capsys):
+    main(["c", "format", "webp"])
+    assert load_config().format == "webp"
+    assert "saved: format" in capsys.readouterr().out
+    with pytest.raises(SystemExit) as excinfo:
+        main(["c", "format", "gif"])
+    assert excinfo.value.code == 2
 
 
 def test_config_bulk_and_both_turn_each_other_off(isolated_config):

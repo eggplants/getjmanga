@@ -131,7 +131,7 @@ def parse_args(args: list[str] | None = None, *, patrol: bool = False) -> Namesp
             action="store_true",
             help="remember each url in the config file, for `%(prog)s patrol` to download what is new",
         )
-        # `-b`, `-B`, `-d` and `-o` default to None so that the config file can fill them in.
+        # `-b`, `-B`, `-C`, `-d`, `-F` and `-o` default to None so that the config file can fill them in.
         chain = parser.add_mutually_exclusive_group()
         chain.add_argument("-b", "--bulk", action=BooleanOptionalAction, help="follow every next episode")
         chain.add_argument("-B", "--both", action=BooleanOptionalAction, help="follow every previous episode too")
@@ -143,13 +143,12 @@ def parse_args(args: list[str] | None = None, *, patrol: bool = False) -> Namesp
         "-F",
         "--format",
         choices=get_args(Format),
-        default="jpg",
-        help="image format to save each page as",
+        help="image format to save each page as (default: the config's format, else jpg)",
     )
     parser.add_argument(
         "-C",
         "--cbz",
-        action="store_true",
+        action=BooleanOptionalAction,
         help="also pack the saved pages into <series>/_cbz/<episode>.cbz (pages already saved are packed as they are)",
     )
     parser.add_argument("-o", "--overwrite", action=BooleanOptionalAction, help="download again if it exists")
@@ -194,6 +193,10 @@ def apply_config(parsed: Namespace, config: Config) -> None:
         parsed.savedir = config.savedir if config.savedir is not None else "."
     if parsed.overwrite is None:
         parsed.overwrite = config.overwrite
+    if parsed.format is None:
+        parsed.format = config.format if config.format is not None else "jpg"
+    if parsed.cbz is None:
+        parsed.cbz = config.cbz
     # `-b` and `-B` rule each other out: one given on the command line (or turned
     # off there) settles both; otherwise the config file does, which never has both on.
     if parsed.bulk is not None:
@@ -230,6 +233,10 @@ def parse_config_args(args: list[str]) -> Namespace:
     for name, flag in (("overwrite", "-o"), ("bulk", "-b (turns both off)"), ("both", "-B (turns bulk off)")):
         setter = commands.add_parser(name, help=f"set whether {flag} is on by default")
         setter.add_argument("value", choices=("true", "false"))
+    fmt = commands.add_parser("format", help="set what -F defaults to")
+    fmt.add_argument("value", choices=get_args(Format), help="image format to save each page as")
+    cbz = commands.add_parser("cbz", help="set whether -C is on by default")
+    cbz.add_argument("value", choices=("true", "false"))
     patrol = commands.add_parser("patrol", help="add a url for `getjmanga patrol`, without downloading it now")
     patrol.add_argument("url", help="an episode or series url, whose title is read from the site, or a page with -s")
     patrol.add_argument("-s", "--search", action="store_true", help="a web page to download the links of")
@@ -289,6 +296,9 @@ def config_main(args: list[str]) -> None:
         elif parsed.command == "savedir":
             path = set_option("savedir", str(parsed.dir.expanduser().absolute()), parsed.config)
             print(f"saved: savedir in {path}")
+        elif parsed.command == "format":
+            path = set_option("format", parsed.value, parsed.config)
+            print(f"saved: format in {path}")
         elif parsed.command == "patrol":
             work = Work(url=parsed.url, search=True)
             if not parsed.search:

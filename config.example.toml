@@ -5,6 +5,8 @@ savedir = "~/Pictures/getjmanga"
 overwrite = false
 bulk = false
 both = true
+format = "jpg"
+cbz = false
 
 # targets of `jm patrol`
 # patrol = [
