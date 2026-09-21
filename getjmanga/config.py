@@ -5,6 +5,8 @@ savedir = "~/manga"           # what `-d` defaults to
 overwrite = false             # whether `-o` is on unless `--no-overwrite` is given
 bulk = false                  # whether `-b` is on unless `--no-bulk` is given
 both = false                  # whether `-B` is on unless `--no-both` is given; not with bulk
+format = "jpg"                # what `-F` defaults to: jpg, png or webp
+cbz = false                   # whether `-C` is on unless `--no-cbz` is given
 
 [site."shonenjumpplus.com"]   # one GigaViewer site; each has an account of its own
 username = "you@example.com"
@@ -31,8 +33,9 @@ A `[site.<key>]` section is looked up by the URL's hostname first, then by the
 extractor's `CONFIG_KEY`, so a per-host section beats the shared one.
 
 `jm config` writes the file: `init` lays down a commented template, `site`
-asks for an account, and `savedir` / `overwrite` / `bulk` / `both` set the
-defaults (`bulk` and `both` rule each other out: setting one clears the other).
+asks for an account, and `savedir` / `overwrite` / `bulk` / `both` / `format` /
+`cbz` set the defaults (`bulk` and `both` rule each other out: setting one
+clears the other).
 `-S`, `jm config patrol` and `jm patrol` keep the `[[patrol]]` entries. The
 writes go through tomlkit so the comments in a hand-edited file survive.
 """
@@ -43,13 +46,14 @@ import os
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, TypeVar
+from typing import TYPE_CHECKING, Literal, TypeVar, cast, get_args
 from urllib.parse import urlparse
 
 import tomlkit
 from tomlkit.exceptions import ParseError
 from tomlkit.items import AoT, Array, InlineTable, Table
 
+from .downloader import Format
 from .errors import GetjmangaError
 
 if TYPE_CHECKING:
@@ -61,7 +65,7 @@ if TYPE_CHECKING:
 CONFIG_RELPATH = Path("getjmanga") / "config.toml"
 
 #: The top-level keys that stand in for a command line flag.
-Option = Literal["savedir", "overwrite", "bulk", "both"]
+Option = Literal["savedir", "overwrite", "bulk", "both", "format", "cbz"]
 
 _T = TypeVar("_T", str, bool)
 
@@ -76,6 +80,8 @@ savedir = "."
 overwrite = false
 bulk = false
 both = false
+format = "jpg"
+cbz = false
 
 # targets of `jm patrol`
 # patrol = [
@@ -151,6 +157,10 @@ class Config:
     bulk: bool = False
     #: Whether `-B` is on by default; never together with `bulk`.
     both: bool = False
+    #: What `-F` defaults to; None leaves it to the command line.
+    format: Format | None = None
+    #: Whether `-C` is on by default.
+    cbz: bool = False
 
     def credentials(self, extractor: type[Extractor], url: str) -> Credentials | None:
         """The credentials to sign in to `url` with.
@@ -197,6 +207,10 @@ def load_config(path: Path | None = None) -> Config:
         msg = f"{where} is not valid TOML: {exc}"
         raise ConfigError(msg) from exc
     savedir = _option(data, "savedir", str, where)
+    fmt = _option(data, "format", str, where)
+    if fmt is not None and fmt not in get_args(Format):
+        msg = f"{where}: format must be one of {', '.join(get_args(Format))}."
+        raise ConfigError(msg)
     bulk, both = _option(data, "bulk", bool, where) or False, _option(data, "both", bool, where) or False
     if bulk and both:
         msg = f"{where}: bulk and both cannot both be true; -b follows the next episodes, -B the previous ones too."
@@ -209,6 +223,8 @@ def load_config(path: Path | None = None) -> Config:
         overwrite=_option(data, "overwrite", bool, where) or False,
         bulk=bulk,
         both=both,
+        format=cast("Format | None", fmt),
+        cbz=_option(data, "cbz", bool, where) or False,
     )
 
 
@@ -314,9 +330,10 @@ def set_option(name: Option, value: str | bool, path: Path | None = None) -> Pat
     """Write a top-level key, replacing the one already there.
 
     Args:
-        name: `savedir`, `overwrite`, `bulk` or `both`.
-        value: A path for `savedir`, kept as given; True or False for the others.
-            Turning `bulk` on turns `both` off, and the other way round.
+        name: `savedir`, `overwrite`, `bulk`, `both`, `format` or `cbz`.
+        value: A path for `savedir`, kept as given; `jpg`, `png` or `webp` for
+            `format`; True or False for the others. Turning `bulk` on turns
+            `both` off, and the other way round.
         path: The file to edit instead of `default_config_path()`.
 
     Returns:

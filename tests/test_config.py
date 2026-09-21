@@ -82,9 +82,12 @@ def test_load_config_is_empty_without_a_file(tmp_path):
 
 
 def test_load_config_reads_the_defaults(tmp_path):
-    path = write(tmp_path / "c.toml", 'savedir = "~/manga"\noverwrite = true\nbulk = true\n')
+    path = write(
+        tmp_path / "c.toml", 'savedir = "~/manga"\noverwrite = true\nbulk = true\nformat = "png"\ncbz = true\n'
+    )
     config = load_config(path)
     assert (config.savedir, config.overwrite, config.bulk, config.both) == (Path.home() / "manga", True, True, False)
+    assert (config.format, config.cbz) == ("png", True)
 
 
 def test_load_config_refuses_bulk_and_both_together(tmp_path):
@@ -96,6 +99,7 @@ def test_load_config_refuses_bulk_and_both_together(tmp_path):
 def test_load_config_leaves_the_defaults_alone_when_unset(tmp_path):
     config = load_config(write(tmp_path / "c.toml", ""))
     assert (config.savedir, config.overwrite, config.bulk) == (None, False, False)
+    assert (config.format, config.cbz) == (None, False)
 
 
 def test_load_config_reads_the_patrol_entries(tmp_path):
@@ -134,6 +138,9 @@ def test_load_config_rejects_a_directory(tmp_path):
         ('overwrite = "yes"\n', "overwrite must be a boolean"),
         ("bulk = 1\n", "bulk must be a boolean"),
         ("both = 1\n", "both must be a boolean"),
+        ("format = 1\n", "format must be a string"),
+        ('format = "gif"\n', "format must be one of jpg, png, webp"),
+        ('cbz = "yes"\n', "cbz must be a boolean"),
         ("patrol = 1\n", "must be an array"),
         ("[[patrol]]\ntitle = 'x'\n", "needs a url"),
         ("[[patrol]]\nurl = 'https://a/'\nsearch = 1\n", "search a boolean"),
