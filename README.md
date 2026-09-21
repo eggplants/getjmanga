@@ -10,12 +10,6 @@
   <https://github.com/eggplants/getjmanga/actions/workflows/ci.yml>
 )
 
-[![ghcr size](
-  <https://ghcr-badge.egpl.dev/eggplants/getjmanga/size>
-)](
-  <https://github.com/eggplants/getjmanga/pkgs/container/getjmanga>
-)
-
 Retrieve and save images from Japanese web comic sites.
 
 _Do not redistribute the downloaded images. Keep them for private use._
@@ -42,7 +36,13 @@ pipx install getjmanga
 pip install getjmanga
 ```
 
-### Docker
+## Docker
+
+[![ghcr size](
+  <https://ghcr-badge.egpl.dev/eggplants/getjmanga/size>
+)](
+  <https://github.com/eggplants/getjmanga/pkgs/container/getjmanga>
+)
 
 ```bash
 docker pull ghcr.io/eggplants/getjmanga
@@ -86,7 +86,7 @@ jm -S -b https://shonenjumpplus.com/episode/13932016480028799982
 jm patrol
 ```
 
-### Configuration
+## Configuration
 
 Use `jm c`.
 
@@ -114,7 +114,7 @@ jm c patrol https://shonenjumpplus.com/episode/13932016480028799982
 jm c patrol -s https://shonenjumpplus.com/
 ```
 
-### Patrol
+## Patrol
 
 `jm -S` adds what it downloads to a list of works to watch for new episodes in the config file.
 
@@ -139,6 +139,65 @@ patrol = [
 ]
 ```
 
+### Running every day
+
+`jm p` saves into `savedir` from the config file, which defaults to the current directory,
+so set it first: `jm c savedir ~/manga`. Both cron and systemd run with a minimal `PATH`,
+so use the full path that `command -v jm` prints.
+
+#### cron
+
+`crontab -e`, then:
+
+```crontab
+# every day at 04:00, logging to a file
+0 4 * * * /home/you/.local/bin/jm p >> /home/you/.local/state/getjmanga/patrol.log 2>&1
+
+# log only the skips and the errors
+0 4 * * * /home/you/.local/bin/jm p -q >> /home/you/.local/state/getjmanga/patrol.log 2>&1
+```
+
+#### systemd timer
+
+`~/.config/systemd/user/getjmanga-patrol.service`:
+
+```ini
+[Unit]
+Description=Download what is new in every patrolled work
+
+[Service]
+Type=oneshot
+ExecStart=/home/you/.local/bin/jm p
+```
+
+`~/.config/systemd/user/getjmanga-patrol.timer`:
+
+```ini
+[Unit]
+Description=Run getjmanga-patrol daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+`Persistent=true` runs the job at the next boot when the machine was off at the scheduled time.
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now getjmanga-patrol.timer
+
+# keep the user units running after logout
+loginctl enable-linger "$USER"
+
+# next run, and the output of the last one
+systemctl --user list-timers getjmanga-patrol.timer
+journalctl --user -u getjmanga-patrol.service
+```
+
 ## Library
 
 ```python
@@ -147,9 +206,16 @@ from getjmanga import Downloader, find_extractor
 url = "https://takecomic.jp/episodes/74f33031e13cd"
 extractor = find_extractor(url)() # returns `Comici`
 result = Downloader(extractor, "out", fmt="png", cbz=True).download(url)
-print(result.status, result.save_dir, result.archive, result.episode.next_url)
-print(result.episode.writer, result.episode.publisher)  # what the cbz's ComicInfo.xml says
-print(result.episode.published, result.episode.number)  # the day it came out, and where it stands in the series
+
+result.status
+result.save_dir
+
+result.archive
+result.episode.next_url
+result.episode.writer
+result.episode.publisher
+result.episode.published
+result.episode.number
 ```
 
 An extractor on its own reads the site and writes nothing:
@@ -163,7 +229,7 @@ for url in comici.series_urls("https://takecomic.jp/series/b167ea507d35f"):
     print(episode.episode_title, len(episode.pages), episode.readable)
 ```
 
-### Writing an extractor
+## Writing an extractor
 
 See [docs/ADD_SITE.md](
   <https://github.com/eggplants/getjmanga/blob/master/docs/ADD_SITE.md>
