@@ -186,6 +186,7 @@ class DaysNeo(Extractor):
             writer=str(metadata["author"]),
             publisher=self.PUBLISHER,
             published=published_on(str(metadata["published"])),
+            number=self._listed_number(_work_url(url, match["work"]), episode_url),
         )
 
 

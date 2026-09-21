@@ -130,8 +130,12 @@ LANDING_HTML = """
 
 
 @pytest.fixture
-def client(fake_session):
+def client(fake_session, fake_response):
     def make(routes):
+        # The work page numbers its episodes; another work is unknown, so its episodes go unnumbered.
+        routes = dict(routes)
+        routes.setdefault("/hajisef/", fake_response(text=WORK_HTML))
+        routes.setdefault("yawaspi.com/", fake_response(text="", status_code=HTTPStatus.NOT_FOUND))
         session = fake_session(routes)
         return Yawaspi(session), session
 
@@ -209,7 +213,7 @@ def test_is_series_is_false_for_a_one_shot_and_episode_reuses_the_page(client, f
 def test_the_query_string_is_not_sent(client, fake_response):
     yawaspi, session = client({"/comic/001_001.html": fake_response(text=EPISODE_HTML)})
     yawaspi.episode(f"{EPISODE_URL}?from=top#page3")
-    assert session.calls == [EPISODE_URL]
+    assert session.calls == [EPISODE_URL, WORK_URL]
 
 
 # --- episode --------------------------------------------------------------------------
@@ -232,7 +236,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert episode.readable
     assert episode.metadata["author"] == "ゆりかわ"
     assert (episode.writer, episode.publisher) == ("ゆりかわ", "小学館")
-    assert episode.published == date(2025, 4, 9)
+    assert (episode.published, episode.number) == (date(2025, 4, 9), 1)
     assert episode.metadata["updated"] == "更新日: 2025/4/9"
     assert episode.metadata["prev_url"] is None
     assert episode.metadata["images"] == [page.url for page in episode.pages]

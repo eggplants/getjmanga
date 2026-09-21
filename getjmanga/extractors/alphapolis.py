@@ -25,7 +25,7 @@ from bs4.element import Tag
 from PIL import Image
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, published_on
+from getjmanga.extractor import Episode, Extractor, Page, ordinal, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -352,7 +352,8 @@ class AlphaPolis(Extractor):
         tables = parse_puzzles(str(page.get("placeholder") or ""))
         images = page.get("images") or []
         listed = data.get("episodes") or []
-        prev_url, next_url = _neighbours(url, [urljoin(BASE_URL, str(entry["url"])) for entry in listed])
+        urls = [urljoin(BASE_URL, str(entry["url"])) for entry in listed]
+        prev_url, next_url = _neighbours(url, urls)
         # `upTime`: `2026.08.05更新` on the episode's own row.
         up_time = next((e.get("upTime") for e in listed if urljoin(BASE_URL, str(e.get("url"))) == url), "")
         return Episode(
@@ -362,6 +363,7 @@ class AlphaPolis(Extractor):
             writer=self.work(work_url).writer,
             publisher=self.PUBLISHER,
             published=published_on(up_time),
+            number=_number(url, urls),
             pages=tuple(
                 Page(
                     url=str(image["url"]),
@@ -522,6 +524,7 @@ class AlphaPolis(Extractor):
             metadata={"locked": True},
             writer=work.writer,
             publisher=self.PUBLISHER,
+            number=_number(url, work.urls),
         )
 
 
@@ -576,12 +579,16 @@ def _chapter_entries(chapters: list[Any]) -> Iterator[dict[str, Any]]:
 
 def _neighbours(url: str, urls: list[str] | tuple[str, ...]) -> tuple[str | None, str | None]:
     """The episodes before and after `url` in a work's list, None at either end."""
-    normalised = [candidate.rstrip("/") for candidate in urls]
-    try:
-        position = normalised.index(url.rstrip("/"))
-    except ValueError:
+    number = _number(url, urls)
+    if number is None:
         return None, None
+    position = number - 1
     return urls[position - 1] if position else None, urls[position + 1] if position + 1 < len(urls) else None
+
+
+def _number(url: str, urls: list[str] | tuple[str, ...]) -> int | None:
+    """Where `url` stands in a work's list, counted from 1; None when unlisted."""
+    return ordinal([candidate.rstrip("/") for candidate in urls], url.rstrip("/"))
 
 
 def _signed_in(soup: BeautifulSoup) -> bool:

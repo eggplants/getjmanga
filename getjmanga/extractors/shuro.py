@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -200,7 +200,7 @@ class Shuro(Extractor):
         work_url = urljoin(url, str(work_link["href"])) if isinstance(work_link, Tag) else None
 
         works = parse_manga_data(html)
-        entry, prev_url, next_url = self._locate(url, works)
+        entry, prev_url, next_url, number = self._locate(url, works)
         if not episode_title and entry is not None:
             parts = (str(entry.get("title", "")), str(entry.get("titleSub", "")))
             episode_title = " ".join(part for part in parts if part)
@@ -233,6 +233,7 @@ class Shuro(Extractor):
                 },
                 writer=", ".join(credited),
                 publisher=self.PUBLISHER,
+                number=number,
             )
         )
 
@@ -246,8 +247,10 @@ class Shuro(Extractor):
         return res.text
 
     @staticmethod
-    def _locate(url: str, works: Iterable[dict[str, Any]]) -> tuple[dict[str, Any] | None, str | None, str | None]:
-        """Find `url` in the works' episode listings: its entry and the episodes either side of it."""
+    def _locate(
+        url: str, works: Iterable[dict[str, Any]]
+    ) -> tuple[dict[str, Any] | None, str | None, str | None, int | None]:
+        """Find `url` in the works' episode listings: its entry, the episodes either side of it, and its place."""
         wanted = Shuro._key(url)
         for work in works:
             episodes = [entry for entry in work.get("episodes") or [] if isinstance(entry, dict)]
@@ -259,8 +262,9 @@ class Shuro(Extractor):
                     by_url[wanted],
                     str(by_url[before].get("permalink")) if before else None,
                     str(by_url[after].get("permalink")) if after else None,
+                    ordinal(ordered, wanted),
                 )
-        return None, None, None
+        return None, None, None, None
 
     @staticmethod
     def _page_of(slide: Tag, url: str) -> Page | None:

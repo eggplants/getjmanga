@@ -361,6 +361,7 @@ class Neetsha(Extractor):
                 },
                 writer=story.author,
                 publisher=self.PUBLISHER,
+                number=self._listed_number(work_url(key) or "", key),
             )
         )
 

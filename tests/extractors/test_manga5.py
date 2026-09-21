@@ -402,7 +402,7 @@ def test_episode_reads_a_koma_episode(client):
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == "作品No.1"
     assert (episode.writer, episode.publisher) == ("餅月あんこ", "レベルファイブ")
-    assert episode.published == date(2023, 4, 18)
+    assert (episode.published, episode.number) == (date(2023, 4, 18), 1)
     assert episode.next_url == f"{BASE_URL}/product/00850002"
     assert [page.url for page in episode.pages] == [
         f"{KOMA_BASE}picture/26(01)_001.jpg?{AUTH}",
@@ -513,7 +513,7 @@ def test_refused_license_means_locked_but_keeps_the_viewer_titles(client, fake_r
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == "作品No.1"
     assert (episode.writer, episode.publisher) == ("餅月あんこ", "レベルファイブ")
-    assert episode.published == date(2023, 4, 18)
+    assert (episode.published, episode.number) == (date(2023, 4, 18), 1)
     assert episode.next_url == f"{BASE_URL}/product/00850002"
     assert episode.metadata == {"viewer": VIEWER_DATA, "license": REFUSED_LICENSE}
 

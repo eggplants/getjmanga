@@ -217,8 +217,13 @@ def test_is_series_tells_a_work_page_from_an_episode():
 # --- episodes --------------------------------------------------------------------------
 
 
+def site(fake_session, fake_response, **routes):
+    """A session scripting the given pages and, after them, the work page that numbers the episodes."""
+    return fake_session({**routes, "/product/favorites": fake_response(text=WORK_HTML)})
+
+
 def test_episode_reads_the_titles_the_pages_and_the_next(fake_session, fake_response):
-    session = fake_session({"/story/fv_01": fake_response(text=EPISODE_HTML)})
+    session = site(fake_session, fake_response, **{"/story/fv_01": fake_response(text=EPISODE_HTML)})
     episode = Torch(session).episode(EPISODE_URL)
 
     assert episode.series_title == "フェイバリッツ FAVORITES"
@@ -233,22 +238,26 @@ def test_episode_reads_the_titles_the_pages_and_the_next(fake_session, fake_resp
     ]
     assert all(page.extra == {} for page in episode.pages)
     assert episode.next_url == NEXT_URL
+    assert episode.number == 1
     assert episode.metadata["kind"] == "manga"
     assert episode.metadata["series_url"] == WORK_URL
     assert episode.metadata["slug"] == "fv_01"
-    assert session.calls == [EPISODE_URL]
+    # The episode, then the work page for where the episode stands.
+    assert session.calls == [EPISODE_URL, WORK_URL]
     assert session.headers_seen[0]["User-Agent"].startswith("Mozilla/5.0")
 
 
 def test_episode_is_dated_by_its_first_page_upload(fake_session, fake_response, uploaded):
-    session = fake_session(
-        {"/story/fv_01": fake_response(text=EPISODE_HTML), "fv01_001.jpg": fake_response(b"", headers=uploaded)}
+    session = site(
+        fake_session,
+        fake_response,
+        **{"/story/fv_01": fake_response(text=EPISODE_HTML), "fv01_001.jpg": fake_response(b"", headers=uploaded)},
     )
     assert Torch(session).episode(EPISODE_URL).published == date(2025, 8, 21)
 
 
 def test_episode_at_the_end_of_a_work_has_no_next(fake_session, fake_response):
-    session = fake_session({"/story/fv_13": fake_response(text=LAST_EPISODE_HTML)})
+    session = site(fake_session, fake_response, **{"/story/fv_13": fake_response(text=LAST_EPISODE_HTML)})
     episode = Torch(session).episode("https://to-ti.in/story/fv_13")
 
     assert episode.episode_title == "#13"
@@ -257,11 +266,18 @@ def test_episode_at_the_end_of_a_work_has_no_next(fake_session, fake_response):
 
 
 def test_text_post_has_no_pages_but_still_a_next(fake_session, fake_response):
-    session = fake_session({"/story/making": fake_response(text=TEXT_HTML)})
+    session = fake_session(
+        {
+            "/story/making": fake_response(text=TEXT_HTML),
+            # Its work is not scripted here: the post goes unnumbered.
+            "/product/takahashikun": fake_response(text=NOT_A_PAGE_HTML, status_code=HTTPStatus.NOT_FOUND),
+        }
+    )
     episode = Torch(session).episode("https://to-ti.in/story/making_takahashi_drama")
 
     assert not episode.readable
     assert episode.pages == ()
+    assert episode.number is None
     assert episode.series_title == "自転車屋さんの高橋くん"
     assert episode.episode_title == "ドラマ『自転車屋さんの高橋くん』メイキング"
     assert episode.next_url == "https://to-ti.in/story/takahashi150_ranking"
@@ -353,13 +369,15 @@ def test_series_urls_rejects_an_episode_url(fake_session):
 
 
 def test_download_writes_the_pages(tmp_path, fake_session, fake_response):
-    session = fake_session(
-        {
+    session = site(
+        fake_session,
+        fake_response,
+        **{
             "/story/fv_01": fake_response(text=EPISODE_HTML),
             "fv01_001.jpg": fake_response(jpeg((200, 40, 40)), content_type="image/jpeg"),
             "fv01_002.jpg": fake_response(jpeg((40, 200, 40)), content_type="image/jpeg"),
             "fv01_003.jpg": fake_response(jpeg((40, 40, 200)), content_type="image/jpeg"),
-        }
+        },
     )
     result = Downloader(Torch(session), tmp_path).download(EPISODE_URL)
 

@@ -239,7 +239,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, f
     assert episode.url == EPISODE_URL
     assert episode.series_title == "ワタシ悪役令嬢、いま無人島にいるの。……と思ったけどチート王子住んでた。"
     assert (episode.writer, episode.publisher) == ("", "一二三書房")
-    assert episode.published == date(2026, 3, 13)
+    assert (episode.published, episode.number) == (date(2026, 3, 13), 1)
     assert episode.episode_title == "第1話"
     assert [page.url for page in episode.pages] == [
         f"{EPISODE_URL}data/0001.ptimg.json",

@@ -171,6 +171,7 @@ class Rookie(Extractor):
             writer=author.get_text(strip=True) if isinstance(author, Tag) else "",
             publisher=self.PUBLISHER,
             published=published_on(published.get_text(strip=True) if isinstance(published, Tag) else ""),
+            number=self._listed_number(series_url, f"{series_url}/{match['episode']}"),
         )
 
     def _page(self, url: str) -> BeautifulSoup:

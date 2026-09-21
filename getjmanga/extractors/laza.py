@@ -39,7 +39,7 @@ from bs4.element import Tag
 from httpx import Timeout, TransportError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -115,6 +115,10 @@ class MtListing:
         """The first pages of the episodes either side of the one starting at `start`, None at either end."""
         return neighbours(self.starts, start)
 
+    def number_of(self, start: str) -> int | None:
+        """Where the episode starting at `start` stands in the list, counted from 1; None when unlisted."""
+        return ordinal(self.starts, start)
+
 
 @dataclass(frozen=True)
 class OldEpisodePage:
@@ -156,6 +160,10 @@ class OldListing:
     def neighbours_of(self, url: str) -> tuple[str | None, str | None]:
         """The updates either side of `url`, None at either end."""
         return neighbours(self.urls, url)
+
+    def number_of(self, url: str) -> int | None:
+        """Where `url` stands among the updates, counted from 1; None when unlisted."""
+        return ordinal(self.urls, url)
 
 
 def read_body(res: Response) -> bytes:
@@ -485,6 +493,7 @@ class Laza(Extractor):
                 },
                 # A Movable Type work names nobody on its pages.
                 publisher=self.PUBLISHER,
+                number=listing.number_of(start),
             )
         )
 
@@ -562,6 +571,7 @@ class Laza(Extractor):
                 },
                 writer=page.writer,
                 publisher=self.PUBLISHER,
+                number=listing.number_of(url),
             )
         )
 

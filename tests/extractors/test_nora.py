@@ -212,7 +212,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert episode.url == EPISODE_URL
     assert episode.series_title == SERIES_TITLE
     assert (episode.writer, episode.publisher) == ("林家志弦（漫画）", "Gakken")
-    assert episode.published == date(2026, 5, 28)
+    assert (episode.published, episode.number) == (date(2026, 5, 28), 1)
     assert episode.episode_title == "特別予告編"
     assert [page.url for page in episode.pages] == [PAGE_1, PAGE_2]
     assert all(page.extra == {"seed": SEED} for page in episode.pages)
@@ -221,10 +221,12 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert episode.metadata["date"] == "2026/05/28"
     assert episode.metadata["viewer"]["episode_id"] == 142
 
-    # The work page is asked for with the episode picked, then the API is signed the viewer's way.
-    assert session.calls == [WORK_URL, VIEWER_API]
+    # The work page is asked for with the episode picked, then the API is signed
+    # the viewer's way, then the work page again, oldest first, for the number.
+    assert session.calls == [WORK_URL, VIEWER_API, WORK_URL]
     assert session.params_seen[0] == {"episode_id": 142}
     assert session.params_seen[1] == {"version": "6.0.0", "platform": "3", "episode_id": "142"}
+    assert session.params_seen[2] == {"orderby": "asc"}
     headers = session.headers_seen[1]
     assert headers["x-com-sega-md-hash"] == service_hash(session.params_seen[1])
     assert headers["x-com-sega-md-is-crawler"] == "false"
@@ -278,7 +280,8 @@ def test_hidden_episode_has_no_pages_and_asks_the_api_nothing(client, fake_respo
     assert episode.episode_title == "700"
     assert episode.metadata["published"] is False
     assert episode.metadata["viewer"] is None
-    assert session.calls == [WORK_URL]
+    assert episode.number is None
+    assert session.calls == [WORK_URL, WORK_URL]
 
 
 def test_episode_the_api_calls_unreleased_has_no_pages(client, fake_response):

@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from PIL import Image
 
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, published_on
+from getjmanga.extractor import Episode, Extractor, Page, numbered, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -271,6 +271,7 @@ class Drecomi(Extractor):
             writer=self._writer(series_code),
             publisher=self.PUBLISHER,
             published=published_on(detail.get("publish_at")),
+            number=numbered(detail.get("episode_number")),
         )
 
     def _writer(self, series_code: str) -> str:

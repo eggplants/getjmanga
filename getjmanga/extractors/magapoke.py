@@ -41,7 +41,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 from getjmanga.viewers.kmanga import descramble, service_hash
 
 if TYPE_CHECKING:
@@ -64,7 +64,6 @@ _SECURE_API_ORIGIN = "https://se-api.pocket.shonenmagazine.com"
 _SECURE_PATHS = frozenset({"/web/episode/viewer", "/web/user/login"})
 #: The API's `response_code` for an id that names nothing.
 _EPISODE_NOT_FOUND = 3100
-_TITLE_NOT_FOUND = 3000
 
 #: The digit alphabets `scramble_seed` is written in, picked by the title id's parity.
 SEED_ALPHABETS = ("svdk0m7acl", "q6jtf2xnog")
@@ -120,7 +119,8 @@ class MagaPoke(Extractor):
         """
         super().__init__(session)
         #: `author_text` of each work asked about, by title id.
-        self._credits: dict[int, str] = {}
+        #: The `web_title` of every work asked about, by title id (None for one the API knows no such title).
+        self._titles: dict[int, dict[str, Any] | None] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -229,6 +229,7 @@ class MagaPoke(Extractor):
                 writer=self._writer(title_id),
                 publisher=self.PUBLISHER,
                 published=published_on(info.get("start_time")),
+                number=self._listed_position(title_id, episode_id),
             )
 
         raw_seed = viewer.get("scramble_seed")
@@ -250,14 +251,12 @@ class MagaPoke(Extractor):
             writer=self._writer(title_id),
             publisher=self.PUBLISHER,
             published=published_on(info.get("start_time")),
+            number=self._listed_position(title_id, episode_id),
         )
 
     def _writer(self, title_id: int) -> str:
-        """The work's `author_text`, asked for once per work; the episode API names no author."""
-        if title_id not in self._credits:
-            title = self._title(title_id) or {}
-            self._credits[title_id] = str(title.get("author_text") or "")
-        return self._credits[title_id]
+        """The work's `author_text`; the episode API names no author."""
+        return str((self._title(title_id) or {}).get("author_text") or "")
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
         """Fetch one page and unscramble it when the episode has a seed.
@@ -274,19 +273,26 @@ class MagaPoke(Extractor):
         return descramble(image, int(seed)) if seed is not None else image
 
     def _title(self, title_id: int) -> dict[str, Any] | None:
-        """The `web_title` of a work, or None when the API knows no such title."""
-        status, data = self._api("/web/title/detail", {"title_id": title_id})
-        if status == HTTPStatus.BAD_REQUEST and data.get("response_code") == _TITLE_NOT_FOUND:
-            return None
-        title = data.get("web_title")
-        if isinstance(title, dict):
-            self._credits[title_id] = str(title.get("author_text") or "")
-        return title if isinstance(title, dict) else None
+        """The `web_title` of a work, asked for once; None when the API knows no such title."""
+        if title_id not in self._titles:
+            _, data = self._api("/web/title/detail", {"title_id": title_id})
+            # An unknown title is a 400 with response code 3000 and no `web_title`.
+            title = data.get("web_title")
+            self._titles[title_id] = title if isinstance(title, dict) else None
+        return self._titles[title_id]
 
     def _listed_ids(self, title_id: int, episode_id: int) -> tuple[int | None, int | None]:
         """The ids the work lists either side of `episode_id`, None at either end (or both when unlisted)."""
+        return neighbours(self._episode_ids(title_id), episode_id)
+
+    def _listed_position(self, title_id: int, episode_id: int) -> int | None:
+        """Where the work lists `episode_id`, counted from 1; None when unlisted."""
+        return ordinal(self._episode_ids(title_id), episode_id)
+
+    def _episode_ids(self, title_id: int) -> list[int]:
+        """The work's `episode_id_list`, oldest first."""
         title = self._title(title_id)
-        return neighbours([int(value) for value in (title or {}).get("episode_id_list") or []], episode_id)
+        return [int(value) for value in (title or {}).get("episode_id_list") or []]
 
     def _api(self, path: str, params: Mapping[str, str | int]) -> tuple[int, dict[str, Any]]:
         """GET one API path, signed the viewer's way.

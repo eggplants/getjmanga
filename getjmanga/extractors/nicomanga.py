@@ -245,6 +245,7 @@ class NicoManga(Extractor):
             writer=str(content.get("display_author_name") or ""),
             publisher=_publisher(content) or self.PUBLISHER,
             published=published_on(meta.get("publish_at")),
+            number=index + 1 if index is not None else None,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

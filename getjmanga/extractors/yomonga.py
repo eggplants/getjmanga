@@ -297,6 +297,7 @@ class Yomonga(Extractor):
                 writer=work.writer,
                 publisher=self.PUBLISHER,
                 published=published_on(listed.updated) if listed else None,
+                number=number,
             )
         if work.info_url is None:
             msg = f"no SpeedBinb viewer on {page_url}."
@@ -337,6 +338,7 @@ class Yomonga(Extractor):
             writer=_authors(item) or work.writer,
             publisher=str(item.get("Publisher") or "") or self.PUBLISHER,
             published=published_on(listed.updated),
+            number=number,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

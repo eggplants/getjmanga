@@ -201,6 +201,7 @@ class Souffle(Extractor):
             writer=title_match["author"].strip() if title_match else "",
             publisher=self.PUBLISHER,
             published=published_on(date.get_text(strip=True) if isinstance(date, Tag) else ""),
+            number=self._listed_number(f"{BASE_URL}/{section}/{series_slug}/", url) if match else None,
         )
 
     def _ajax_episode_urls(self, url: str, author: str) -> list[str]:

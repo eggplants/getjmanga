@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal
 from getjmanga.viewers.seedrandom import descramble as descramble_tiles
 
 if TYPE_CHECKING:
@@ -295,6 +295,7 @@ class Piccoma(Extractor):
             },
             writer=self.writer(product_id),
             publisher=self.publisher_of(product_id),
+            number=self._number(product_id, episode_id, episode_type),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -428,6 +429,7 @@ class Piccoma(Extractor):
             metadata={"product_id": product_id, "episode_id": episode_id, "episode_type": "E", "scrambled": False},
             writer=self.writer(product_id),
             publisher=self.publisher_of(product_id),
+            number=self._number(product_id, episode_id, "E"),
         )
 
     def _neighbours(self, product_id: str, episode_id: str, episode_type: EpisodeType) -> tuple[str | None, str | None]:
@@ -440,6 +442,12 @@ class Piccoma(Extractor):
             return None, None
         before, after = neighbours(entries, entry)
         return before.url if before else None, after.url if after else None
+
+    def _number(self, product_id: str, episode_id: str, episode_type: EpisodeType) -> int | None:
+        """Where `episode_id` stands in its series' list, counted from 1; None when unlisted."""
+        if not product_id or not episode_id:
+            return None
+        return ordinal([entry.id for entry in self.entries(product_id, episode_type)], episode_id)
 
     def _login_status(self) -> bool:
         """Ask any page whether the session is signed in."""

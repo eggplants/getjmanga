@@ -363,6 +363,7 @@ class ZeroSum(Extractor):
             writer=str(listing["title"].get("author") or ""),
             publisher=self.PUBLISHER,
             published=published_on(chapter.get("startTime")),
+            number=len(chapters) - index if index is not None else None,  # newest first,
         )
 
     def _listing(self, tag: str, referer: str) -> dict[str, Any]:

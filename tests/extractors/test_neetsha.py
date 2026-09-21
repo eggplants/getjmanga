@@ -123,8 +123,11 @@ EMPTY_WORK_HTML = """<!DOCTYPE html>
 
 
 @pytest.fixture
-def client(fake_session):
+def client(fake_session, fake_response):
     def make(routes):
+        # A test's own routes go first (a story route contains the work's); the work page numbers the story.
+        routes = dict(routes)
+        routes.setdefault("comic.php?id=26627", fake_response(WORK_HTML.encode()))
         session = fake_session(routes)
         return Neetsha(session), session
 
@@ -193,7 +196,9 @@ def test_episode_reads_a_story(client, fake_response):
     assert episode.metadata["magazine"] == "週刊ヤングVIP"
     assert episode.metadata["work_url"] == WORK_URL
     assert episode.metadata["prev_url"] is None
-    assert session.calls == [STORY_URL]
+    assert episode.number == 1
+    # The story page, then the work page for where the story stands in it.
+    assert session.calls == [STORY_URL, WORK_URL]
     assert session.headers_seen[0]["User-Agent"].startswith("Mozilla/5.0")
 
 
@@ -212,7 +217,7 @@ def test_episode_reads_the_spread_layout_as_the_plain_one(client, fake_response)
     episode = neetsha.episode(SPREAD_URL)
 
     assert episode.url == STORY_URL
-    assert session.calls == [STORY_URL]
+    assert session.calls[0] == STORY_URL
 
 
 def test_episode_keeps_https_and_www_when_given(client, fake_response):
@@ -220,7 +225,7 @@ def test_episode_keeps_https_and_www_when_given(client, fake_response):
     neetsha, session = client({"comic.php?id=26627&story=1": fake_response(STORY_HTML.encode())})
     episode = neetsha.episode(url)
 
-    assert session.calls == [url]
+    assert session.calls == [url, "https://www.neetsha.jp/inside/comic.php?id=26627"]
     assert episode.url == url
     assert episode.next_url == "https://www.neetsha.jp/inside/comic.php?id=26627&story=9"
 

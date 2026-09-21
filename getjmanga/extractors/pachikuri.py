@@ -335,6 +335,7 @@ class Pachikuri(Extractor):
             writer=post.author,
             publisher=self.PUBLISHER,
             published=published_on(post.date),
+            number=self._listed_number(post.work_url, post.url) if post.work_url else None,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

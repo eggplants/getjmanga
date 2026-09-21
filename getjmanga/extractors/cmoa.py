@@ -34,7 +34,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
@@ -355,6 +355,7 @@ class Cmoa(Extractor):
 
         listing = self._listing(title_id) if title_id else None
         volume, prev_url, next_url = _place(listing, content_id)
+        number = ordinal(listing.volumes, volume) if listing and volume else None
         canonical = volume.url if volume else (urljoin(BASE_URL, shop_url) if shop else url)
         series_title = listing.title if listing else content_id or bib_id
         episode_title = str(item.get("SubTitle") or (volume.title if volume else "") or content_id or bib_id)
@@ -377,6 +378,7 @@ class Cmoa(Extractor):
                 writer=listing.writer if listing else "",
                 publisher=(listing.publisher if listing else "") or self.PUBLISHER,
                 published=published,
+                number=number,
             )
 
         book = speedbinb.page_list(self, content, referer=reader_url, params=forwarded)
@@ -397,6 +399,7 @@ class Cmoa(Extractor):
             writer=listing.writer if listing else "",
             publisher=(listing.publisher if listing else "") or self.PUBLISHER,
             published=published,
+            number=number,
         )
 
     def _released(self, volume_url: str) -> date | None:

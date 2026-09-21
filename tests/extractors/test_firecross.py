@@ -251,7 +251,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, f
     assert episode.series_title == "コーヴァ -KOHVA-"
     assert episode.episode_title == "第1話"
     assert (episode.writer, episode.publisher) == ("Konata (漫画)", "ホビージャパン")
-    assert episode.published == date(2025, 12, 18592 % 28 + 1)
+    assert (episode.published, episode.number) == (date(2025, 12, 18592 % 28 + 1), 1)
     assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert episode.readable
     assert [page.url.split("?", 1)[1].split("&param=")[0] for page in episode.pages] == [

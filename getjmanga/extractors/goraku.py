@@ -13,7 +13,7 @@ from PIL import Image
 
 from getjmanga.cipher import aes_cbc_decrypt
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, published_on
+from getjmanga.extractor import Episode, Extractor, Page, ordinal, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -103,6 +103,19 @@ def episode_props(html: str) -> dict[str, Any] | None:
     return None
 
 
+def _listed(props: dict[str, Any]) -> list[str]:
+    """The episode URLs the page's `episodeList` names, oldest first, deduplicated."""
+    urls: list[str] = []
+    for entry in reversed(props.get("episodeList") or []):
+        href = entry.get("href") if isinstance(entry, dict) else None
+        if not href:
+            continue
+        episode_url = urljoin(BASE_URL, str(href))
+        if episode_url not in urls:
+            urls.append(episode_url)
+    return urls
+
+
 def page_url(base: str, filename: str, access_key: str) -> str:
     """The URL the viewer fetches one page file from.
 
@@ -177,15 +190,7 @@ class Goraku(Extractor):
         if not self.is_series(url):
             msg = f"{url} is not a work page."
             raise UnsupportedUrlError(msg)
-        props = self._props(url)
-        urls: list[str] = []
-        for entry in reversed(props.get("episodeList") or []):
-            href = entry.get("href") if isinstance(entry, dict) else None
-            if not href:
-                continue
-            episode_url = urljoin(BASE_URL, str(href))
-            if episode_url not in urls:
-                urls.append(episode_url)
+        urls = _listed(self._props(url))
         if not urls:
             msg = f"the work at {url} lists no episode."
             raise NotAnEpisodePageError(msg)
@@ -244,6 +249,7 @@ class Goraku(Extractor):
             writer=str(props.get("author") or ""),
             publisher=self.PUBLISHER,
             published=published_on(props.get("openAt")),
+            number=ordinal(_listed(props), canonical),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

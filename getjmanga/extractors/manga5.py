@@ -440,6 +440,8 @@ class Manga5(Extractor):
         self._credits: dict[str, str] = {}
         #: The `update-date` of every listed episode seen so far, by product id.
         self._dates: dict[str, str] = {}
+        #: Where the work page lists every episode seen so far, counted from 1, by product id.
+        self._positions: dict[str, int] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -552,6 +554,7 @@ class Manga5(Extractor):
                 writer=self._writer(series_id(product_id)),
                 publisher=self.PUBLISHER,
                 published=published_on(self._update_date(product_id)),
+                number=self._number(product_id),
             )
         if not base.endswith("/"):
             base += "/"
@@ -568,15 +571,25 @@ class Manga5(Extractor):
             writer=self._writer(series_id(product_id)),
             publisher=self.PUBLISHER,
             published=published_on(self._update_date(product_id)),
+            number=self._number(product_id),
         )
 
     def _update_date(self, product_id: str) -> str:
         """The `update-date` the work page lists for `product_id`: walked for, oldest first."""
-        if product_id not in self._dates:
-            for _ in self._listings(series_id(product_id)):
-                if product_id in self._dates:
-                    break
+        self._walk_to(product_id)
         return self._dates.get(product_id, "")
+
+    def _number(self, product_id: str) -> int | None:
+        """Where the work page lists `product_id`, counted from 1: walked for, oldest first."""
+        self._walk_to(product_id)
+        return self._positions.get(product_id)
+
+    def _walk_to(self, product_id: str) -> None:
+        """Walk the work's listing until `product_id` shows up, unless it did already."""
+        if product_id not in self._positions:
+            for _ in self._listings(series_id(product_id)):
+                if product_id in self._positions:
+                    break
 
     def _writer(self, content_id: str) -> str:
         """The credits off the work page's first listing page, read once per work."""
@@ -636,10 +649,15 @@ class Manga5(Extractor):
     def _listings(self, content_id: str) -> Iterator[Listing]:
         """Walk a work's listing pages oldest first, until the pager's "next" is disabled."""
         listing_url = content_url(content_id)
+        listed: list[str] = []
         for page in range(1, self.MAX_LISTING_PAGES + 1):
             listing = parse_listing(self._get(listing_url, params={"order": "asc", "p": page}).content)
             self._credits.setdefault(content_id, listing.writer)
             self._dates.update(listing.dates)
+            for product_id, _ in listing.items:
+                if product_id not in listed:
+                    listed.append(product_id)
+                    self._positions.setdefault(product_id, len(listed))
             yield listing
             if not listing.has_next:
                 break
@@ -672,4 +690,5 @@ class Manga5(Extractor):
             writer=self._credits.get(series_id(product_id), ""),
             publisher=self.PUBLISHER,
             published=published_on(self._update_date(product_id)),
+            number=self._number(product_id),
         )

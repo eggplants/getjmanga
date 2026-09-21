@@ -279,6 +279,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert (episode.pages[0].width, episode.pages[0].height) == (1353, 1920)
     assert (episode.pages[2].width, episode.pages[2].height) == (2560, 1820)
     assert episode.next_url == NEXT_URL
+    assert episode.number == 1
     assert episode.readable
     assert episode.metadata["work_url"] == WORK_URL
     assert episode.metadata["episode"]["title"] == "第１話"
@@ -312,6 +313,7 @@ def test_last_episode_has_no_next(client, fake_response):
     assert episode.episode_title == "第１5話 「ウエちゃんが撮ったやつ」"
     assert len(episode.pages) == 1
     assert (episode.prev_url, episode.next_url) == (EPISODE_URL, None)
+    assert episode.number == 2
 
 
 def test_episode_with_an_empty_viewer_has_no_pages(client, fake_response):

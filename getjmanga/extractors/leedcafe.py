@@ -32,7 +32,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -352,6 +352,7 @@ class LeedCafe(Extractor):
         series_title = ""
         episode_title = page.title
         prev_url, next_url = page.prev_url, page.next_url
+        number = None
         work_link = page.work_url
         if work_link is not None and (work_key := work_slug(work_link)) is not None:
             work, episodes = self._work(work_key)
@@ -360,6 +361,7 @@ class LeedCafe(Extractor):
             listed_prev, listed_next = _either_side(episodes, slug)
             prev_url = listed_prev or prev_url
             next_url = listed_next or next_url
+            number = ordinal(list(episodes), slug)
             work_link = work.url
         if not series_title:
             series_title = page.title
@@ -383,6 +385,7 @@ class LeedCafe(Extractor):
             writer=page.writer,
             publisher=self.PUBLISHER,
             published=published_on(page.updated),
+            number=number,
         )
 
     def _work(self, slug: str) -> tuple[Work, dict[str, str]]:

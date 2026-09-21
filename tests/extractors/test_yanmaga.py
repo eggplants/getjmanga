@@ -321,7 +321,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "妹は知っている"
     assert (episode.writer, episode.publisher) == ("雁木万里", "講談社")
-    assert episode.published == date(2024, 11, 25)
+    assert (episode.published, episode.number) == (date(2024, 11, 25), 1)
     assert episode.episode_title == "第１話　三木貴一郎という男"
     assert [page.url for page in episode.pages] == [f"{SERVER}/img/pages/a.jpg", f"{SERVER}/img/pages/b.jpg"]
     assert episode.pages[0].width == 392

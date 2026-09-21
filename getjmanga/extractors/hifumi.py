@@ -36,7 +36,7 @@ from bs4.element import Tag
 from httpx import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
@@ -291,6 +291,7 @@ class Hifumi(Extractor):
             # Neither imprint credits an author anywhere but the copyright line.
             publisher=self.PUBLISHER,
             published=published_on(listing.dates.get(canonical, "")) if listing else None,
+            number=ordinal(list(listing.episodes), canonical) if listing else None,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

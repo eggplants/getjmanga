@@ -438,6 +438,7 @@ def test_twi4_episode_reads_the_strip_and_skips_closed_ones_for_the_next(client,
     )
     assert episode.metadata["kind"] == "twi4"
     assert episode.metadata["closed"] is False
+    assert episode.number == 9
     assert session.calls == [TWI4_EPISODE_URL, f"{HOST}/comics/twi4/tsuredure/index.js"]
     assert "User-Agent" in session.headers_seen[0]
 
@@ -537,6 +538,7 @@ def test_reader_episode_reads_the_pages_and_the_next_served_volume(client, fake_
         f"{HOST}/works/comics/karanokyoukai/72/01.html",
     )
     assert episode.metadata["kind"] == "reader"
+    assert episode.number == 3
     assert session.calls == [READER_EPISODE_URL, f"{HOST}/comics/karanokyoukai/meta.json"]
 
 

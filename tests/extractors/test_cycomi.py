@@ -222,7 +222,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_chapter(client):
     assert episode.series_title == "BAD ASS BUDDIES"
     assert episode.episode_title == "第１話"
     assert (episode.writer, episode.publisher) == ("すんしろう", "Cygames")
-    assert episode.published == date(2025, 10, 21)
+    assert (episode.published, episode.number) == (date(2025, 10, 21), 1)
     assert [page.url for page in episode.pages] == [page(1)["image"], page(2)["image"]]
     assert [page.extra for page in episode.pages] == [{"key": KEY, "page_number": 1}, {"key": KEY, "page_number": 2}]
     assert episode.pages[0].width == 960
@@ -231,8 +231,9 @@ def test_episode_reads_the_titles_the_pages_and_the_next_chapter(client):
     assert episode.metadata["chapter"]["id"] == 22179
     assert episode.metadata["pages"]["lastPageNumber"] == 2
 
-    assert session.calls == [f"{API_URL}/chapter/detail"]
-    assert session.params_seen == [{"chapterId": "22179"}]
+    # The detail, then the title's listing (two pages) for the number.
+    assert session.calls == [f"{API_URL}/chapter/detail"] + [f"{API_URL}/chapter/paginatedList"] * 2
+    assert session.params_seen[0] == {"chapterId": "22179"}
     assert session.headers_seen[0]["Accept"] == "application/json"
     assert session.headers_seen[0]["Referer"] == EPISODE_URL
     assert session.posts == [(f"{API_URL}/chapter/page/list", {"titleId": 257, "chapterId": 22179})]

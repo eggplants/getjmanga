@@ -198,6 +198,7 @@ class Gecchan(Extractor):
             },
             writer=writer,
             publisher=self.PUBLISHER,
+            number=entry.number,
         )
 
     def _work(self, url: str) -> tuple[str, str, list[Entry]]:

@@ -331,6 +331,7 @@ def test_mt_episode_walks_the_pages_until_the_title_changes(client, mt_routes):
     assert [page.url for page in episode.pages] == [f"{HOST}/kimono-lolita/up/2021/01/29/00{n}.png" for n in (1, 2, 3)]
     # The next episode comes from the list, skipping the announcement.
     assert episode.next_url == f"{HOST}/kimono-lolita/manga/005.html"
+    assert episode.number == 1
     assert episode.metadata["label"] == "第1話"
     assert [page["title"] for page in episode.metadata["pages"]] == [
         "001：第一話 着物ちゃん",
@@ -365,6 +366,7 @@ def test_mt_last_episode_has_no_next_and_ignores_the_page_mark(client, mt_routes
     assert episode.episode_title == "第二話 ロリータちゃん"
     assert len(episode.pages) == 2
     assert (episode.prev_url, episode.next_url) == (f"{HOST}/kimono-lolita/manga/001.html", None)
+    assert episode.number == 2
 
 
 def test_mt_announcement_in_the_chain_is_an_episode_of_its_own(client, mt_routes):
@@ -484,6 +486,7 @@ def test_old_update_is_read_frame_by_frame(client, old_routes):
     assert [page.url for page in episode.pages] == [f"{HOST}/comic001/img/191.png", f"{HOST}/comic001/img/192.jpg"]
     # The update after p36 that is still public, per the index.
     assert episode.next_url == f"{HOST}/comic001/p48.html"
+    assert episode.number == 3
     assert episode.metadata["update"] == "p36"
     assert episode.metadata["date"] == "2016/1/18"
     assert [strip["caption"] for strip in episode.metadata["strips"]] == [
@@ -510,6 +513,7 @@ def test_old_update_falls_back_to_its_own_arrow_without_an_index(client, old_rou
     episode = laza.episode(OLD_EPISODE_URL)
 
     assert (episode.prev_url, episode.next_url) == (f"{HOST}/comic001/p35.html", f"{HOST}/comic001/p37.html")
+    assert episode.number is None
     assert episode.metadata["date"] == ""
 
 

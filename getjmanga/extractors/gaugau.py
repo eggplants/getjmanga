@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, neighbours, ordinal, published_on
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
@@ -147,6 +147,7 @@ class Gaugau(Extractor):
         published = published_on(dated.get_text(" ", strip=True)) if isinstance(dated, Tag) else None
         viewer = soup.select_one(f"#{_VIEWER_ID}[data-ptbinb][data-ptbinb-cid]")
         prev_url, next_url = self._neighbours(url, work_id, kind)
+        number = self._number(url, work_id, kind)
 
         if not isinstance(viewer, Tag):
             if not episode_title:
@@ -162,6 +163,7 @@ class Gaugau(Extractor):
                 writer=writer,
                 publisher=self.PUBLISHER,
                 published=published,
+                number=number,
             )
 
         content_id = str(viewer.attrs["data-ptbinb-cid"])
@@ -195,6 +197,7 @@ class Gaugau(Extractor):
             writer=writer,
             publisher=self.PUBLISHER,
             published=published,
+            number=number,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -244,9 +247,19 @@ class Gaugau(Extractor):
     def _neighbours(self, url: str, work_id: str, kind: str) -> tuple[str | None, str | None]:
         """The listing entries either side of `url`, None at either end (or both when unlisted)."""
         urls = self.listing(work_id, kind)
-        key = url.rstrip("/")
-        listed = next((candidate for candidate in urls if candidate.rstrip("/") == key), None)
+        listed = self._listed(url, urls)
         return neighbours(urls, listed) if listed is not None else (None, None)
+
+    def _number(self, url: str, work_id: str, kind: str) -> int | None:
+        """Where the listing puts `url`, counted from 1; None when unlisted."""
+        urls = self.listing(work_id, kind)
+        listed = self._listed(url, urls)
+        return ordinal(urls, listed) if listed is not None else None
+
+    @staticmethod
+    def _listed(url: str, urls: list[str]) -> str | None:
+        key = url.rstrip("/")
+        return next((candidate for candidate in urls if candidate.rstrip("/") == key), None)
 
 
 def _series_title(soup: BeautifulSoup, work_id: str) -> str:

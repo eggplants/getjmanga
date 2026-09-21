@@ -41,7 +41,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
@@ -321,12 +321,17 @@ class YanMaga(Extractor):
             writer=_authors(item),
             publisher=str(item.get("Publisher") or "") or self.PUBLISHER,
             published=self._released(title, canonical),
+            number=self._number(title, canonical),
         )
 
     def _released(self, title: str, canonical: str) -> date | None:
         """The day the work's listing dates the episode; the viewer's item carries none."""
         entry = next((e for e in self.listing(title) if e.url == canonical), None)
         return published_on(entry.released) if entry else None
+
+    def _number(self, title: str, canonical: str) -> int | None:
+        """Where the work's listing puts the episode, counted from 1; None when unlisted."""
+        return ordinal([entry.url for entry in self.listing(title)], canonical)
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
         """Fetch one page and put its tiles back where they belong.
@@ -405,6 +410,7 @@ class YanMaga(Extractor):
             # A locked episode's page names no author; the viewer's item would.
             publisher=self.PUBLISHER,
             published=published_on(listed[urls.index(canonical)].released) if canonical in urls else None,
+            number=ordinal(urls, canonical),
         )
 
 

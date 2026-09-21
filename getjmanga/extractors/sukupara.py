@@ -194,6 +194,7 @@ class Sukupara(Extractor):
                 },
                 writer=first.author,
                 publisher=self.PUBLISHER,
+                number=self._listed_number(series_url(manga_id), first_url),
             )
         )
 

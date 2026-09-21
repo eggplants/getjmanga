@@ -161,6 +161,8 @@ def client(fake_session, fake_response):
             f"{API_URL}/works/v5/785": fake_response(
                 payload={"data": {"official_work": {"id": 785, "author": "吉田覚"}}}
             ),
+            # The locked episode's work lists nothing the fake knows: it goes unnumbered.
+            f"{API_URL}/works/785/episodes/v2": fake_response(payload=NOT_FOUND, status_code=HTTPStatus.NOT_FOUND),
             "/viewer/stories/999": fake_response(text="not found", status_code=HTTPStatus.NOT_FOUND),
             "/viewer/stories/": fake_response(text=VIEWER_HTML),
             CDN: fake_response(jpeg_bytes(scramble(striped_page(), KEY)), content_type="image/jpeg"),
@@ -274,7 +276,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.series_title == "異世界皇子、おしかけ求婚に参りました"
     assert episode.episode_title == "1 第1話-1"
     assert (episode.writer, episode.publisher) == ("紺乃みる/加藤沙羽", "ピクシブ")
-    assert episode.published == date(2013, 12, 20)
+    assert (episode.published, episode.number) == (date(2013, 12, 20), 1)
     assert [page.url for page in episode.pages] == [page["url"] for page in PAGES]
     assert all(page.extra == {"key": KEY, "gridsize": 32} for page in episode.pages)
     assert episode.pages[0].width == 721
@@ -285,9 +287,15 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.metadata == READABLE["data"]["reading_episode"]
 
     # The viewer page is read for the salt, then the API is asked with the signed
-    # headers; the work's description, for its author, comes last.
-    assert session.calls == [EPISODE_URL, f"{API_URL}/episodes/244715/read_v4", f"{API_URL}/works/v5/13564"]
-    sent = session.headers_seen[-2]
+    # headers; then the work's description, for its author, and its listing (two pages) for the number.
+    assert session.calls == [
+        EPISODE_URL,
+        f"{API_URL}/episodes/244715/read_v4",
+        f"{API_URL}/works/v5/13564",
+        f"{API_URL}/works/13564/episodes/v2",
+        f"{API_URL}/works/13564/episodes/v2",
+    ]
+    sent = session.headers_seen[1]
     assert sent["X-Requested-With"] == "pixivcomic"
     assert sent["Referer"] == EPISODE_URL
     assert sent["X-Client-Hash"] == hashlib.sha256(f"{sent['X-Client-Time']}{SALT}".encode()).hexdigest()
@@ -308,6 +316,7 @@ def test_locked_episode_has_no_pages_but_keeps_its_titles_and_the_next(client):
     assert episode.episode_title == "第4話"
     assert episode.next_url == f"{BASE_URL}/viewer/stories/3277"
     assert episode.metadata["state"] == "login_required"
+    assert episode.number is None
 
 
 def test_last_episode_has_no_next(client, fake_response):

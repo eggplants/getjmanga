@@ -221,6 +221,7 @@ class Meets(Extractor):
             writer=", ".join(str(name) for name in comic.get("authors") or [] if name),
             publisher=self.PUBLISHER,
             published=published_on(entry.get("published_at")),
+            number=index + 1,
         )
 
     def _listing(self, origin: str, dir_name: str, referer: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:

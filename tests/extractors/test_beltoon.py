@@ -221,6 +221,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.pages[0].height == 64
     assert episode.pages[0].extra == {"scramble": []}
     assert episode.next_url == LOCKED_URL
+    assert episode.number == 1
     assert episode.metadata["episodeId"] == 2
     assert "images" not in episode.metadata
     json.dumps(episode.metadata)
@@ -250,6 +251,7 @@ def test_episode_stops_at_the_last_episode(client, fake_response):
     beltoon, _ = client({"/viewer/": fake_response(text=viewer_html({"result": viewer_result(episodeAlias="3")}))})
     episode = beltoon.episode(f"{BASE_URL}/viewer/12s1/3")
     assert (episode.prev_url, episode.next_url) == (LOCKED_URL, None)
+    assert episode.number == 3
 
 
 def test_episode_skips_rows_without_an_image(client, fake_response):
@@ -307,6 +309,7 @@ def test_a_locked_episode_has_no_pages_but_a_next_url(client, fake_response):
     assert episode.episode_title == "2話"
     assert episode.writer == "TR, 黄金期"
     assert (episode.prev_url, episode.next_url) == (EPISODE_URL, f"{BASE_URL}/viewer/12s1/3")
+    assert episode.number == 2
     assert episode.metadata["error"] == error
     json.dumps(episode.metadata)
 

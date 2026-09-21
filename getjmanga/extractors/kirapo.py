@@ -24,7 +24,7 @@ from bs4.element import Tag
 from httpx import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal
 from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
@@ -174,10 +174,11 @@ class Kirapo(Extractor):
         title = soup.title.get_text() if soup.title else ""
         listing = self._listing_of(url)
         series_title, episode_title = split_title(title, listing.title if listing else "")
-        prev_url = next_url = None
+        prev_url = next_url = number = None
         if listing:
             episode_title = listing.episodes.get(_reader_key(url)) or episode_title
             prev_url, next_url = neighbours(list(listing.episodes), _reader_key(url))
+            number = ordinal(list(listing.episodes), _reader_key(url))
         match = _EPISODE_PATH.match(urlparse(url).path)
         return self._dated_by_upload(
             Episode(
@@ -198,6 +199,7 @@ class Kirapo(Extractor):
                 },
                 writer=listing.writer if listing else "",
                 publisher=self.PUBLISHER,
+                number=number,
             )
         )
 

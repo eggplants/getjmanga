@@ -37,7 +37,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, published_on
+from getjmanga.extractor import Episode, Extractor, Page, ordinal, published_on
 from getjmanga.viewers.publus import decode_pack, descramble, pages
 
 if TYPE_CHECKING:
@@ -291,6 +291,7 @@ class Nettai(Extractor):
         }
         writer = listing.writer if listing is not None else ""
         published = published_on(listing.dates.get(content_id, "")) if listing is not None else None
+        number = self._position(book_id, content_id, listing) if listing is not None else None
         if not licensed:
             return Episode(
                 url=canonical,
@@ -302,6 +303,7 @@ class Nettai(Extractor):
                 writer=writer,
                 publisher=self.PUBLISHER,
                 published=published,
+                number=number,
             )
 
         content_url = str(license_["url"])
@@ -317,6 +319,7 @@ class Nettai(Extractor):
             writer=writer,
             publisher=self.PUBLISHER,
             published=published,
+            number=number,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -351,6 +354,24 @@ class Nettai(Extractor):
         """One page of a work's episode list, first episode first."""
         res = self._get(f"{book_url(book_id)}?{urlencode({'sort_type': 'priority_asc', 'page': page})}")
         return parse_listing(res.content)
+
+    def _position(self, book_id: str, content_id: str, first: Listing) -> int | None:
+        """Where the work lists `content_id`, open or closed, counted from 1: walked for past the first page.
+
+        The viewer URLs the work lists carry a fresh token each time, so an
+        episode is found by its `book_content_id`, not by its URL.
+        """
+        listed = list(first.titles)
+        listing: Listing | None = first
+        for page in range(2, self.MAX_LISTING_PAGES + 1):
+            if content_id in listed or listing is None or not listing.has_next:
+                break
+            listing = self._listing(book_id, page)
+            fresh = [found for found in (listing.titles if listing else {}) if found not in listed]
+            if not fresh:
+                break
+            listed.extend(fresh)
+        return ordinal(listed, content_id)
 
 
 def _content_id(colophon_url: str) -> str:

@@ -44,7 +44,7 @@ from httpx import HTTPStatusError
 from PIL import Image
 
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -512,6 +512,7 @@ class Wings(Extractor):
                 writer=work.writer if work else "",
                 publisher=self.PUBLISHER,
                 published=published_on(book.fields.get("publishDate")),
+                number=self._number(work, canonical),
             )
         pages = tuple(
             Page(
@@ -541,6 +542,7 @@ class Wings(Extractor):
             writer=work.writer if work else "",
             publisher=self.PUBLISHER,
             published=published_on(book.fields.get("publishDate")),
+            number=self._number(work, canonical),
         )
 
     def _smoozy_episode(self, canonical: str, slug: str, work: Work | None, title: str) -> Episode:
@@ -633,6 +635,11 @@ class Wings(Extractor):
     def _neighbours(work: Work | None, canonical: str) -> tuple[str | None, str | None]:
         """The listed episodes either side of `canonical`, None at either end (or both when unlisted)."""
         return neighbours(list(work.episodes), canonical) if work is not None else (None, None)
+
+    @staticmethod
+    def _number(work: Work | None, canonical: str) -> int | None:
+        """Where the work lists `canonical`, counted from 1; None when unlisted."""
+        return ordinal(list(work.episodes), canonical) if work is not None else None
 
     @staticmethod
     def _tile_urls(page: Page) -> Iterator[str]:

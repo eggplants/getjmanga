@@ -214,7 +214,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "うさぎのモフィ"
     assert (episode.writer, episode.publisher) == ("コンドウ アキ", "主婦と生活社")
-    assert episode.published == date(2026, 9, 16)
+    assert (episode.published, episode.number) == (date(2026, 9, 16), 4)
     assert episode.episode_title == "第710話 夏の思い出"
     assert [page.url for page in episode.pages] == [
         SCALED_IMAGE,
@@ -231,7 +231,8 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
         "work_url": WORK_URL,
         "prev_url": PREV_SHORT_URL,
     }
-    assert session.calls == [EPISODE_URL]
+    # The episode, then the work's listing (two pages) for where the episode stands in it.
+    assert session.calls == [EPISODE_URL, WORK_URL, "https://pachikuri.jp/mofy/page/2/"]
     assert session.headers_seen[0]["User-Agent"]
 
 
@@ -239,7 +240,7 @@ def test_episode_follows_a_short_link_to_the_slug_url(client):
     pachikuri, session = client()
     episode = pachikuri.episode(PREV_SHORT_URL)
 
-    assert session.calls == [PREV_SHORT_URL]
+    assert session.calls[0] == PREV_SHORT_URL
     assert episode.url == EPISODE_URL
     assert episode.readable
 
@@ -376,7 +377,6 @@ def test_image_without_an_original_fetches_the_page_url_only(client):
     pachikuri.image(episode.pages[1], episode)
 
     assert session.calls[-1] == "https://pachikuri.jp/wp-content/uploads/2026/09/mofy_web710b.jpg"
-    assert len(session.calls) == 2
 
 
 # --- the real site --------------------------------------------------------------------

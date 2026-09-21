@@ -94,9 +94,16 @@ def jpeg_bytes(color=(10, 20, 30), size=(8, 8)):
     return raw.getvalue()
 
 
+CARDS = [
+    article(EPISODE_URL, "#1 靴擦れと夏祭り"),
+    article(NEXT_URL, "#2 持ち主は高田くん"),
+    article(f"{BASE_URL}/manga/{SERIES}/20250827-003/", "#3 失くした高田くん", expired=True),
+]
+
+
 @pytest.fixture
 def client(fake_session, fake_response):
-    """A `Souffle` over a session answering a readable episode, an expired one and the images."""
+    """A `Souffle` over a session answering a readable episode, an expired one, the images and the series."""
 
     def build(extra=None):
         routes = {
@@ -110,8 +117,17 @@ def client(fake_session, fake_response):
                 ),
             ),
             "/assets/img/manga/": fake_response(jpeg_bytes(), content_type="image/jpeg"),
+            # The series page and its plugin, for where an episode stands; after the episodes, which it matches too.
+            "/chigau-kurasu-no-sukina-hito/": fake_response(text=series_html("178", *reversed(CARDS))),
+            AJAX_URL: fake_response(payload=alm_payload(*CARDS)),
         }
-        session = fake_session({**(extra or {}), **routes})
+        # A test's own routes come first (the series route matches its episodes too); anything
+        # else on the site is a 404, so an episode of an unknown series goes unnumbered.
+        overrides = extra or {}
+        unknown = fake_response(text="<html></html>", status_code=HTTPStatus.NOT_FOUND)
+        session = fake_session(
+            {**overrides, **{key: value for key, value in routes.items() if key not in overrides}, BASE_URL: unknown}
+        )
         return Souffle(session), session
 
     return build
@@ -184,7 +200,7 @@ def test_episode_reads_the_titles_and_the_pages(client):
 
     assert episode.series_title == "違うクラスの好きな人"
     assert (episode.writer, episode.publisher) == ("かわいちひろ", "秋田書店")
-    assert episode.published == date(2025, 8, 27)
+    assert (episode.published, episode.number) == (date(2025, 8, 27), 1)
     assert episode.episode_title == "#1 靴擦れと夏祭り"
     assert [page.url for page in episode.pages] == [f"{CDN}/0001.jpg", f"{CDN}/0002.jpg"]
     assert episode.next_url == NEXT_URL
@@ -195,8 +211,9 @@ def test_episode_reads_the_titles_and_the_pages(client):
     assert episode.metadata["episode_id"] == "20250827-001"
     assert episode.metadata["expired"] is False
     assert episode.metadata["prev_url"] is None
-    assert session.calls == [EPISODE_URL]
-    assert session.params_seen == [None]
+    # The episode, then the series page and its plugin for where the episode stands.
+    assert session.calls == [EPISODE_URL, SERIES_URL, AJAX_URL]
+    assert session.params_seen[0] is None
     assert "User-Agent" in session.headers_seen[0]
 
 
@@ -251,12 +268,6 @@ def test_episode_rejects_a_404(client, fake_response):
 
 
 # --- series -----------------------------------------------------------------------------
-
-CARDS = [
-    article(EPISODE_URL, "#1 靴擦れと夏祭り"),
-    article(NEXT_URL, "#2 持ち主は高田くん"),
-    article(f"{BASE_URL}/manga/{SERIES}/20250827-003/", "#3 失くした高田くん", expired=True),
-]
 
 
 @pytest.mark.parametrize("url", [SERIES_URL, AUTHOR_URL])

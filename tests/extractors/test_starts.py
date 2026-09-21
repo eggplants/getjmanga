@@ -257,7 +257,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next(client):
         "タクヘイ (作画), 雨宮れん (原作), RAHWIA (キャラクター原案)",
         "スターツ出版",
     )
-    assert episode.published == date(2026, 9, 10)
+    assert (episode.published, episode.number) == (date(2026, 9, 10), 24)
     assert episode.episode_title == "12話-②"
     assert [page.url for page in episode.pages] == [
         f"{CONTENT}/cover.jpg?t={UPDATED_AT}",

@@ -202,7 +202,7 @@ def test_mangaone_episode_reads_the_titles_the_pages_and_the_next_chapter(mangao
     assert episode.series_title == "女の子を天国に連れていくには"
     assert episode.episode_title == "第1話"
     assert (episode.writer, episode.publisher) == ("高見奈緒", "小学館")
-    assert episode.published == date(2019, 9, 19)
+    assert (episode.published, episode.number) == (date(2019, 9, 19), 1)
     assert [page.url for page in episode.pages] == [MO_IMAGE.format(1), MO_IMAGE.format(2)]
     assert episode.pages[0].extra == {"key": KEY, "iv": IV}
     assert (episode.pages[0].width, episode.pages[0].height) == (720, 1020)
@@ -412,7 +412,7 @@ def test_flower_episode_reads_the_viewer_props(flower):
     assert episode.series_title == "死神の初恋 〜没落華族の令嬢は愛を知らない死神に嫁ぐ〜"
     assert episode.episode_title == "第1話 -1"
     assert (episode.writer, episode.publisher) == ("美麻りん", "小学館")
-    assert episode.published == date(2026, 6, 1)
+    assert (episode.published, episode.number) == (date(2026, 6, 1), 1)
     assert [page.url for page in episode.pages] == [FC_IMAGE.format(1), FC_IMAGE.format(2)]
     assert episode.pages[0].extra == {"key": KEY, "iv": IV}
     assert episode.next_url == f"{FLOWERCOMICS_URL}/chapter/96935"
@@ -591,6 +591,7 @@ def test_gangan_episode_reads_the_page_json(gangan):
     assert [page.url for page in episode.pages] == [GANGANONLINE_URL + GG_IMAGE.format(i) for i in (1, 2)]
     assert episode.pages[0].extra == {}
     assert (episode.prev_url, episode.next_url) == (None, f"{GANGANONLINE_URL}/title/2580/chapter/131954")
+    assert episode.number == 1
     assert episode.metadata["author"] == "原作／夜明星良　漫画／宮鈴りうむ"
     assert (episode.writer, episode.publisher) == ("原作／夜明星良　漫画／宮鈴りうむ", "スクウェア・エニックス")
     assert episode.metadata["left_start"] is True
@@ -816,7 +817,7 @@ def test_park_episode_reads_the_title_page_and_the_chapter_api(park):
     assert episode.series_title == "アクトジジョウ"
     assert episode.episode_title == "#１①"
     assert (episode.writer, episode.publisher) == ("原作：糸加　作画：白藤圭", "白泉社")
-    assert episode.published == date(2017, 8, 397003 % 28 + 1)
+    assert (episode.published, episode.number) == (date(2017, 8, 397003 % 28 + 1), 1)
     assert [page.url for page in episode.pages] == [MP_IMAGE.format(0), MP_IMAGE.format(1)]
     assert episode.pages[0].extra == {"key": MP_KEY}
     assert episode.next_url == f"{MANGAPARK_URL}/title/33142/397006"
@@ -1046,6 +1047,7 @@ def test_lab_episode_reads_the_chapter_and_walks_the_title_list_upwards(lab):
     assert [page.url for page in episode.pages] == [ML_IMAGE.format(0), ML_IMAGE.format(1)]
     assert episode.pages[0].extra == {}
     assert episode.next_url == f"{MANGALAB_URL}/title/viewer/810463"
+    assert episode.number == 2
     assert episode.metadata["title_id"] == 105830
     assert episode.metadata["number"] == 2.0
     assert episode.metadata["author"] == "西野ぺんぎん"

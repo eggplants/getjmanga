@@ -42,7 +42,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlparse
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 from getjmanga.viewers.kmanga import GRID, SEED_MAX, SEED_MIN, UNIT, tile_order
 from getjmanga.viewers.kmanga import descramble as descramble_v2
 
@@ -257,7 +257,8 @@ class Ciao(Extractor):
             raise NotAnEpisodePageError(msg)
         title_id = int(entry.get("title_id") or match["title"])
         title = self._title(title_id) or {}
-        prev_id, next_id = neighbours([int(i) for i in title.get("episode_id_list") or []], episode_id)
+        listed = [int(i) for i in title.get("episode_id_list") or []]
+        prev_id, next_id = neighbours(listed, episode_id)
 
         viewer: dict[str, Any] | None = None
         pages: tuple[Page, ...] = ()
@@ -285,6 +286,7 @@ class Ciao(Extractor):
             writer=_authors(title),
             publisher=self.PUBLISHER,
             published=published_on(entry.get("start_time")),
+            number=ordinal(listed, episode_id),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

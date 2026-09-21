@@ -169,7 +169,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "ネトラセ契約"
     assert (episode.writer, episode.publisher) == ("後藤晶 (著)", "マンガボックス")
-    assert episode.published == date(2019, 6, 20)
+    assert (episode.published, episode.number) == (date(2019, 6, 20), 1)
     assert episode.episode_title == "第1話"
     assert [page.url for page in episode.pages] == IMAGE_URLS
     assert all(page.extra == {"mask": -7} for page in episode.pages)

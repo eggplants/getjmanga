@@ -304,6 +304,7 @@ class Corona(Extractor):
             writer=self._writer(str(described.get("comic_id") or ""), canonical),
             publisher=self.PUBLISHER,
             published=self._published_on(str(described.get("comic_id") or ""), episode_id),
+            number=self._listed_number(f"{BASE_URL}/comics/{described.get('comic_id')}", canonical),
         )
 
     def _published_on(self, comic_id: str, episode_id: str) -> date | None:

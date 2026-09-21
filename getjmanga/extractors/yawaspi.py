@@ -263,6 +263,8 @@ class Yawaspi(Extractor):
         if document.is_work:
             msg = f"{url} is a work page, not an episode."
             raise NotAnEpisodePageError(msg)
+        # The work page, `/<work>/`, numbers its episodes.
+        work_url = urljoin(document.url, "../")
         return Episode(
             url=document.url,
             series_title=document.series_title,
@@ -280,6 +282,7 @@ class Yawaspi(Extractor):
             writer=document.author,
             publisher=self.PUBLISHER,
             published=published_on(document.updated),
+            number=self._listed_number(work_url, document.url),
         )
 
     def _document(self, url: str) -> Document:

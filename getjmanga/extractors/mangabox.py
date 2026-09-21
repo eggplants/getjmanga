@@ -237,6 +237,7 @@ class Mangabox(Extractor):
             writer=_authors(listing),
             publisher=self.PUBLISHER,
             published=published_on(entry.get("publishedDate")),
+            number=index + 1 if index is not None else None,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

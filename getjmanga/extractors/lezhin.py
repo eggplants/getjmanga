@@ -20,7 +20,7 @@ from PIL import Image
 
 from getjmanga.cipher import xor_unmask
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, numbered
 
 if TYPE_CHECKING:
     from httpx import Client, Response
@@ -85,6 +85,15 @@ def authors_of(html: str) -> list[str]:
     if match is None:
         return []
     return [name for name in _AUTHOR_NAME.findall(match["data"]) if name]
+
+
+def _display_order(prev_item: dict[str, Any], next_item: dict[str, Any]) -> int | None:
+    """The chapter's place in the series, off its neighbours' `display_order`: its own is not sent."""
+    if numbered(next_item.get("display_order")) is not None:
+        return int(next_item["display_order"]) - 1 or None
+    if numbered(prev_item.get("display_order")) is not None:
+        return int(prev_item["display_order"]) + 1
+    return None
 
 
 def _results(status: int, body: dict[str, Any]) -> dict[str, Any]:
@@ -270,6 +279,7 @@ class Lezhin(Extractor):
                 metadata={"info": info, "viewer": viewer, "error": None if pages else body.get("message")},
                 writer=self._writer(title_id),
                 publisher=self.PUBLISHER,
+                number=_display_order(prev_item, next_item),
             )
         )
 

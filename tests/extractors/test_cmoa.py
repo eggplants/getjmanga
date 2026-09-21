@@ -293,7 +293,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_volume(client):
     assert episode.series_title == "ダイヤのA act2"
     assert episode.episode_title == "ダイヤのＡ　ａｃｔ２（１）"
     assert (episode.writer, episode.publisher) == ("寺嶋裕二", "講談社")
-    assert episode.published == date(2015, 11, 17)
+    assert (episode.published, episode.number) == (date(2015, 11, 17), 1)
     assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert [page.width for page in episode.pages] == [392, 392]
     page = urlparse(episode.pages[0].url)

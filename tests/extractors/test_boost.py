@@ -235,7 +235,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
         "恵ノ島すず (原作), 今中千尋 (作画), えいひ (キャラクター原案)",
         "幻冬舎コミックス",
     )
-    assert episode.published == date(2026, 2, 3)
+    assert (episode.published, episode.number) == (date(2026, 2, 3), 1)
     assert [page.url for page in episode.pages] == [
         f"{CONTENT_URL}OEBPS/text/p-0001.xhtml/0.jpeg",
         f"{CONTENT_URL}OEBPS/text/p-0002.xhtml/0.jpeg",

@@ -36,7 +36,7 @@ from urllib.parse import unquote, urlparse
 from httpx import HTTPStatusError
 
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, published_on
+from getjmanga.extractor import Episode, Extractor, Page, numbered, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -328,6 +328,7 @@ class MangaNo(Extractor):
             writer=str((work.get("user") or {}).get("displayName") or ""),
             publisher=self.PUBLISHER,
             published=published_on(node.get("publishedAt")),
+            number=numbered(node.get("publicNumber") or node.get("number")),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

@@ -276,6 +276,7 @@ class Cycomi(Extractor):
             writer=str(chapter.get("author") or ""),
             publisher=self.PUBLISHER,
             published=published_on(chapter.get("startAt")),
+            number=self._listed_number(f"{BASE_URL}/title/{title_id}", episode_url(chapter_id)),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

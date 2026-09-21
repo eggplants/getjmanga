@@ -14,7 +14,7 @@ from xml.etree import ElementTree as ET
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, numbered, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -309,6 +309,7 @@ class Comico(Extractor):
             writer=_authors(content),
             publisher=str(content.get("publisherName") or "") or self.PUBLISHER,
             published=published_on(chapter.get("publishedAt")),
+            number=numbered(chapter.get("sort")),
         )
 
     def _pages(self, chapter: dict[str, Any], referer: str) -> Iterator[Page]:
@@ -374,6 +375,7 @@ class Comico(Extractor):
             writer=_authors(listing),
             publisher=str(listing.get("publisherName") or "") or self.PUBLISHER,
             published=published_on(chapters[position].get("publishedAt")),
+            number=numbered(chapters[position].get("sort")),
         )
 
     def _chapters(self, content_type: str, content_id: str, referer: str) -> list[dict[str, Any]]:

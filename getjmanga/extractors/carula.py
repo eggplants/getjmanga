@@ -30,7 +30,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -113,8 +113,8 @@ def page_urls(body: str) -> list[str]:
     return [str(img["src"]) for img in soup.select("figure img[src]") if isinstance(img, Tag)]
 
 
-def neighbour_keys(body: str, key: str) -> tuple[str | None, str | None]:
-    """Find the episodes either side of `key` in the article's episode index.
+def listed_keys(body: str, key: str) -> list[str]:
+    """Find the episode index `key` is in, off the article.
 
     Every episode article opens with a paragraph linking all the episodes of
     the work in order, the current one included.
@@ -124,15 +124,15 @@ def neighbour_keys(body: str, key: str) -> tuple[str | None, str | None]:
         key: The current article's key.
 
     Returns:
-        The keys of the linked episodes before and after; None at either end,
-        or both when `key` is not listed at all.
+        The keys of the linked episodes in order; empty when no paragraph
+        links `key` at all.
     """
     soup = BeautifulSoup(body, "html.parser")
     for paragraph in soup.find_all("p"):
         keys = list(_linked_keys(paragraph))
         if key in keys:
-            return neighbours(keys, key)
-    return None, None
+            return keys
+    return []
 
 
 def _linked_keys(paragraph: Tag) -> Iterator[str]:
@@ -268,7 +268,8 @@ class Carula(Extractor):
         body = str(note.get("body") or "")
         nickname = str((note.get("user") or {}).get("nickname") or CREATOR)
         series_title, episode_title = split_title(str(note.get("name") or ""), nickname)
-        preceding, following = neighbour_keys(body, key)
+        listed = listed_keys(body, key)
+        preceding, following = neighbours(listed, key)
         locked = is_locked(note)
         pages = () if locked else tuple(Page(url=src) for src in page_urls(body))
         if not pages and not locked:
@@ -285,6 +286,7 @@ class Carula(Extractor):
             writer=self.credits(series_title),
             publisher=self.PUBLISHER,
             published=published_on(note.get("publish_at")),
+            number=ordinal(listed, key),
         )
 
     def credits(self, title: str) -> str:

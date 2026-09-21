@@ -180,6 +180,7 @@ class Nora(Extractor):
                 writer=writer,
                 publisher=self.PUBLISHER,
                 published=published_on(str(metadata["date"])),
+                number=self._listed_number(work_url, episode_url),
             )
 
         viewer = self._viewer(work_url, episode_id)
@@ -201,6 +202,7 @@ class Nora(Extractor):
             writer=writer,
             publisher=self.PUBLISHER,
             published=published_on(str(metadata["date"])),
+            number=self._listed_number(work_url, episode_url),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

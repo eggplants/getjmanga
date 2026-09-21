@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlparse
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 
 if TYPE_CHECKING:
     from datetime import date
@@ -401,6 +401,7 @@ class Ganma(Extractor):
         writer = str(magazine.get("authorName") or "")
 
         released = self._release(magazine_key, story_id, url)
+        number = ordinal([str(s.get("storyId")) for s in self._listing(magazine_key, url)], story_id)
         if contents.get("__typename") == "StoryContents":
             info = contents.get("storyInfo") or {}
             prev_story = (info.get("previousStoryInfo") or {}).get("storyId")
@@ -416,6 +417,7 @@ class Ganma(Extractor):
                 writer=writer,
                 publisher=self.PUBLISHER,
                 published=released,
+                number=number,
             )
 
         if contents.get("error") == _STORY_NOT_FOUND:
@@ -437,6 +439,7 @@ class Ganma(Extractor):
             writer=writer,
             publisher=self.PUBLISHER,
             published=released,
+            number=number,
         )
 
     def _release(self, magazine_key: str, story_id: str, referer: str) -> date | None:

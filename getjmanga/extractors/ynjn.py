@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlencode, urlparse
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -259,6 +259,7 @@ class YanJan(Extractor):
                 metadata=data,
                 writer=self._writer(title_id),
                 publisher=self.PUBLISHER,
+                number=self._listed_number_of(title_id, episode_id),
             )
         )
 
@@ -342,9 +343,16 @@ class YanJan(Extractor):
 
     def _listed_ids(self, title_id: str, episode_id: str) -> tuple[int, int]:
         """The ids of the episodes listed either side of `episode_id`, 0 at either end or when unknown."""
-        try:
-            entries = self._listing(title_id)
-        except NotAnEpisodePageError:
-            return 0, 0
-        before, after = neighbours([str(entry.get("id")) for entry in entries], episode_id)
+        before, after = neighbours(self._listed_episode_ids(title_id), episode_id)
         return int(before or 0), int(after or 0)
+
+    def _listed_number_of(self, title_id: str, episode_id: str) -> int | None:
+        """Where the title lists `episode_id`, counted from 1; None when unlisted or unknown."""
+        return ordinal(self._listed_episode_ids(title_id), episode_id)
+
+    def _listed_episode_ids(self, title_id: str) -> list[str]:
+        """The title's episode ids, oldest first; empty for a title the site does not know."""
+        try:
+            return [str(entry.get("id")) for entry in self._listing(title_id)]
+        except NotAnEpisodePageError:
+            return []

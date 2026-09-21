@@ -13,7 +13,7 @@ from PIL import Image
 
 from getjmanga.cipher import aes_cbc_decrypt
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 from getjmanga.protobuf import encode_bytes_field, encode_varint_field, integer, message, messages, raw, string
 
 if TYPE_CHECKING:
@@ -186,6 +186,7 @@ class Fuz(Extractor):
             writer=self._credits.get(manga_id, ""),
             publisher=self.PUBLISHER,
             published=published_on(released),
+            number=ordinal([c.id for c in chapters], chapter_id),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -289,6 +290,7 @@ class Fuz(Extractor):
                     writer=self._credits.get(manga_id, ""),
                     publisher=self.PUBLISHER,
                     published=published_on(listed.released),
+                    number=ordinal([c.id for c in chapters], chapter_id),
                 )
         return Episode(url=url, series_title=str(chapter_id), episode_title=str(chapter_id), publisher=self.PUBLISHER)
 

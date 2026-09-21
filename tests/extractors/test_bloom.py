@@ -262,6 +262,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.episode_title == "第1話"
     assert (episode.writer, episode.publisher) == ("上野ポテト", "ホーム社")
     assert episode.next_url == NEXT_URL
+    assert episode.number == 1
     assert [page.width for page in episode.pages] == [392, 392]
     page = urlparse(episode.pages[0].url)
     assert f"{page.scheme}://{page.netloc}{page.path}" == f"{SERVER}/sbcGetImg.php"
@@ -364,6 +365,7 @@ def test_api_that_refuses_the_content_is_locked(client):
     assert episode.series_title == "なんか、花火"
     assert episode.episode_title == "第1話"
     assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
+    assert episode.number == 1
     assert episode.metadata["locked"] is True
     json.dumps(episode.metadata)
 

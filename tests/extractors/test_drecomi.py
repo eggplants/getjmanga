@@ -297,7 +297,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.series_title == "毒姫は呪われた指先に春を乞う"
     assert episode.episode_title == "第1話（1）"
     assert (episode.writer, episode.publisher) == ("米倉をこめ (漫画)", "ドリコム")
-    assert episode.published == date(2026, 9, 1)
+    assert (episode.published, episode.number) == (date(2026, 9, 1), 1)
     # Pages come back in `page_number` order, whatever order the session listed them in.
     assert [page.url for page in episode.pages] == [PAGES[1]["image_url"], PAGES[0]["image_url"]]
     assert episode.pages[0].extra == {

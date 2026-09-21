@@ -155,7 +155,7 @@ def test_episode_reads_a_horizontal_viewer(fake_session, fake_response):
     assert episode.metadata["direction"] == "horizontal"
     assert episode.metadata["author"] == "きわみらい"
     assert (episode.writer, episode.publisher) == ("きわみらい", "講談社")
-    assert episode.published == date(2026, 8, 20)
+    assert (episode.published, episode.number) == (date(2026, 8, 20), 1)
     assert episode.metadata["published"] == "2026年08月20日 公開"
     assert episode.metadata["page_count"] == 3
     # The page, then the work page for the episode before this one, which the page does not link.

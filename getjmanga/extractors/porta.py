@@ -21,7 +21,7 @@ from bs4.element import Tag
 from httpx import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
@@ -187,6 +187,7 @@ class Porta(Extractor):
             writer=listing.writer if listing else "",
             publisher=self.PUBLISHER,
             published=published_on(listing.dates.get(url, "")) if listing else None,
+            number=_position(listing.urls, url) if listing else None,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -283,6 +284,16 @@ class Porta(Extractor):
 
 def _either_side(urls: tuple[str, ...], url: str) -> tuple[str | None, str | None]:
     """The URLs either side of `url` in `urls`, trailing slash or not; None at either end."""
-    wanted = url.rstrip("/")
-    listed = next((candidate for candidate in urls if candidate.rstrip("/") == wanted), None)
+    listed = _listed(urls, url)
     return neighbours(urls, listed) if listed is not None else (None, None)
+
+
+def _position(urls: tuple[str, ...], url: str) -> int | None:
+    """Where `url` stands in `urls`, trailing slash or not, counted from 1; None when unlisted."""
+    listed = _listed(urls, url)
+    return ordinal(urls, listed) if listed is not None else None
+
+
+def _listed(urls: tuple[str, ...], url: str) -> str | None:
+    wanted = url.rstrip("/")
+    return next((candidate for candidate in urls if candidate.rstrip("/") == wanted), None)

@@ -245,6 +245,7 @@ class MechaCreators(Extractor):
             writer=str((data.get("user") or {}).get("name") or ""),
             publisher=self.PUBLISHER,
             published=published_on(chapter.get("published")),
+            number=self._listed_number(series_url(title_id), canonical),
         )
 
     def _fetch(self, url: str) -> Response:

@@ -251,7 +251,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_chapter(client):
     assert episode.series_title == "最悪な鬱小説を書き直してみせます"
     assert episode.episode_title == "第 1 話"
     assert (episode.writer, episode.publisher) == ("えいだ恭子, ケイト・ウォーカー (原作)", "SBCr")
-    assert episode.published == date(2014, 11, 1)
+    assert (episode.published, episode.number) == (date(2014, 11, 1), 1)
     # Decrypted, in `sort` order, with the signed query the CDN checks.
     assert [page.url for page in episode.pages] == [
         f"{CDN}/1_x.jpg/dims/crop/x2000+0+0/optimize?{PARAMETER}",

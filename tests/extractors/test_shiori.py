@@ -215,6 +215,7 @@ def test_episode_reads_the_titles_and_the_pages(client):
     assert [page.url for page in episode.pages] == [f"{UPLOADS}/syouzou_h.jpg", f"{UPLOADS}/asa1.jpg"]
     assert all(page.extra == {} for page in episode.pages)
     assert episode.next_url == NEXT_URL
+    assert episode.number == 1
     assert episode.metadata == {
         "episode_id": "runrun_1",
         "series_url": SERIES_URL,

@@ -340,6 +340,7 @@ class Torch(Extractor):
                 },
                 writer=viewer.writer,
                 publisher=self.PUBLISHER,
+                number=self._listed_number(viewer.series_url, url) if viewer.series_url else None,
             )
         )
 

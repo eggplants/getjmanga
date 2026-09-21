@@ -151,6 +151,10 @@ def client(fake_session, fake_response):
             "story_id=2160": fake_response(text=pages[0]),
             "/plus/manga/": fake_response(jpeg_bytes(), content_type="image/jpeg"),
         }
+        # The work page, for where a story stands in it, unless the test scripts its own.
+        routes.setdefault(
+            "mag_top.php", fake_response(text=series_html([(6, "2173"), (1, "2160")], first="2160", newest="2174"))
+        )
         session = fake_session(routes)
         return Sukupara(session), session
 
@@ -238,8 +242,10 @@ def test_episode_walks_the_pages_and_reads_the_titles(client):
         "images": [f"https://sukupara.jp/plus/manga/{MANGA}/2160/{number}.jpg" for number in (1, 2, 3)],
     }
     # Page 1 is asked for without a page number, the rest by the next-page links.
-    assert session.calls == [FIRST_URL, f"{FIRST_URL}&page_no=2", f"{FIRST_URL}&page_no=3"]
-    assert session.params_seen == [None, None, None]
+    assert episode.number == 1
+    # The three pages of the story, then the work page for where the story stands.
+    assert session.calls == [FIRST_URL, f"{FIRST_URL}&page_no=2", f"{FIRST_URL}&page_no=3", SERIES_URL]
+    assert session.params_seen == [None, None, None, None]
     assert "User-Agent" in session.headers_seen[0]
 
 
@@ -307,7 +313,7 @@ def test_episode_stops_walking_when_a_next_page_link_loops(client, fake_response
     episode = sukupara.episode(SIXTH_URL)
 
     assert len(episode.pages) == 1
-    assert session.calls == [SIXTH_URL]
+    assert session.calls == [SIXTH_URL, SERIES_URL]
 
 
 def test_episode_gives_up_on_an_endless_chain_of_pages(fake_session, fake_response, monkeypatch):
@@ -324,7 +330,7 @@ def test_episode_gives_up_on_an_endless_chain_of_pages(fake_session, fake_respon
     episode = Sukupara(session).episode(SIXTH_URL)
 
     assert len(episode.pages) == 5
-    assert len(session.calls) == 5
+    assert len(session.calls) == 6  # five pages, then the work page
 
 
 def test_episode_rejects_a_taken_down_story(client, fake_response):
@@ -391,7 +397,7 @@ def test_download_writes_the_pages_as_served(client, tmp_path):
     with Image.open(result.save_dir / "0.jpg") as saved:
         assert saved.size == (8, 8)
         assert saved.getpixel((4, 4)) == pytest.approx((10, 20, 30), abs=8)
-    assert session.calls[3:] == [f"https://sukupara.jp/plus/manga/{MANGA}/2160/{number}.jpg" for number in (1, 2, 3)]
+    assert session.calls[4:] == [f"https://sukupara.jp/plus/manga/{MANGA}/2160/{number}.jpg" for number in (1, 2, 3)]
     assert session.headers_seen[-1]["Referer"] == FIRST_URL
 
 

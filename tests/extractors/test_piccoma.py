@@ -220,6 +220,7 @@ def test_episode_reads_the_titles_and_the_pages(client):
     assert episode.pages[0].width == 1441
     assert episode.pages[0].extra == {"scrambled": True}
     assert episode.next_url == f"{BASE_URL}/web/viewer/8195/1185887"
+    assert episode.number == 1
     assert episode.metadata == {
         "product_id": "8195",
         "episode_id": "1185884",
@@ -232,6 +233,7 @@ def test_episode_stops_at_the_last_episode(client):
     piccoma, _ = client()
     episode = piccoma.episode(f"{BASE_URL}/web/viewer/8195/1185887")
     assert (episode.prev_url, episode.next_url) == (f"{BASE_URL}/web/viewer/8195/1185884", None)
+    assert episode.number == 2
 
 
 def test_episode_rejects_a_page_without_a_viewer(fake_session, fake_response):

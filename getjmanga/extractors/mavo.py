@@ -33,7 +33,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -79,6 +79,10 @@ class Listing:
     def neighbours_of(self, url: str) -> tuple[str | None, str | None]:
         """The episodes listed either side of `url`, None at either end."""
         return neighbours(self.urls, url)
+
+    def number_of(self, url: str) -> int | None:
+        """Where `url` stands in the list, counted from 1; None when unlisted."""
+        return ordinal(self.urls, url)
 
 
 def episode_id(url: str) -> str | None:
@@ -351,6 +355,7 @@ class Mavo(Extractor):
             writer=viewer.author,
             publisher=self.PUBLISHER,
             published=published_on(listing.dates.get(listed or key, "")),
+            number=listing.number_of(listed) if listed else None,
         )
 
     def _listing(self, url: str) -> Listing:

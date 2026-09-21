@@ -263,6 +263,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert [(page.width, page.height) for page in episode.pages] == [(844, 1200), (844, 1200)]
     assert [page.extra["page_number"] for page in episode.pages] == [1, 2]
     assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
+    assert episode.number == 1
     assert episode.metadata == VIEWER["data"]
 
     # The viewer API with the ids as query parameters, from the site's origin, then the
@@ -309,6 +310,7 @@ def test_last_locked_episode_has_no_next(client):
     episode = ynjn.episode(LAST_URL)
     assert episode.pages == ()
     assert (episode.prev_url, episode.next_url) == (EPISODE_URL, None)
+    assert episode.number == 5
     assert episode.series_title == "シャドーハウス"
 
 

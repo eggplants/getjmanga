@@ -428,6 +428,7 @@ class Gakcomic(Extractor):
                     metadata=metadata,
                     writer=work.writer,
                     publisher=self.PUBLISHER,
+                    number=index + 1,
                 )
             )
         content = self._open(item.content_id)
@@ -442,6 +443,7 @@ class Gakcomic(Extractor):
                 metadata={**metadata, "content_id": item.content_id, **content.info},
                 writer=work.writer,
                 publisher=self.PUBLISHER,
+                number=index + 1,
             )
         )
 
@@ -524,6 +526,7 @@ class Gakcomic(Extractor):
                         metadata={**metadata, "episode_id": work.items[index].id, "work_url": work.url},
                         writer=work.writer,
                         publisher=self.PUBLISHER,
+                        number=index + 1,
                     )
                 )
         title = str(content.info.get("title") or content_id)

@@ -251,6 +251,7 @@ class Splush(Extractor):
                 },
                 writer=document.writer,
                 publisher=self.PUBLISHER,
+                number=self._listed_number(document.work_url, document.url) if document.work_url else None,
             )
         )
 

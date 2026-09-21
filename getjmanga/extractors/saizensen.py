@@ -433,6 +433,8 @@ class Saizensen(Extractor):
             raise NotAnEpisodePageError(msg)
         res = self._page(url)
         url = str(res.url or url)
+        # Every kind of episode is numbered by the site in its own path.
+        numbered = kind.match(urlparse(url).path)
         if kind is _TWI4_EPISODE:
             document = parse_twi4_page(res.content, url)
             flags = self._twi4_flags(urljoin(url, "."))
@@ -461,6 +463,7 @@ class Saizensen(Extractor):
                 },
                 writer=document.writer,
                 publisher=self.PUBLISHER,
+                number=int(numbered["number"]) if numbered else None,
             )
         )
 

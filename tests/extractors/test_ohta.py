@@ -298,6 +298,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.pages[0].width == 392
     assert episode.pages[0].extra == {"ctbl": IDENTITY_CTBL, "ptbl": SWAPPED_PTBL}
     assert episode.next_url == NEXT_URL
+    assert episode.number == 1
     assert episode.readable
     assert episode.metadata["content_id"] == "64823"
     assert episode.metadata["binb_id"] == BINB_ID
@@ -348,6 +349,7 @@ def test_last_episode_has_no_next(client, fake_response):
     episode = ohta.episode(NEXT_URL)
     assert episode.episode_title == "第9話　50歳のもらい泣き"
     assert (episode.prev_url, episode.next_url) == (EPISODE_URL, None)
+    assert episode.number == 2
 
 
 def test_episode_the_work_page_does_not_list_splits_the_content_title(client, fake_response):

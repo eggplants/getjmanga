@@ -34,7 +34,7 @@ from bs4.element import Tag
 from PIL import Image
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 from getjmanga.viewers import yondemill
 from getjmanga.viewers.speedbinb import split_title
 from getjmanga.viewers.yondemill import Content, content_url
@@ -411,6 +411,7 @@ class Pie(Extractor):
             writer=story.author,
             publisher=self.PUBLISHER,
             published=published_on(story.published),
+            number=ordinal(self._work(story.series_url).urls, url) if story.series_url else None,
         )
 
     def _content(self, canonical: str) -> Episode:
@@ -419,11 +420,12 @@ class Pie(Extractor):
         work = self._work_of(canonical, reading.content)
         if work is None:
             series_title, episode_title = split_title(reading.content.title)
-            prev_url = next_url = None
+            prev_url = next_url = number = None
         else:
             series_title = work.title
             episode_title = work.listed_title(canonical) or split_title(reading.content.title)[1]
             prev_url, next_url = work.neighbours_of(canonical)
+            number = ordinal(work.urls, canonical)
         metadata: dict[str, Any] = {
             "kind": "yondemill",
             "content_id": reading.content_id,
@@ -444,6 +446,7 @@ class Pie(Extractor):
                 metadata={**metadata, "locked": True},
                 writer=str(metadata["author"]),
                 publisher=self.PUBLISHER,
+                number=number,
             )
         return Episode(
             url=canonical,
@@ -462,6 +465,7 @@ class Pie(Extractor):
             },
             writer=str(metadata["author"]),
             publisher=self.PUBLISHER,
+            number=number,
         )
 
     def _work(self, url: str) -> Work:

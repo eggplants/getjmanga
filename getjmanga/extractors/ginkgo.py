@@ -30,7 +30,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -397,6 +397,7 @@ class Ginkgo(Extractor):
                 },
                 # 漫画街 names its authors on its front page only, not on the work or its pages.
                 publisher=self.PUBLISHER,
+                number=ordinal(list(listing.urls), match["episode"]),
             )
         )
 

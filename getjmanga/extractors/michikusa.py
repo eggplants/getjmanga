@@ -30,7 +30,7 @@ from bs4.element import Tag
 from httpx import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal
 from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
@@ -263,6 +263,7 @@ class Michikusa(Extractor):
                 },
                 writer=listing.writer if listing else "",
                 publisher=self.PUBLISHER,
+                number=ordinal(listing.urls, canonical) if listing else None,
             )
         )
 

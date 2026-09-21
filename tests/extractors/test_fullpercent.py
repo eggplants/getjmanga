@@ -182,7 +182,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert episode.metadata["author"] == "作者名"
     assert (episode.writer, episode.publisher) == ("作者名", "RelatyLS")
-    assert episode.metadata["index"] == 0
+    assert (episode.metadata["index"], episode.number) == (0, 1)
     assert episode.metadata["episode_count"] == 3
     assert episode.metadata["page_count"] == 3
     assert episode.metadata["heading"] == f"{WORK_TITLE}　第１話"

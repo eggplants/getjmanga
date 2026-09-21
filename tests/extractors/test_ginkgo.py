@@ -324,6 +324,7 @@ def test_gai_episode_walks_the_pages_and_names_itself_from_the_index(client, gai
         "http://www.manga-gai.net/manga/zuttari/735/03.jpg",
     ]
     assert episode.next_url == "http://www.manga-gai.net/manga/zuttari/736/01.html"
+    assert episode.number == 5  # after 01, 02, 734 and 734.5
     assert episode.metadata["pages"] == [
         "http://www.manga-gai.net/manga/zuttari/735/01.html",
         "http://www.manga-gai.net/manga/zuttari/735/02.html",

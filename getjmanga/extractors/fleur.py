@@ -24,7 +24,7 @@ from bs4.element import Tag
 from httpx import HTTPStatusError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, published_on
+from getjmanga.extractor import Episode, Extractor, Page, ordinal, published_on
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -169,6 +169,8 @@ class Fleur(Extractor):
         next_url = self._pager(soup, url, "_next")
         work = soup.select_one(".manga-header__name a[href]")
         writer, dates = self._work(urljoin(url, str(work["href"]))) if isinstance(work, Tag) else ("", {})
+        # The work page lists newest first, and other things than episodes.
+        listed = [href for href in reversed(dates) if _EPISODE_PATH.match(urlparse(href).path)]
 
         return Episode(
             url=url,
@@ -185,6 +187,7 @@ class Fleur(Extractor):
             writer=writer,
             publisher=self.PUBLISHER,
             published=published_on(dates.get(url, "")),
+            number=ordinal(listed, url),
         )
 
     def _work(self, work_url: str) -> tuple[str, dict[str, str]]:

@@ -9,7 +9,7 @@ from PIL import Image
 
 from getjmanga.downloader import Downloader
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractors.carula import Carula, is_locked, neighbour_keys, parse_catalogue, split_title
+from getjmanga.extractors.carula import Carula, is_locked, listed_keys, parse_catalogue, split_title
 
 EPISODE_URL = "https://note.com/carula/n/nb016b73d0f1d"
 NEXT_URL = "https://note.com/carula/n/n596c41e8118a"
@@ -91,13 +91,13 @@ def test_split_title(name, expected):
     assert split_title(name, "コミックカルラ") == expected
 
 
-def test_next_key_ignores_links_to_other_creators():
+def test_listed_keys_ignores_links_to_other_creators():
     body = (
         '<p><a href="https://note.com/other/n/nb016b73d0f1d">1</a>'
         '<a href="https://note.com/carula/n/nb016b73d0f1d">1</a>'
         '<a href="https://example.com/carula/n/n596c41e8118a">2</a></p>'
     )
-    assert neighbour_keys(body, "nb016b73d0f1d") == (None, None)
+    assert listed_keys(body, "nb016b73d0f1d") == ["nb016b73d0f1d"]
 
 
 @pytest.mark.parametrize(
@@ -159,7 +159,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, a
     assert episode.series_title == "留学ろっく!!"
     assert episode.episode_title == "Lesson 1　パパはダイヤモンドチューバー‼"
     assert (episode.writer, episode.publisher) == ("一本木蛮", "世界文化ブックス")
-    assert episode.published == date(2024, 12, 16)
+    assert (episode.published, episode.number) == (date(2024, 12, 16), 1)
     assert [page.url for page in episode.pages] == [PAGE_1, PAGE_2]
     assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert episode.metadata["key"] == "nb016b73d0f1d"

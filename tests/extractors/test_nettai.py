@@ -252,7 +252,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == SERIES_TITLE
     assert (episode.writer, episode.publisher) == ("宮川輝", "光文社")
-    assert episode.published == date(2021, 10, 22)
+    assert (episode.published, episode.number) == (date(2021, 10, 22), 1)
     assert episode.episode_title == "#001（前編）"
     assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert [page.url for page in episode.pages] == [

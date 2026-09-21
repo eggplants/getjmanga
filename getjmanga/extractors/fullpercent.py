@@ -331,6 +331,7 @@ class FullPercent(Extractor):
                 metadata=metadata,
                 writer=str(metadata["author"]),
                 publisher=self.PUBLISHER,
+                number=index + 1 if index is not None else None,
             )
         )
 

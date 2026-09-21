@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal
 from getjmanga.viewers import yondemill
 from getjmanga.viewers.speedbinb import split_title
 from getjmanga.viewers.yondemill import CONTENT_HOST, Content, content_url
@@ -196,6 +196,7 @@ class Ohta(Extractor):
         work = self._work(work_url) if work_url else None
         series_title, episode_title = self._titles(content, work, content_id)
         prev_url, next_url = _neighbour_urls(work, content_id)
+        number = ordinal(list(work.episodes), content_id) if work is not None else None
         metadata: dict[str, Any] = {
             "content_id": content_id,
             "title": content.title,
@@ -217,6 +218,7 @@ class Ohta(Extractor):
                 metadata={**metadata, "locked": True},
                 writer=_credit(content.author),
                 publisher=content.label or self.PUBLISHER,
+                number=number,
             )
         return self._dated_by_upload(
             Episode(
@@ -237,6 +239,7 @@ class Ohta(Extractor):
                 },
                 writer=_credit(content.author),
                 publisher=content.label or self.PUBLISHER,
+                number=number,
             )
         )
 

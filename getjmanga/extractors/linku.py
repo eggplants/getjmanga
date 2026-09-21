@@ -32,7 +32,7 @@ from PIL import Image
 
 from getjmanga.cipher import aes_cbc_decrypt, xor_unmask
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 from getjmanga.protobuf import integer, message, messages, raw, string
 
 if TYPE_CHECKING:
@@ -193,6 +193,11 @@ class LinkU(Extractor):
             cls.chapter_url(title_id, after.id) if after else None,
         )
 
+    @staticmethod
+    def _chapter_number(chapters: list[Chapter], chapter_id: int) -> int | None:
+        """Where `chapter_id` stands in an oldest-first list, counted from 1; None when unlisted."""
+        return ordinal([chapter.id for chapter in chapters], chapter_id)
+
     def _locked(self, url: str, title_id: int, series_title: str, chapters: list[Chapter], chapter_id: int) -> Episode:
         """Describe a chapter the site would not open, from the title's chapter list."""
         title = next((chapter.title for chapter in chapters if chapter.id == chapter_id), "") or str(chapter_id)
@@ -210,6 +215,7 @@ class LinkU(Extractor):
             writer=self._credits.get(title_id, ""),
             publisher=self.PUBLISHER,
             published=published_on(next((c.released for c in chapters if c.id == chapter_id), "")),
+            number=self._chapter_number(chapters, chapter_id),
         )
 
     @staticmethod
@@ -369,6 +375,7 @@ class MangaOne(LinkU):
             writer=string(title, 5),
             publisher=self.PUBLISHER,
             published=published_on(string(current, 5)),
+            number=self._listed_number(f"{MANGAONE_URL}/manga/{title_id}", self.chapter_url(title_id, chapter_id)),
         )
 
     def _chapter_list(self, title_id: int) -> list[Chapter]:
@@ -555,6 +562,7 @@ class FlowerComics(LinkU):
             writer=self._writer(title_id),
             publisher=self.PUBLISHER,
             published=published_on(released),
+            number=self._chapter_number(chapters, chapter_id),
         )
 
     def _writer(self, title_id: int) -> str:
@@ -747,6 +755,9 @@ class GanganOnline(LinkU):
                 },
                 writer=str(data.get("author") or ""),
                 publisher=self.PUBLISHER,
+                number=self._listed_number(
+                    f"{GANGANONLINE_URL}/title/{title_id}", self.chapter_url(title_id, chapter_id)
+                ),
             )
         )
 
@@ -949,6 +960,7 @@ class MangaPark(LinkU):
             writer=locked.writer,
             publisher=self.PUBLISHER,
             published=locked.published,
+            number=locked.number,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -1186,6 +1198,7 @@ class MangaLab(LinkU):
                 },
                 writer=string(author, 2),
                 publisher=self.PUBLISHER,
+                number=self._chapter_number(chapters, chapter_id),
             )
         )
 

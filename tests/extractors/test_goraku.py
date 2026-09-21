@@ -145,7 +145,7 @@ def test_episode_reads_the_titles_and_the_pages(fake_session, fake_response):
     assert episode.url == FIRST_URL
     assert episode.series_title == "堕ちた剣聖、腐神に拾われる"
     assert (episode.writer, episode.publisher) == ("谷川人鳥 田鵺功空", "日本文芸社")
-    assert episode.published == date(2026, 7, 24)
+    assert (episode.published, episode.number) == (date(2026, 7, 24), 1)
     assert episode.episode_title == "第一話 腐神と赤錆"
     assert [page.url for page in episode.pages] == [
         f"{CDN_BASE}/1?__token__={ACCESS_KEY}",

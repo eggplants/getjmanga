@@ -374,6 +374,7 @@ def test_episode_reads_a_webtoon(client):
     assert len(episode.pages) == 2
     assert episode.pages[0].url.endswith("FFeZ7qqIlvhe4o8usLAUlGac.jpg")
     assert (episode.prev_url, episode.next_url) == (None, f"{BASE_URL}/book/viewer?id=Z0090128")
+    assert episode.number == 1
     assert episode.metadata["option"]["bookId"] == "Z0090127"
     assert json.dumps(episode.metadata)
     # The viewer page names the next episode; the previous one comes off the

@@ -335,7 +335,7 @@ def test_episode_reads_a_story(client):
     assert episode.series_title == "Poetic Horror"
     assert episode.episode_title == "【Part 1】Alicia"
     assert (episode.writer, episode.publisher) == ("坂月さかな", "パイ インターナショナル")
-    assert episode.published == date(2026, 2, 4)
+    assert (episode.published, episode.number) == (date(2026, 2, 4), 1)
     assert [page.url for page in episode.pages] == [f"{UPLOADS}/2025/07/01_A_1.jpg"]
     assert episode.pages[0].extra == {}
     assert episode.next_url == NEXT_STORY_URL
@@ -351,7 +351,8 @@ def test_episode_reads_a_story(client):
     }
     json.dumps(episode.metadata)
     # A story needs no work page.
-    assert session.calls == [STORY_URL]
+    # The story, then the work page it links, for where the story stands in it.
+    assert session.calls == [STORY_URL, WORK_URL]
 
 
 def test_episode_remembers_the_original_of_a_scaled_image(client, fake_response):
@@ -413,6 +414,7 @@ def test_content_is_titled_after_the_work_page_that_lists_it(client):
     assert episode.pages[0].extra == {"ctbl": IDENTITY_CTBL, "ptbl": SWAPPED_PTBL}
     # The next free episode, over the ones sold elsewhere.
     assert episode.next_url == NEXT_CONTENT_URL
+    assert episode.number == 1
     assert episode.metadata["kind"] == "yondemill"
     assert episode.metadata["work_url"] == MANGA_WORK_URL
     assert episode.metadata["author"] == "ねこ助"

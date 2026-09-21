@@ -121,8 +121,12 @@ ATTACHMENT_HTML = """
 
 
 @pytest.fixture
-def client(fake_session):
+def client(fake_session, fake_response):
     def make(routes):
+        # The work page numbers its episodes; any other work is unknown, so its episodes go unnumbered.
+        routes = dict(routes)
+        routes.setdefault("/series/14712/", fake_response(text=WORK_HTML))
+        routes.setdefault("/series/", fake_response(text="404", status_code=HTTPStatus.NOT_FOUND))
         session = fake_session(routes)
         return Splush(session), session
 
@@ -175,7 +179,8 @@ def test_is_series_fetches_the_page_once_and_episode_reuses_it(client, fake_resp
     episode = splush.episode(EPISODE_URL)
 
     assert episode.episode_title == "第一話（前編）"
-    assert session.calls == [EPISODE_URL]
+    # The episode page, then its work page for where the episode stands.
+    assert session.calls == [EPISODE_URL, WORK_URL]
 
 
 def test_is_series_is_true_for_a_work_page_and_series_urls_reuses_it(client, fake_response):
@@ -203,6 +208,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
         "https://www.splush.jp/wp-content/uploads/2025/12/souta01_04.jpg",
     ]
     assert episode.next_url == NEXT_URL
+    assert episode.number == 1
     assert episode.readable
     assert episode.metadata["work_url"] == WORK_URL
     assert episode.metadata["expired"] is False

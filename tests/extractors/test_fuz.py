@@ -127,7 +127,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_chapter(client):
     assert episode.series_title == "氷舞のアウフギーサー"
     assert episode.episode_title == "1話（1）"
     assert (episode.writer, episode.publisher) == ("笠間裕之 (原作), 相馬一 (作画)", "芳文社")
-    assert episode.published == date(2026, 7, 79232 % 28 + 1)
+    assert (episode.published, episode.number) == (date(2026, 7, 79232 % 28 + 1), 1)
     assert [page.url for page in episode.pages] == [
         "https://img.comic-fuz.com/f/x/0.jpeg.enc?h=a",
         "https://img.comic-fuz.com/f/x/1.jpeg.enc?h=b",

@@ -33,7 +33,7 @@ from PIL import Image
 
 from getjmanga.cipher import aes_cbc_decrypt
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, numbered
 
 if TYPE_CHECKING:
     from httpx import Response
@@ -331,6 +331,7 @@ class Vcomi(Extractor):
                     if (name := str(_dict(_dict(item).get("author")).get("name") or ""))
                 ),
                 publisher=self.PUBLISHER,
+                number=numbered(entry.get("sequence")),
             )
         )
 

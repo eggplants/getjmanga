@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urlparse
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -330,6 +330,7 @@ class LineManga(Extractor):
                 metadata={"option": option},
                 writer=str(option.get("authorName") or ""),
                 publisher=self._publisher(flavour, product_id, canonical),
+                number=self._listed_position(flavour, product_id, book_id, canonical),
             )
         )
 
@@ -381,6 +382,7 @@ class LineManga(Extractor):
             metadata={"book": entry},
             writer=", ".join(str(a.get("name") or "") for a in entry.get("authors") or [] if a.get("name")),
             publisher=self._publisher(flavour, product_id, url),
+            number=index + 1,
         )
 
     def _publisher(self, flavour: str, product_id: str, referer: str) -> str:
@@ -400,15 +402,23 @@ class LineManga(Extractor):
         None at the start of the work, and for a work the API has no list of
         (a print comic, say).
         """
-        if not product_id:
-            return None
-        try:
-            entries = self._listing(flavour, product_id, referer)
-        except NotAnEpisodePageError:
-            return None
+        entries = self._listed(flavour, product_id, referer)
         entry = next((entry for entry in entries if str(entry.get("id")) == book_id), None)
         before = neighbours(entries, entry)[0] if entry is not None else None
         return episode_url(str(before["id"]), indies=flavour == "indies") if before else None
+
+    def _listed_position(self, flavour: str, product_id: str, book_id: str, referer: str) -> int | None:
+        """Where the work lists `book_id`, counted from 1; None for a work the API has no list of."""
+        return ordinal([str(entry.get("id")) for entry in self._listed(flavour, product_id, referer)], book_id)
+
+    def _listed(self, flavour: str, product_id: str, referer: str) -> list[dict[str, Any]]:
+        """The work's listing, or nothing for a work the API has no list of."""
+        if not product_id:
+            return []
+        try:
+            return self._listing(flavour, product_id, referer)
+        except NotAnEpisodePageError:
+            return []
 
     def _listing(self, flavour: str, product_id: str, referer: str) -> list[dict[str, Any]]:
         """The episodes of a work in reading order, fetched once per work.

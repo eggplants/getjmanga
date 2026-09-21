@@ -135,8 +135,8 @@ class Boost(Extractor):
         super().__init__(session)
         #: The credits of each work page read, by URL.
         self._credits: dict[str, str] = {}
-        #: The `update-date` of every listed episode seen so far, by product id.
-        self._dates: dict[str, str] = {}
+        #: The `update-date` and the position of every listed episode seen so far, by product id.
+        self._listed: dict[str, tuple[str, int]] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -193,9 +193,9 @@ class Boost(Extractor):
             fresh = False
             for item in soup.select("a.book-product-list-item[data-id]"):
                 candidate = product_url(str(item.attrs["data-id"]))
-                self._dates.setdefault(str(item.attrs["data-id"]), _update_date(item))
                 if candidate not in urls:
                     urls.append(candidate)
+                    self._listed.setdefault(str(item.attrs["data-id"]), (_update_date(item), len(urls)))
                     fresh = True
             pager_next = soup.select_one("li.to-next")
             if not fresh or pager_next is None or "disabled" in (pager_next.get("class") or []):
@@ -243,7 +243,8 @@ class Boost(Extractor):
                 metadata={"colophon": colophon.raw},
                 writer=self._writer(colophon.content_url),
                 publisher=self.PUBLISHER,
-                published=published_on(self._update_date(colophon.content_url, product_id)),
+                published=published_on(self._listing_row(colophon.content_url, product_id)[0]),
+                number=self._listing_row(colophon.content_url, product_id)[1],
             )
 
         license_ = self._get(LICENSE_URL, params={"cid": cid}, headers={**self.HEADERS, "Referer": landed}).json()
@@ -265,7 +266,8 @@ class Boost(Extractor):
                 metadata={"colophon": colophon.raw, "license": license_},
                 writer=self._writer(colophon.content_url),
                 publisher=self.PUBLISHER,
-                published=published_on(self._update_date(colophon.content_url, product_id)),
+                published=published_on(self._listing_row(colophon.content_url, product_id)[0]),
+                number=self._listing_row(colophon.content_url, product_id)[1],
             )
         pack = decode_pack(self._get(urljoin(content_url, "configuration_pack.json")).text)
         return Episode(
@@ -278,32 +280,37 @@ class Boost(Extractor):
             metadata={"colophon": colophon.raw, "license": license_, "configuration": pack.content["configuration"]},
             writer=self._writer(colophon.content_url),
             publisher=self.PUBLISHER,
-            published=published_on(self._update_date(colophon.content_url, product_id)),
+            published=published_on(self._listing_row(colophon.content_url, product_id)[0]),
+            number=self._listing_row(colophon.content_url, product_id)[1],
         )
 
-    def _update_date(self, content_url: str | None, product_id: str) -> str:
-        """The `update-date` the work page lists for `product_id`.
+    def _listing_row(self, content_url: str | None, product_id: str) -> tuple[str, int | None]:
+        """The `update-date` and the position, from 1, the work page lists `product_id` at.
 
         The listing is walked oldest first until the episode shows up, and
         every episode passed on the way is remembered too.
         """
         if content_url is None:
-            return ""
-        if product_id not in self._dates:
+            return "", None
+        if product_id not in self._listed:
+            seen: list[str] = []
             for page in range(1, self.MAX_LISTING_PAGES + 1):
                 soup = BeautifulSoup(self._get(content_url, params={"order": "asc", "p": page}).content, "html.parser")
                 items = soup.select("a.book-product-list-item[data-id]")
                 for item in items:
-                    self._dates.setdefault(str(item.attrs["data-id"]), _update_date(item))
+                    listed_id = str(item.attrs["data-id"])
+                    if listed_id not in seen:
+                        seen.append(listed_id)
+                        self._listed.setdefault(listed_id, (_update_date(item), len(seen)))
                 pager_next = soup.select_one("li.to-next")
                 if (
-                    product_id in self._dates
+                    product_id in self._listed
                     or not items
                     or pager_next is None
                     or "disabled" in (pager_next.get("class") or [])
                 ):
                     break
-        return self._dates.get(product_id, "")
+        return self._listed.get(product_id, ("", None))
 
     def _writer(self, content_url: str | None) -> str:
         """The credits off the work page the colophon links back to, read once per work.

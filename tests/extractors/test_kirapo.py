@@ -220,6 +220,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, f
     ]
     assert [page.extra["spread"] for page in episode.pages] == ["center", "right"]
     assert episode.next_url == SPECIAL_URL
+    assert episode.number == 1
     assert episode.metadata["direction"] == "rtl"
     assert episode.metadata["recommend"].startswith("/p/ad_pages/")
     assert (episode.metadata["imprint"], episode.metadata["slug"], episode.metadata["episode_id"]) == (

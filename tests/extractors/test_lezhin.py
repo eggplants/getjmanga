@@ -237,6 +237,7 @@ def test_episode_reads_titles_pages_and_the_next_chapter(client):
     assert episode.pages[0].extra == {"key": XOR_KEY}
     assert (episode.pages[0].width, episode.pages[0].height) == (1080, 4218)
     assert episode.next_url == SECOND_URL
+    assert episode.number == 1
     assert episode.metadata["error"] is None
     assert session.calls == [
         f"{API_URL}/comic/{TITLE}/chapter/{FIRST}/general-info",

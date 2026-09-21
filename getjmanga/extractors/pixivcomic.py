@@ -356,6 +356,7 @@ class PixivComic(Extractor):
             writer=self._writer(str(reading.get("work_id") or ""), page_url),
             publisher=self.PUBLISHER,
             published=published_on(reading.get("read_start_at")),
+            number=self._listed_number(f"{BASE_URL}/works/{reading.get('work_id')}", page_url),
         )
 
     def _writer(self, work_id: str, referer: str) -> str:

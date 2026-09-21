@@ -139,6 +139,7 @@ def test_episode_reads_the_titles_the_page_and_the_next_episode(client):
     assert (episode.writer, episode.publisher) == ("まりぱか", "秋田書店")
     assert [page.url for page in episode.pages] == ["https://nikkangecchan.jp/comics/hanikamu/2/image"]
     assert episode.next_url == f"{WORK_URL}/3"
+    assert episode.number == 2
     assert episode.metadata == {
         "slug": "hanikamu",
         "number": 2,

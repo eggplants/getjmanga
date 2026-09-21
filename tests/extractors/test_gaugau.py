@@ -212,6 +212,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.pages[0].width == 392
     assert episode.pages[0].extra == {"ctbl": IDENTITY_CTBL, "ptbl": SWAPPED_PTBL}
     assert episode.next_url == f"{WORK_URL}/episodes/2"
+    assert episode.number == 1
     assert episode.metadata["content_id"] == CONTENT_ID
     assert episode.metadata["contents_server"] == SERVER
     json.dumps(episode.metadata)
@@ -252,6 +253,7 @@ def test_a_locked_episode_has_no_pages_but_still_a_next(client, fake_response):
     assert episode.episode_title == "第2話(3)"
     assert episode.series_title == "宝石の聖女"
     assert (episode.prev_url, episode.next_url) == (f"{WORK_URL}/episodes/1", f"{WORK_URL}/episodes/3")
+    assert episode.number == 2
     assert episode.metadata == {"work_id": WORK_ID, "locked": True}
     assert not any("bibGetCntntInfo" in url for url in session.calls)
 

@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, ordinal
 
 if TYPE_CHECKING:
     from httpx import Client, Response
@@ -58,8 +58,8 @@ class Shiori(Extractor):
             session: A session to reuse. A retrying one is made when omitted.
         """
         super().__init__(session)
-        #: The author each work page profiles, by URL.
-        self._credits: dict[str, str] = {}
+        #: The author each work page profiles and the episodes it lists, by URL.
+        self._works: dict[str, tuple[str, list[str]]] = {}
 
     URL_FORMS = (
         "https://shiori-on.com/story/<slug>_<n>",
@@ -167,20 +167,26 @@ class Shiori(Extractor):
                     "prev_url": _nav_link(soup, "前の話", page_url),
                     "images": image_urls,
                 },
-                writer=self._writer(series_url),
+                writer=self._work(series_url)[0],
                 publisher=self.PUBLISHER,
+                number=ordinal(self._work(series_url)[1], url),
             )
         )
 
-    def _writer(self, series_url: str) -> str:
-        """The name the work page's `著者プロフィール` heads, read once per work; an episode page names none."""
+    def _work(self, series_url: str) -> tuple[str, list[str]]:
+        """The work page, read once: the name its `著者プロフィール` heads, and its episode list in order.
+
+        An episode page names no author, and lists only its neighbours.
+        """
         if not series_url:
-            return ""
-        if series_url not in self._credits:
-            soup = BeautifulSoup(self._fetch_page(series_url, "series").content, "html.parser")
+            return "", []
+        if series_url not in self._works:
+            res = self._fetch_page(series_url, "series")
+            soup = BeautifulSoup(res.content, "html.parser")
             heading = soup.select_one(".product-profile .comment h3, .comment h3")
-            self._credits[series_url] = heading.get_text(strip=True) if isinstance(heading, Tag) else ""
-        return self._credits[series_url]
+            writer = heading.get_text(strip=True) if isinstance(heading, Tag) else ""
+            self._works[series_url] = (writer, _episode_links(soup, str(res.url or series_url)))
+        return self._works[series_url]
 
     def _fetch_page(self, url: str, kind: str) -> Response:
         """GET a site page, turning a 404 into `NotAnEpisodePageError`."""

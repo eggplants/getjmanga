@@ -206,6 +206,7 @@ class ComicWalker(Extractor):
             writer=_authors(work.get("work") or {}),
             publisher=self.PUBLISHER,
             published=published_on(entry.get("updateDate")),
+            number=index + 1,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

@@ -21,7 +21,7 @@ from PIL import Image
 
 from getjmanga.cipher import aes_cbc_decrypt
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, published_on
+from getjmanga.extractor import Episode, Extractor, Page, ordinal, published_on
 from getjmanga.protobuf import integer, message, messages, raw, string
 
 if TYPE_CHECKING:
@@ -321,6 +321,7 @@ class Corocoro(Extractor):
         preceding = chapter(raw(viewer, _VIEWER_PREV))
         following = chapter(raw(viewer, _VIEWER_NEXT))
         authors = [author(buf) for buf in messages(viewer, _VIEWER_AUTHORS)]
+        chapters = [chapter(buf) for buf in messages(viewer, _VIEWER_CHAPTERS)]
         return Episode(
             url=episode_url(chapter_id),
             series_title=series["name"] or str(series["id"] or chapter_id),
@@ -336,11 +337,12 @@ class Corocoro(Extractor):
                 "chapter": current,
                 "prev_chapter": chapter(raw(viewer, _VIEWER_PREV)) if raw(viewer, _VIEWER_PREV) else None,
                 "next_chapter": following if following["id"] else None,
-                "chapters": [chapter(buf) for buf in messages(viewer, _VIEWER_CHAPTERS)],
+                "chapters": chapters,
             },
             writer=", ".join(f"{a['name']} ({a['role']})" if a["role"] else a["name"] for a in authors if a["name"]),
             publisher=self.PUBLISHER,
             published=published_on(current["start_at"]),
+            number=ordinal([c["id"] for c in chapters], current["id"]),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

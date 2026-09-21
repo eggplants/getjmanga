@@ -334,6 +334,7 @@ class Starts(Extractor):
             writer=self._credits.get(series_url(origin, serial), ""),
             publisher=self.PUBLISHER,
             published=published_on(story.updated) if story else None,
+            number=number,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

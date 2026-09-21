@@ -28,7 +28,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from PIL import Image
 
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, numbered, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -304,6 +304,7 @@ class BeLToon(Extractor):
                 writer=_creators(work),
                 publisher=self.PUBLISHER,
                 published=published_on((entry or {}).get("openedAt")),
+                number=numbered((entry or {}).get("orderNo")),
             )
 
         if result.get("contentType") != "IMAGE":
@@ -332,6 +333,7 @@ class BeLToon(Extractor):
             writer=_creators(work),
             publisher=self.PUBLISHER,
             published=published_on((entry or {}).get("openedAt")),
+            number=numbered((entry or {}).get("orderNo")),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

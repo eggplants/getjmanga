@@ -302,6 +302,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.pages[0].extra == {"iv": IVS[0], "secret": SECRET}
     assert episode.pages[1].extra == {"iv": IVS[1], "secret": SECRET}
     assert episode.next_url == SECOND_URL
+    assert episode.number == 1
     assert episode.metadata["episode"] == FIRST
     assert episode.metadata["nextEpisode"] == SECOND
     assert episode.metadata["viewer"] == PAGES

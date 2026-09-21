@@ -233,6 +233,7 @@ class FireCross(Extractor):
         prev_url = self._listed_neighbours(series_url, episode_url)[0] if series_url else None
         writer = self._credits.get(series_url or "", "")
         published = published_on(self._releases.get(episode_url, ""))
+        listed_at = self._listed_number(series_url, episode_url) if series_url else None
         metadata: dict[str, Any] = {
             "ebook_id": int(episode_id),
             "series_url": str(home["href"]) if isinstance(home, Tag) else None,
@@ -251,6 +252,7 @@ class FireCross(Extractor):
                 writer=writer,
                 publisher=self.PUBLISHER,
                 published=published,
+                number=listed_at,
             )
         reader = BeautifulSoup(self._get(reader_url, headers=self.HEADERS).content, "html.parser")
         cgi, param = _reader_meta(reader)
@@ -286,6 +288,7 @@ class FireCross(Extractor):
             writer=writer,
             publisher=self.PUBLISHER,
             published=published,
+            number=listed_at,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

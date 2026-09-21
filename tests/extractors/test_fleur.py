@@ -205,7 +205,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.series_title == "ゆきあいの青"
     assert episode.episode_title == "第1話"
     assert (episode.writer, episode.publisher) == ("たつもとみお", "KADOKAWA")
-    assert episode.published == date(2026, 7, 1)
+    assert (episode.published, episode.number) == (date(2026, 7, 1), 1)
     assert [page.url for page in episode.pages] == ORIGINALS
     assert [page.extra["served"] for page in episode.pages] == SERVED
     assert episode.next_url == NEXT_URL

@@ -202,6 +202,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, f
     ]
     assert [page.extra["spread"] for page in episode.pages] == ["left", "right"]
     assert episode.next_url == NEXT_URL
+    assert episode.number == 1
     assert episode.metadata["direction"] == "rtl"
     assert episode.metadata["recommend"] == "last.html[next]"
     assert episode.metadata["work_url"] == SERIES_URL

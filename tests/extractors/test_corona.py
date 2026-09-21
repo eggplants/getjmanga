@@ -240,7 +240,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.series_title == "クズ勇者のその日暮らし@COMIC"
     assert episode.episode_title == " 第1話"
     assert (episode.writer, episode.publisher) == ("OFURO (漫画), 珍比良 (原作)", "TOブックス")
-    assert episode.published == date(2026, 3, 9)
+    assert (episode.published, episode.number) == (date(2026, 3, 9), 1)
     assert [page.url.split("?")[0] for page in episode.pages] == [f"{CDN}/aaaa", f"{CDN}/bbbb"]
     assert [page.extra for page in episode.pages] == [{"drm_hash": SHUFFLE}, {"drm_hash": ""}]
     assert episode.next_url == SECOND_URL
