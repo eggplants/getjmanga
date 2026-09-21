@@ -109,6 +109,7 @@ jm c bulk false
 jm c both true
 jm c format webp
 jm c cbz true
+jm c metadata true
 
 jm c patrol https://shonenjumpplus.com/episode/13932016480028799982
 jm c patrol -s https://shonenjumpplus.com/

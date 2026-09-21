@@ -131,7 +131,7 @@ def parse_args(args: list[str] | None = None, *, patrol: bool = False) -> Namesp
             action="store_true",
             help="remember each url in the config file, for `%(prog)s patrol` to download what is new",
         )
-        # `-b`, `-B`, `-C`, `-d`, `-F` and `-o` default to None so that the config file can fill them in.
+        # `-b`, `-B`, `-C`, `-d`, `-F`, `-m` and `-o` default to None so that the config file can fill them in.
         chain = parser.add_mutually_exclusive_group()
         chain.add_argument("-b", "--bulk", action=BooleanOptionalAction, help="follow every next episode")
         chain.add_argument("-B", "--both", action=BooleanOptionalAction, help="follow every previous episode too")
@@ -152,7 +152,7 @@ def parse_args(args: list[str] | None = None, *, patrol: bool = False) -> Namesp
         help="also pack the saved pages into <series>/_cbz/<episode>.cbz (pages already saved are packed as they are)",
     )
     parser.add_argument("-o", "--overwrite", action=BooleanOptionalAction, help="download again if it exists")
-    parser.add_argument("-m", "--metadata", action="store_true", help="save episode metadata as json")
+    parser.add_argument("-m", "--metadata", action=BooleanOptionalAction, help="save episode metadata as json")
     parser.add_argument("-u", "--username", metavar="ID", help="id or email address to log in with")
     parser.add_argument("-p", "--password", metavar="PW", help="password (prompted for if -u is given without it)")
     if not patrol:
@@ -197,6 +197,8 @@ def apply_config(parsed: Namespace, config: Config) -> None:
         parsed.format = config.format if config.format is not None else "jpg"
     if parsed.cbz is None:
         parsed.cbz = config.cbz
+    if parsed.metadata is None:
+        parsed.metadata = config.metadata
     # `-b` and `-B` rule each other out: one given on the command line (or turned
     # off there) settles both; otherwise the config file does, which never has both on.
     if parsed.bulk is not None:
@@ -235,8 +237,9 @@ def parse_config_args(args: list[str]) -> Namespace:
         setter.add_argument("value", choices=("true", "false"))
     fmt = commands.add_parser("format", help="set what -F defaults to")
     fmt.add_argument("value", choices=get_args(Format), help="image format to save each page as")
-    cbz = commands.add_parser("cbz", help="set whether -C is on by default")
-    cbz.add_argument("value", choices=("true", "false"))
+    for name, flag in (("cbz", "-C"), ("metadata", "-m")):
+        setter = commands.add_parser(name, help=f"set whether {flag} is on by default")
+        setter.add_argument("value", choices=("true", "false"))
     patrol = commands.add_parser("patrol", help="add a url for `getjmanga patrol`, without downloading it now")
     patrol.add_argument("url", help="an episode or series url, whose title is read from the site, or a page with -s")
     patrol.add_argument("-s", "--search", action="store_true", help="a web page to download the links of")
