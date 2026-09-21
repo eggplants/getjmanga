@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import ClassVar
 
@@ -20,7 +21,7 @@ def test_parse_args_defaults():
     assert parsed.extractor is None
     # -b, -C, -d, -F, -m and -o are left to the config file until `apply_config` settles them.
     assert (parsed.bulk, parsed.savedir, parsed.overwrite) == (None, None, None)
-    assert (parsed.first, parsed.quiet) == (False, False)
+    assert (parsed.first, parsed.quiet, parsed.verbose) == (False, False, False)
     assert (parsed.format, parsed.cbz, parsed.metadata) == (None, None, None)
 
 
@@ -206,8 +207,7 @@ def test_main_downloads_a_single_episode(recording, capsys, tmp_path):
     assert extractor.images == 1
     assert (tmp_path / "mangabu.jp" / "S" / "ep1" / "0.jpg").exists()
     out = capsys.readouterr().out
-    assert "get: https://mangabu.jp/episodes/0" in out
-    assert "saved:" in out
+    assert "saved: mangabu.jp/S/ep1" in out
     assert "done." in out
 
 
@@ -242,7 +242,13 @@ def test_bulk_steps_over_a_locked_episode(recording, capsys):
     main(["-b", "https://mangabu.jp/episodes/0"])
 
     assert len(recording.instances[0].episodes) == 3
-    assert "skip: 'ep2' needs a purchase" in capsys.readouterr().err
+    assert "saved: mangabu.jp/S (2 episodes, 1 locked)" in capsys.readouterr().out
+
+
+def test_a_single_locked_episode_is_skipped(recording, capsys):
+    recording.locked = {"https://mangabu.jp/episodes/0"}
+    main(["https://mangabu.jp/episodes/0"])
+    assert "skip: 'ep1' needs a purchase, a wait or a login." in capsys.readouterr().err
 
 
 def test_bulk_stops_where_the_chain_stops_being_readable(recording, capsys):
@@ -269,7 +275,7 @@ def test_a_series_downloads_every_episode_it_lists(recording, capsys):
         "https://mangabu.jp/episodes/feed1",
         "https://mangabu.jp/episodes/feed2",
     ]
-    assert "series: 3 episodes listed." in capsys.readouterr().out
+    assert "saved: mangabu.jp/S (3 episodes)" in capsys.readouterr().out
 
 
 def test_a_series_skips_what_it_cannot_read_and_warns_about_bulk(recording, capsys):
@@ -300,9 +306,7 @@ def test_format_and_cbz_reach_the_downloader(recording, capsys, tmp_path):
     main(["-F", "webp", "-C", "https://mangabu.jp/episodes/0"])
     assert (tmp_path / "mangabu.jp" / "S" / "ep1" / "0.webp").exists()
     assert (tmp_path / "mangabu.jp" / "S" / "_cbz" / "ep1.cbz").exists()
-    out = capsys.readouterr().out
-    assert "saved:" in out
-    assert "packed:" in out
+    assert "saved: mangabu.jp/S/ep1" in capsys.readouterr().out
 
 
 def test_an_existing_episode_is_skipped(recording, capsys, tmp_path):
@@ -343,6 +347,44 @@ def test_quiet_prints_nothing(recording, capsys):
     assert capsys.readouterr().out == ""
 
 
+def test_quiet_still_warns(recording, capsys):
+    recording.missing = {"https://mangabu.jp/episodes/1"}
+    main(["-q", "-b", "https://mangabu.jp/episodes/0"])
+    assert capsys.readouterr().err == "stop: the next episode is not readable.\n"
+
+
+def test_verbose_logs_every_step_with_a_timestamp(recording, capsys):
+    recording.locked = {"https://mangabu.jp/episodes/1"}
+    main(["-v", "-C", "-b", "https://mangabu.jp/episodes/0"])
+    lines = capsys.readouterr().err.splitlines()
+    assert all(
+        re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} (DEBUG|INFO|WARNING) +getjmanga: ", line) for line in lines
+    )
+    assert [line.split(": ", 1)[1] for line in lines] == [
+        "get: https://mangabu.jp/episodes/0",
+        "'ep1': 1 pages",
+        "page 1/1",
+        "saved: mangabu.jp/S/ep1",
+        "packed: mangabu.jp/S/_cbz/ep1.cbz",
+        "get: https://mangabu.jp/episodes/1",
+        "skip: 'ep2' needs a purchase, a wait or a login.",
+        "get: https://mangabu.jp/episodes/2",
+        "'ep3': 1 pages",
+        "page 1/1",
+        "saved: mangabu.jp/S/ep3",
+        "packed: mangabu.jp/S/_cbz/ep3.cbz",
+        "saved: mangabu.jp/S (2 episodes, 1 locked)",
+        "done.",
+    ]
+
+
+def test_quiet_and_verbose_rule_each_other_out(capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        parse_args(["-q", "-v", "https://mangabu.jp/episodes/1"])
+    assert excinfo.value.code == 2
+    assert "not allowed with" in capsys.readouterr().err
+
+
 def test_an_unsupported_url_fails(capsys):
     with pytest.raises(SystemExit) as excinfo:
         main(["https://example.com/episodes/1"])
@@ -362,7 +404,7 @@ def test_download_never_visits_a_url_twice(tmp_path):
     downloader = Downloader(extractor, tmp_path)
 
     # Started at episode 2, the fake names episode 1 next, which names episode 2 again -- a loop.
-    done = download(downloader, ["https://mangabu.jp/episodes/2"], series=False, bulk=True, quiet=True)
+    done = download(downloader, ["https://mangabu.jp/episodes/2"], series=False, bulk=True)
 
     assert [result.episode.url for result in done] == ["https://mangabu.jp/episodes/2", "https://mangabu.jp/episodes/1"]
     assert extractor.episodes == ["https://mangabu.jp/episodes/2", "https://mangabu.jp/episodes/1"]
@@ -815,7 +857,7 @@ def test_patrol_follows_each_chain_from_where_it_left_off(recording, isolated_co
     assert extractor.images == 2
     assert load_config().patrol == (Work("https://mangabu.jp/episodes/2", "S"),)
     out = capsys.readouterr().out
-    assert "patrol: S" in out
+    assert "saved: mangabu.jp/S (2 episodes, 1 already there)" in out
     assert "done." in out
 
 

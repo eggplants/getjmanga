@@ -89,10 +89,14 @@ lint.ignore = [
 ]
 lint.per-file-ignores."getjmanga/cli.py" = [
   "PLR0913", # Too many arguments (`download` takes one keyword per command line flag)
-  "T201",    # `print` found
+  "T201",    # `print` found (`jm config` answers on stdout; everything else goes through `console.logger`)
+  "TRY400",  # `logging.error` in `except` (the message is for the terminal, the traceback is not)
 ]
 lint.per-file-ignores."getjmanga/config.py" = [
   "FBT001", # Boolean positional argument (`set_option` takes the value `overwrite = true` is set to)
+]
+lint.per-file-ignores."getjmanga/console.py" = [
+  "ARG002", # Unused method argument (the base `Display` takes what its subclasses show)
 ]
 lint.per-file-ignores."getjmanga/downloader.py" = [
   "PLR0913", # Too many arguments (one keyword per command line flag)

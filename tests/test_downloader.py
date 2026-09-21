@@ -69,6 +69,14 @@ def test_download_stops_after_the_first_page_when_asked(tmp_path):
     assert extractor.fetched == ["https://cdn.example/0.jpg"]
 
 
+def test_download_reports_each_page_as_it_is_written(tmp_path):
+    seen = []
+    Downloader(Canned(episode()), tmp_path, progress=lambda ep, done, total: seen.append((ep, done, total))).download(
+        "u"
+    )
+    assert seen == [(episode(), 0, 3), (episode(), 1, 3), (episode(), 2, 3), (episode(), 3, 3)]
+
+
 def test_download_leaves_an_existing_directory_alone(tmp_path):
     (tmp_path / "example.com" / "Series" / "Episode 1").mkdir(parents=True)
     extractor = Canned(episode())

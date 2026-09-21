@@ -31,6 +31,7 @@ from .config import (
     set_site,
     store_work,
 )
+from .console import Display, logger, setup
 from .downloader import Downloader, Format
 from .errors import GetjmangaError, NotAnEpisodePageError, NothingReadableError
 from .extractors import EXTRACTORS, find_extractor, get_extractor
@@ -169,7 +170,14 @@ def parse_args(args: list[str] | None = None, *, patrol: bool = False) -> Namesp
         type=Path,
         help=f"config file holding site credentials (default: {default_config_path()})",
     )
-    parser.add_argument("-q", "--quiet", action="store_true", help="disable console output")
+    noise = parser.add_mutually_exclusive_group()
+    noise.add_argument("-q", "--quiet", action="store_true", help="print nothing but the warnings and the errors")
+    noise.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="log every step with a timestamp, and every request, instead of the live display",
+    )
     if not patrol:
         parser.add_argument("--list-extractors", action="store_true", help="list every extractor and exit")
     parser.add_argument("-V", "--version", action="version", version=f"%(prog)s {__version__}")
@@ -305,8 +313,8 @@ def config_main(args: list[str]) -> None:
         elif parsed.command == "patrol":
             work = Work(url=parsed.url, search=True)
             if not parsed.search:
-                # Only what `extractor()` and `login()` read of a command line: no -u, no -e, not -q.
-                runner = Runner(Namespace(username=None, extractor=None, quiet=False), load_config(parsed.config), None)
+                # Only what `extractor()` and `login()` read of a command line: no -u, no -e.
+                runner = Runner(Namespace(username=None, extractor=None), load_config(parsed.config), None, setup())
                 work = Work(url=parsed.url, title=runner.title(parsed.url))
             path = store_work(work, parsed.config)
             print(f"saved: {work.url} in {path}")
@@ -318,13 +326,13 @@ def config_main(args: list[str]) -> None:
         raise SystemExit(1) from exc
 
 
-def episode_urls(extractor: Extractor, url: str, *, quiet: bool) -> list[str]:
+def episode_urls(extractor: Extractor, url: str, display: Display | None = None) -> list[str]:
     """The episodes to download: everything a series lists, or the URL itself.
 
     Args:
         extractor: The extractor to read the series with.
         url: The URL given on the command line.
-        quiet: Print nothing.
+        display: Where to say how many episodes a series lists.
 
     Returns:
         One episode URL per download.
@@ -332,26 +340,26 @@ def episode_urls(extractor: Extractor, url: str, *, quiet: bool) -> list[str]:
     if not extractor.is_series(url):
         return [url]
     urls = extractor.series_urls(url)
-    if not quiet:
-        print(f"series: {len(urls)} episodes listed.")
+    if display is not None:
+        display.series(len(urls))
     return urls
 
 
 class Walk:
     """One pass over episodes: what was read, whatever became of it."""
 
-    def __init__(self, downloader: Downloader, *, series: bool, quiet: bool) -> None:
+    def __init__(self, downloader: Downloader, display: Display, *, series: bool) -> None:
         """Set up a pass.
 
         Args:
             downloader: The downloader to run.
+            display: Where to report each episode.
             series: The episodes come from a series listing, so a page with no
                 viewer is skipped rather than ending a chain.
-            quiet: Print nothing.
         """
         self.downloader = downloader
+        self.display = display
         self.series = series
-        self.quiet = quiet
         #: Every episode read, in reading order.
         self.visited: list[Result] = []
         self._seen: set[str] = set()
@@ -373,8 +381,7 @@ class Walk:
         if url in self._seen:
             return None
         self._seen.add(url)
-        if not self.quiet:
-            print("get:", url)
+        self.display.fetching(url)
         try:
             result = self.downloader.download(url)
         except NotAnEpisodePageError:
@@ -382,16 +389,13 @@ class Walk:
             # on it, which is where a chain is meant to end rather than fail.
             if not self.series and not self.visited:
                 raise
-            message = f"skip: {url} is not readable." if self.series else f"stop: {what} is not readable."
-            print(message, file=sys.stderr)
+            if self.series:
+                logger.warning("skip: %s is not readable.", url)
+            else:
+                logger.warning("stop: %s is not readable.", what)
             return None
         self.visited.append(result)
-        if result.status == "locked":
-            print(f"skip: '{result.episode.episode_title}' needs a purchase, a wait or a login.", file=sys.stderr)
-        elif not self.quiet:
-            print("saved:" if result.saved else "skipped (already there):", result.save_dir)
-            if result.saved and result.archive is not None:
-                print("packed:", result.archive)
+        self.display.finished(result)
         return result
 
     def chain(self, start: Result, *, back: bool) -> list[Result]:
@@ -419,11 +423,11 @@ class Walk:
 def download(
     downloader: Downloader,
     queue: list[str],
+    display: Display | None = None,
     *,
     series: bool,
     bulk: bool,
     back: bool = False,
-    quiet: bool,
 ) -> list[Result]:
     """Download every queued episode.
 
@@ -431,17 +435,17 @@ def download(
         downloader: The downloader to run.
         queue: The episodes to download: a series listing, or one episode
             to walk a chain from.
+        display: Where to report each episode; nowhere by default.
         series: The queue came from a series listing, whose episodes stand on
             their own, so no chain is walked.
         bulk: Follow each episode's next episode.
         back: Follow each episode's previous episode first.
-        quiet: Print nothing.
 
     Returns:
         Every episode read, whatever became of it, in reading order: what
         `back` walked to comes before the episode it started from.
     """
-    walk = Walk(downloader, series=series, quiet=quiet)
+    walk = Walk(downloader, display or Display(), series=series)
     for url in queue:
         start = walk.visit(url, "the episode")
         if series or start is None:
@@ -459,17 +463,19 @@ def download(
 class Runner:
     """Drive one command line: pick extractors, sign in once per site, download."""
 
-    def __init__(self, parsed: Namespace, config: Config, password: str | None) -> None:
+    def __init__(self, parsed: Namespace, config: Config, password: str | None, display: Display) -> None:
         """Build a runner.
 
         Args:
             parsed: The parsed command line.
             config: The config file, for the credentials `-u` did not give.
             password: The password that goes with `-u`, once `-p` and the prompt are settled.
+            display: Where to report what is going on, as `setup()` handed it back.
         """
         self.parsed = parsed
         self.config = config
         self.password = password
+        self.display = display
         self.session = make_session()
         # One instance per extractor class, so a chain of episodes shares its
         # cookies and a series on the same site is signed in to once.
@@ -506,8 +512,7 @@ class Runner:
             password = self._prompted[credentials.username]
         extractor.login(url, credentials.username, password)
         self._logged_in.add(key)
-        if not self.parsed.quiet:
-            print("logged in as:", credentials.username)
+        logger.info("logged in as: %s", credentials.username)
 
     def run(self, url: str, *, bulk: bool | None = None, back: bool | None = None) -> list[Result]:
         """Download `url`: the episode, or every episode of the series.
@@ -530,26 +535,31 @@ class Runner:
         # A series listing already names every episode, so there is no next episode to follow.
         series = extractor.is_series(url)
         if series and bulk is None and (parsed.bulk or parsed.both):
-            print("warning: -b/-B does nothing for a series, every listed episode is downloaded.", file=sys.stderr)
+            logger.warning("warning: -b/-B does nothing for a series, every listed episode is downloaded.")
         downloader = Downloader(
             extractor,
             parsed.savedir,
             overwrite=parsed.overwrite,
             only_first=parsed.first,
             save_metadata=parsed.metadata,
-            progress=not parsed.quiet,
+            progress=self.display.pages,
             fmt=parsed.format,
             cbz=parsed.cbz,
         )
-        queue = episode_urls(extractor, url, quiet=parsed.quiet)
-        visited = download(
-            downloader,
-            queue,
-            series=series,
-            bulk=(parsed.bulk or parsed.both) if bulk is None else bulk,
-            back=parsed.both if back is None else back,
-            quiet=parsed.quiet,
-        )
+        self.display.work(url)
+        try:
+            queue = episode_urls(extractor, url, self.display)
+            visited = download(
+                downloader,
+                queue,
+                self.display,
+                series=series,
+                bulk=(parsed.bulk or parsed.both) if bulk is None else bulk,
+                back=parsed.both if back is None else back,
+            )
+        finally:
+            # Whatever ended the work, the display comes down and says what it got through.
+            self.display.done()
         if series and all(result.status == "locked" for result in visited):
             msg = f"no episode in the series at {url} was readable."
             raise NothingReadableError(msg)
@@ -593,7 +603,7 @@ class Runner:
         """
         extractor = self.extractor(url)
         self.login(extractor, url)
-        episodes = episode_urls(extractor, url, quiet=True)
+        episodes = episode_urls(extractor, url)
         if not episodes:
             msg = f"the series at {url} lists no episode."
             raise NothingReadableError(msg)
@@ -622,10 +632,9 @@ class Runner:
                 seen.update(self._search_page(page, extractor, seen))
             except (NothingReadableError, HTTPError) as exc:
                 if not open_ended:
-                    print(f"skip: {page}: {exc}", file=sys.stderr)
+                    logger.warning("skip: %s: %s", page, exc)
                     continue
-                if not self.parsed.quiet:
-                    print(f"search: stopped at {page}: {exc}")
+                logger.info("search: stopped at %s: %s", page, exc)
                 break
         if not seen:
             msg = f"nothing on {url} links to a page an extractor takes."
@@ -644,30 +653,30 @@ class Runner:
         if not links:
             msg = f"nothing {'new ' if seen else ''}on {page} links to a page an extractor takes."
             raise NothingReadableError(msg)
-        if not self.parsed.quiet:
-            print(f"search: {len(links)} links found on {page}.")
+        logger.info("search: %d links found on %s.", len(links), page)
         for link in links:
             try:
                 self.run(link)
             except (GetjmangaError, HTTPError) as exc:
-                print(f"skip: {link}: {exc}", file=sys.stderr)
+                logger.warning("skip: %s: %s", link, exc)
         return links
 
 
 def make_runner(parsed: Namespace) -> Runner:
-    """Build the runner for a parsed command line: settle the password, read the config.
+    """Build the runner for a parsed command line: set the display up, settle the password, read the config.
 
     Raises:
         ConfigError: The config file cannot be read.
     """
+    display = setup(quiet=parsed.quiet, verbose=parsed.verbose)
     password = parsed.password
     if parsed.username and password is None:
         password = getpass.getpass("password: ")
     elif password and not parsed.username:
-        print("warning: -p without -u does nothing.", file=sys.stderr)
+        logger.warning("warning: -p without -u does nothing.")
     config = load_config(parsed.config)
     apply_config(parsed, config)
-    return Runner(parsed, config, password)
+    return Runner(parsed, config, password, display)
 
 
 def patrol_main(args: list[str]) -> None:
@@ -683,27 +692,23 @@ def patrol_main(args: list[str]) -> None:
     try:
         runner = make_runner(parsed)
     except GetjmangaError as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        logger.error("%s", exc)
         raise SystemExit(1) from exc
     if not runner.config.patrol:
         where = runner.config.path or default_config_path()
-        print(
-            f"error: nothing to patrol; download with -S first, or add [[patrol]] entries to {where}.", file=sys.stderr
-        )
+        logger.error("nothing to patrol; download with -S first, or add [[patrol]] entries to %s.", where)
         raise SystemExit(1)
 
     for work in runner.config.patrol:
-        if not parsed.quiet:
-            print("patrol:", work.title or work.url)
+        logger.debug("patrol: %s", work.title or work.url)
         try:
             # A chain entry sits at the first episode still locked, so there is nothing to walk back to.
             stored = runner.visit(work, bulk=True, back=False)
             if stored is not None and stored != work:
                 store_work(stored, parsed.config, replacing=work.url)
         except (GetjmangaError, HTTPError) as exc:
-            print(f"skip: {work.url}: {exc}", file=sys.stderr)
-    if not parsed.quiet:
-        print("done.")
+            logger.warning("skip: %s: %s", work.url, exc)
+    logger.info("done.")
 
 
 def main(args: list[str] | None = None) -> None:
@@ -726,14 +731,12 @@ def main(args: list[str] | None = None) -> None:
             stored = runner.visit(Work(url=url, search=parsed.search))
             if parsed.store and stored is not None:
                 path = store_work(stored, parsed.config)
-                if not parsed.quiet:
-                    print(f"stored: {stored.url} in {path}")
+                logger.info("stored: %s in %s", stored.url, path)
     except (GetjmangaError, HTTPError) as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        logger.error("%s", exc)
         raise SystemExit(1) from exc
 
-    if not parsed.quiet:
-        print("done.")
+    logger.info("done.")
 
 
 if __name__ == "__main__":

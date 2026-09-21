@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, get_args
@@ -11,22 +12,17 @@ from urllib.parse import urlparse
 from cbz import ComicInfo, Manga, PageInfo
 from cbz import Format as ComicFormat
 from pathvalidate import sanitize_filename
-from rich.progress import (
-    BarColumn,
-    MofNCompleteColumn,
-    Progress,
-    SpinnerColumn,
-    TaskProgressColumn,
-    TextColumn,
-    TimeElapsedColumn,
-    TimeRemainingColumn,
-)
 
 if TYPE_CHECKING:
     from .extractor import Episode, Extractor
 
 #: The image format each page is saved as.
 Format = Literal["jpg", "png", "webp"]
+
+#: What `Downloader` reports the pages of an episode with: the episode, how
+#: many pages are written, how many there are. Called before the first page
+#: and after each one.
+Progress = Callable[["Episode", int, int], None]
 
 #: The directory under a series where `cbz=True` puts its archives.
 CBZ_DIR = "_cbz"
@@ -63,7 +59,7 @@ class Downloader:
         overwrite: bool = False,
         only_first: bool = False,
         save_metadata: bool = False,
-        progress: bool = False,
+        progress: Progress | None = None,
         fmt: Format = "jpg",
         cbz: bool = False,
     ) -> None:
@@ -75,7 +71,7 @@ class Downloader:
             overwrite: Download again even if the directory already exists.
             only_first: Stop after the first page.
             save_metadata: Also write `metadata.json` next to the pages.
-            progress: Draw a progress bar.
+            progress: Where to report each page written; see `Progress`.
             fmt: The image format to save each page as.
             cbz: Also pack the saved pages into `<host>/<series>/_cbz/<episode>.cbz`,
                 with a `ComicInfo.xml` naming the episode. Pages already on disk are
@@ -132,28 +128,14 @@ class Downloader:
         """One image file per page, numbered from 0 and padded to the page count."""
         wanted = episode.pages[:1] if self.only_first else episode.pages
         width = len(str(len(wanted)))
-        progress = Progress(
-            SpinnerColumn(),
-            TextColumn("{task.description}"),
-            BarColumn(),
-            TaskProgressColumn(),
-            TextColumn("("),
-            MofNCompleteColumn(),
-            TextColumn("pages )"),
-            TextColumn("remain:"),
-            TimeRemainingColumn(),
-            TextColumn("spent:"),
-            TimeElapsedColumn(),
-            disable=not self.progress,
-        )
-        with progress:
-            task = progress.add_task("[red]Downloading...", total=len(wanted))
-            for index, page in enumerate(wanted):
-                image = self.extractor.image(page, episode)
-                if image.mode not in _MODES[self.fmt]:
-                    image = image.convert("RGBA" if self.fmt != "jpg" and "A" in image.mode else "RGB")
-                image.save(save_dir / f"{index:0{width}d}.{self.fmt}", quality=95)
-                progress.update(task, advance=1)
+        report = self.progress or (lambda _episode, _done, _total: None)
+        report(episode, 0, len(wanted))
+        for index, page in enumerate(wanted):
+            image = self.extractor.image(page, episode)
+            if image.mode not in _MODES[self.fmt]:
+                image = image.convert("RGBA" if self.fmt != "jpg" and "A" in image.mode else "RGB")
+            image.save(save_dir / f"{index:0{width}d}.{self.fmt}", quality=95)
+            report(episode, index + 1, len(wanted))
 
     @staticmethod
     def _pack(episode: Episode, save_dir: Path, archive: Path) -> None:
