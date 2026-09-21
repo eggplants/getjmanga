@@ -53,7 +53,7 @@ docker run --rm -v "$PWD:/work" -w /work \
 
 ## CLI
 
-```shellsession
+```bash
 # one episode
 jm https://takecomic.jp/episodes/74f33031e13cd https://piccoma.com/web/viewer/8195/1185884
 
@@ -96,7 +96,7 @@ Example: [config.example.toml](
   <https://github.com/eggplants/getjmanga/blob/master/config.example.toml>
 )
 
-```shellsession
+```bash
 jm c init
 
 # asks for the username and password
