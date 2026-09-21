@@ -17,7 +17,7 @@ def result(status, title="ep1"):
 
 def test_summary_names_the_directory_of_a_single_episode():
     assert summary([result("saved")]) == (logging.INFO, "saved: out/example.com/S/ep1")
-    assert summary([result("exists")]) == (logging.INFO, "skipped (already there): out/example.com/S/ep1")
+    assert summary([result("exists")]) == (logging.INFO, "skipped: out/example.com/S/ep1")
 
 
 def test_summary_warns_about_a_single_locked_episode():
@@ -29,8 +29,8 @@ def test_summary_warns_about_a_single_locked_episode():
 
 def test_summary_counts_the_episodes_of_a_work_under_its_series_directory():
     results = [result("saved", "ep1"), result("exists", "ep2"), result("locked", "ep3"), result("saved", "ep4")]
-    assert summary(results) == (logging.INFO, "saved: out/example.com/S (2 episodes, 1 already there, 1 locked)")
-    assert summary(results[1:3]) == (logging.INFO, "skipped (already there): out/example.com/S (1 episodes, 1 locked)")
+    assert summary(results) == (logging.INFO, "saved: out/example.com/S (2 episodes, 1 skipped, 1 locked)")
+    assert summary(results[1:3]) == (logging.INFO, "skipped: out/example.com/S (1 episodes, 1 locked)")
 
 
 def test_summary_warns_when_nothing_in_a_work_was_readable():

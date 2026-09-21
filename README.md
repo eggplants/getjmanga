@@ -84,6 +84,20 @@ jm -s "https://comic-ryu.jp/series/list/up/[1-]"
 # remember the work, then download what is new in every remembered work
 jm -S -b https://shonenjumpplus.com/episode/13932016480028799982
 jm patrol
+
+# one timestamped log line per step and per request, instead of the live display
+jm -v https://takecomic.jp/episodes/74f33031e13cd
+# nothing but the warnings and the errors
+jm -q https://takecomic.jp/episodes/74f33031e13cd
+```
+
+What is going on is shown on one or two lines that come down once a work is
+done, leaving one line per work behind:
+
+```text
+saved: /home/you/manga/shonenjumpplus.com/阿波連さんははかれない (2 episodes, 1 already there, 3 locked)
+skipped (already there): /home/you/manga/takecomic.jp/メイドインアビス (12 episodes)
+done.
 ```
 
 ## Configuration
@@ -151,11 +165,14 @@ so use the full path that `command -v jm` prints.
 `crontab -e`, then:
 
 ```crontab
-# every day at 04:00, logging to a file
+# every day at 04:00, logging one line per work to a file
 0 4 * * * /home/you/.local/bin/jm p >> /home/you/.local/state/getjmanga/patrol.log 2>&1
 
 # log only the skips and the errors
 0 4 * * * /home/you/.local/bin/jm p -q >> /home/you/.local/state/getjmanga/patrol.log 2>&1
+
+# log every step, with a timestamp
+0 4 * * * /home/you/.local/bin/jm p -v >> /home/you/.local/state/getjmanga/patrol.log 2>&1
 ```
 
 #### systemd timer

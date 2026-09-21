@@ -313,7 +313,7 @@ def test_an_existing_episode_is_skipped(recording, capsys, tmp_path):
     (tmp_path / "mangabu.jp" / "S" / "ep1").mkdir(parents=True)
     main(["https://mangabu.jp/episodes/0"])
     assert recording.instances[0].images == 0
-    assert "skipped (already there):" in capsys.readouterr().out
+    assert "skipped:" in capsys.readouterr().out
 
 
 def test_login_happens_once_per_site(recording, capsys):
@@ -857,7 +857,7 @@ def test_patrol_follows_each_chain_from_where_it_left_off(recording, isolated_co
     assert extractor.images == 2
     assert load_config().patrol == (Work("https://mangabu.jp/episodes/2", "S"),)
     out = capsys.readouterr().out
-    assert "saved: mangabu.jp/S (2 episodes, 1 already there)" in out
+    assert "saved: mangabu.jp/S (2 episodes, 1 skipped)" in out
     assert "done." in out
 
 

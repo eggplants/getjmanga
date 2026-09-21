@@ -57,6 +57,13 @@ then reacts to `release: [published]` and does the PyPI and GHCR publish.
   back (`Episode`, `Page`); `getjmanga/errors.py` -- the exception hierarchy.
   Both sit above `extractors/` because the CLI, the downloader, the config
   and the viewers all speak in these terms.
+- `getjmanga/console.py` -- what the CLI shows: `logger` for every
+  message, and a `Display` for what is going on (the episode being read,
+  the pages written), of which `setup()` picks one -- the compact live
+  display (rich `Live`, one line per work once it is over), `-v` (one
+  timestamped `logging` line per step, plus httpx2's per request) or `-q`
+  (the base class: warnings and errors only). Nothing else in the package
+  prints, apart from `jm config`'s answers.
 - `getjmanga/cipher.py` -- the two ways page files are hidden in transit
   (AES-CBC, a repeating XOR key), undone.
 - `getjmanga/search.py` -- `-s`: the links on an arbitrary web page that some

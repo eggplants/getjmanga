@@ -40,7 +40,7 @@ LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 #: How the summary line names what became of an episode.
 _LEAD: dict[Status, str] = {"saved": "saved", "exists": "skipped", "locked": "locked"}
-_COUNTED: dict[Status, str] = {"saved": "saved", "exists": "already there", "locked": "locked"}
+_COUNTED: dict[Status, str] = {"saved": "saved", "exists": "skipped", "locked": "locked"}
 
 
 def summary(results: list[Result]) -> tuple[int, str]:
