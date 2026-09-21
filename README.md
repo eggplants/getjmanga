@@ -95,8 +95,8 @@ What is going on is shown on one or two lines that come down once a work is
 done, leaving one line per work behind:
 
 ```text
-saved: /home/you/manga/shonenjumpplus.com/阿波連さんははかれない (2 episodes, 1 already there, 3 locked)
-skipped (already there): /home/you/manga/takecomic.jp/メイドインアビス (12 episodes)
+saved: /home/you/manga/shonenjumpplus.com/阿波連さんははかれない (2 episodes, 1 skipped, 3 locked)
+skipped: /home/you/manga/takecomic.jp/メイドインアビス (12 episodes)
 done.
 ```
 
