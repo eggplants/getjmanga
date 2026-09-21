@@ -25,8 +25,12 @@
   <ul>
     <li><a href="#supported-sites">Supported sites</a></li>
     <li><a href="#installation">Installation</a></li>
+    <li><a href="#docker">Docker</a></li>
     <li><a href="#cli">CLI</a></li>
+    <li><a href="#configuration">Configuration</a></li>
+    <li><a href="#patrol">Patrol</a></li>
     <li><a href="#library">Library</a></li>
+    <li><a href="#writing-an-extractor">Writing an extractor</a></li>
     <li><a href="#license">License</a></li>
   </ul></li>
 </ul>
@@ -3110,10 +3114,6 @@ getjmanga    </h1>
 "><img src="https://github.com/eggplants/getjmanga/actions/workflows/ci.yml/badge.svg
   " alt="CI" /></a></p>
 
-<p><a href="https://github.com/eggplants/getjmanga/pkgs/container/getjmanga
-"><img src="https://ghcr-badge.egpl.dev/eggplants/getjmanga/size
-" alt="ghcr size" /></a></p>
-
 <p>Retrieve and save images from Japanese web comic sites.</p>
 
 <p>_Do not redistribute the downloaded images. Keep them for private use._</p>
@@ -3140,7 +3140,11 @@ pip<span class="w"> </span>install<span class="w"> </span>getjmanga
 </code></pre>
 </div>
 
-<h3 id="docker">Docker</h3>
+<h2 id="docker">Docker</h2>
+
+<p><a href="https://github.com/eggplants/getjmanga/pkgs/container/getjmanga
+"><img src="https://ghcr-badge.egpl.dev/eggplants/getjmanga/size
+" alt="ghcr size" /></a></p>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/eggplants/getjmanga
@@ -3184,7 +3188,7 @@ jm -S -b https://shonenjumpplus.com/episode/13932016480028799982
 jm patrol
 </code></pre>
 
-<h3 id="configuration">Configuration</h3>
+<h2 id="configuration">Configuration</h2>
 
 <p>Use <code>jm c</code>.</p>
 
@@ -3210,7 +3214,7 @@ jm c patrol https://shonenjumpplus.com/episode/13932016480028799982
 jm c patrol -s https://shonenjumpplus.com/
 </code></pre>
 
-<h3 id="patrol">Patrol</h3>
+<h2 id="patrol">Patrol</h2>
 
 <p><code>jm -S</code> adds what it downloads to a list of works to watch for new episodes in the config file.</p>
 
@@ -3238,6 +3242,67 @@ wait-to-read episode gets one more try next time.</li>
 </code></pre>
 </div>
 
+<h3 id="running-every-day">Running every day</h3>
+
+<p><code>jm p</code> saves into <code>savedir</code> from the config file, which defaults to the current directory,
+so set it first: <code>jm c savedir ~/manga</code>. Both cron and systemd run with a minimal <code>PATH</code>,
+so use the full path that <code>command -v jm</code> prints.</p>
+
+<h4 id="cron">cron</h4>
+
+<p><code>crontab -e</code>, then:</p>
+
+<pre><code># every day at 04:00, logging to a file
+0 4 * * * /home/you/.local/bin/jm p &gt;&gt; /home/you/.local/state/getjmanga/patrol.log 2&gt;&amp;1
+
+# log only the skips and the errors
+0 4 * * * /home/you/.local/bin/jm p -q &gt;&gt; /home/you/.local/state/getjmanga/patrol.log 2&gt;&amp;1
+</code></pre>
+
+<h4 id="systemd-timer">systemd timer</h4>
+
+<p><code>~/.config/systemd/user/getjmanga-patrol.service</code>:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="k">[Unit]</span>
+<span class="na">Description</span><span class="o">=</span><span class="s">Download what is new in every patrolled work</span>
+
+<span class="k">[Service]</span>
+<span class="na">Type</span><span class="o">=</span><span class="s">oneshot</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/home/you/.local/bin/jm p</span>
+</code></pre>
+</div>
+
+<p><code>~/.config/systemd/user/getjmanga-patrol.timer</code>:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="k">[Unit]</span>
+<span class="na">Description</span><span class="o">=</span><span class="s">Run getjmanga-patrol daily</span>
+
+<span class="k">[Timer]</span>
+<span class="na">OnCalendar</span><span class="o">=</span><span class="s">daily</span>
+<span class="na">Persistent</span><span class="o">=</span><span class="s">true</span>
+
+<span class="k">[Install]</span>
+<span class="na">WantedBy</span><span class="o">=</span><span class="s">timers.target</span>
+</code></pre>
+</div>
+
+<p><code>Persistent=true</code> runs the job at the next boot when the machine was off at the scheduled time.</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>systemctl<span class="w"> </span>--user<span class="w"> </span>daemon-reload
+systemctl<span class="w"> </span>--user<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>--now<span class="w"> </span>getjmanga-patrol.timer
+
+<span class="c1"># keep the user units running after logout</span>
+loginctl<span class="w"> </span>enable-linger<span class="w"> </span><span class="s2">"</span><span class="nv">$USER</span><span class="s2">"</span>
+
+<span class="c1"># next run, and the output of the last one</span>
+systemctl<span class="w"> </span>--user<span class="w"> </span>list-timers<span class="w"> </span>getjmanga-patrol.timer
+journalctl<span class="w"> </span>--user<span class="w"> </span>-u<span class="w"> </span>getjmanga-patrol.service
+</code></pre>
+</div>
+
 <h2 id="library">Library</h2>
 
 <div class="pdoc-code codehilite">
@@ -3246,9 +3311,16 @@ wait-to-read episode gets one more try next time.</li>
 <span class="n">url</span> <span class="o">=</span> <span class="s2">"https://takecomic.jp/episodes/74f33031e13cd"</span>
 <span class="n">extractor</span> <span class="o">=</span> <span class="n">find_extractor</span><span class="p">(</span><span class="n">url</span><span class="p">)()</span> <span class="c1"># returns `Comici`</span>
 <span class="n">result</span> <span class="o">=</span> <span class="n">Downloader</span><span class="p">(</span><span class="n">extractor</span><span class="p">,</span> <span class="s2">"out"</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s2">"png"</span><span class="p">,</span> <span class="n">cbz</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">download</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">save_dir</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">archive</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">episode</span><span class="o">.</span><span class="n">next_url</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">episode</span><span class="o">.</span><span class="n">writer</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">episode</span><span class="o">.</span><span class="n">publisher</span><span class="p">)</span>  <span class="c1"># what the cbz's ComicInfo.xml says</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">episode</span><span class="o">.</span><span class="n">published</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">episode</span><span class="o">.</span><span class="n">number</span><span class="p">)</span>  <span class="c1"># the day it came out, and where it stands in the series</span>
+
+<span class="n">result</span><span class="o">.</span><span class="n">status</span>
+<span class="n">result</span><span class="o">.</span><span class="n">save_dir</span>
+
+<span class="n">result</span><span class="o">.</span><span class="n">archive</span>
+<span class="n">result</span><span class="o">.</span><span class="n">episode</span><span class="o">.</span><span class="n">next_url</span>
+<span class="n">result</span><span class="o">.</span><span class="n">episode</span><span class="o">.</span><span class="n">writer</span>
+<span class="n">result</span><span class="o">.</span><span class="n">episode</span><span class="o">.</span><span class="n">publisher</span>
+<span class="n">result</span><span class="o">.</span><span class="n">episode</span><span class="o">.</span><span class="n">published</span>
+<span class="n">result</span><span class="o">.</span><span class="n">episode</span><span class="o">.</span><span class="n">number</span>
 </code></pre>
 </div>
 
@@ -3264,7 +3336,7 @@ wait-to-read episode gets one more try next time.</li>
 </code></pre>
 </div>
 
-<h3 id="writing-an-extractor">Writing an extractor</h3>
+<h2 id="writing-an-extractor">Writing an extractor</h2>
 
 <p>See <a href="https://github.com/eggplants/getjmanga/blob/master/docs/ADD_SITE.md
 ">docs/ADD_SITE.md</a>.</p>
@@ -3926,7 +3998,7 @@ wait-to-read episode gets one more try next time.</li>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="AlphaPolis.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="AlphaPolis.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;151&#34;, &#34;Microsoft Edge&#34;;v=&#34;151&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Referer&#39;: &#39;https://www.alphapolis.co.jp/&#39;}</span>
+            <label class="view-value-button pdoc-button" for="AlphaPolis.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;153&#34;, &#34;Google Chrome&#34;;v=&#34;153&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Referer&#39;: &#39;https://www.alphapolis.co.jp/&#39;}</span>
 
         
     </div>
@@ -4855,7 +4927,7 @@ the list however many episodes are downloaded off it.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="BeLToon.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="BeLToon.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;151&#34;, &#34;Microsoft Edge&#34;;v=&#34;151&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Referer&#39;: &#39;https://www.beltoon.jp/&#39;}</span>
+            <label class="view-value-button pdoc-button" for="BeLToon.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;153&#34;, &#34;Google Chrome&#34;;v=&#34;153&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Referer&#39;: &#39;https://www.beltoon.jp/&#39;}</span>
 
         
     </div>
@@ -7560,7 +7632,7 @@ names differently from the catalogue gets no credits.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Ciao.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Ciao.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;151&#34;, &#34;Microsoft Edge&#34;;v=&#34;151&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Origin&#39;: &#39;https://ciao.shogakukan.co.jp&#39;, &#39;Referer&#39;: &#39;https://ciao.shogakukan.co.jp/&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Ciao.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;153&#34;, &#34;Google Chrome&#34;;v=&#34;153&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Origin&#39;: &#39;https://ciao.shogakukan.co.jp&#39;, &#39;Referer&#39;: &#39;https://ciao.shogakukan.co.jp/&#39;}</span>
 
         
     </div>
@@ -9466,7 +9538,7 @@ until there is none.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="ComicWalker.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="ComicWalker.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
+            <label class="view-value-button pdoc-button" for="ComicWalker.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
 
         
     </div>
@@ -10420,7 +10492,7 @@ the extractor with <code>--extractor comici</code>.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Comici.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Comici.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Comici.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
 
         
     </div>
@@ -11275,7 +11347,7 @@ asked for first and the real range fetched second.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Comico.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Comico.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;151&#34;, &#34;Microsoft Edge&#34;;v=&#34;151&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Referer&#39;: &#39;https://www.comico.jp/&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Comico.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;153&#34;, &#34;Google Chrome&#34;;v=&#34;153&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Referer&#39;: &#39;https://www.comico.jp/&#39;}</span>
 
         
     </div>
@@ -12052,7 +12124,7 @@ without the <code>images</code> (or <code>epub</code>) the pages come from.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Corocoro.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Corocoro.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;151&#34;, &#34;Microsoft Edge&#34;;v=&#34;151&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Accept&#39;: &#39;*/*&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Corocoro.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;153&#34;, &#34;Google Chrome&#34;;v=&#34;153&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Accept&#39;: &#39;*/*&#39;}</span>
 
         
     </div>
@@ -12840,7 +12912,7 @@ given; no cookie or Referer is needed.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Corona.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Corona.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Corona.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
 
         
     </div>
@@ -14154,7 +14226,7 @@ series of the artist, each newest first, on one page.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Cycomi.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Cycomi.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Cycomi.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
 
         
     </div>
@@ -16827,7 +16899,7 @@ names the episode after it, 404 at the end of the series.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Extractor.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Extractor.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;151&#34;, &#34;Microsoft Edge&#34;;v=&#34;151&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Extractor.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;153&#34;, &#34;Google Chrome&#34;;v=&#34;153&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;}</span>
 
         
     </div>
@@ -20092,7 +20164,7 @@ found them missing (<code>require</code>).</li>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Fuz.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Fuz.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;151&#34;, &#34;Microsoft Edge&#34;;v=&#34;151&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Origin&#39;: &#39;https://comic-fuz.com&#39;, &#39;Referer&#39;: &#39;https://comic-fuz.com/&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Fuz.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;153&#34;, &#34;Google Chrome&#34;;v=&#34;153&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Origin&#39;: &#39;https://comic-fuz.com&#39;, &#39;Referer&#39;: &#39;https://comic-fuz.com/&#39;}</span>
 
         
     </div>
@@ -20882,7 +20954,7 @@ cookie the viewer API set, which the shared session does by now.</p>
                                 <div class="attr variable">
             <span class="name">LICENSE_HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Gakcomic.LICENSE_HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Gakcomic.LICENSE_HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;151&#34;, &#34;Microsoft Edge&#34;;v=&#34;151&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Origin&#39;: &#39;https://gakcomic.gakken.jp&#39;, &#39;Referer&#39;: &#39;https://gakcomic.gakken.jp/viewer/&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Gakcomic.LICENSE_HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;153&#34;, &#34;Google Chrome&#34;;v=&#34;153&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Origin&#39;: &#39;https://gakcomic.gakken.jp&#39;, &#39;Referer&#39;: &#39;https://gakcomic.gakken.jp/viewer/&#39;}</span>
 
         
     </div>
@@ -22095,7 +22167,7 @@ rendered yet is a fallback shell, whose data comes from <code>/_next/data/</code
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Ganma.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Ganma.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Ganma.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
 
         
     </div>
@@ -28076,7 +28148,7 @@ page describes none.</li>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Lezhin.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Lezhin.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Lezhin.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
 
         
     </div>
@@ -32098,7 +32170,7 @@ with no pages in it.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="MangaOne.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="MangaOne.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;151&#34;, &#34;Microsoft Edge&#34;;v=&#34;151&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Referer&#39;: &#39;https://manga-one.com/&#39;}</span>
+            <label class="view-value-button pdoc-button" for="MangaOne.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;153&#34;, &#34;Google Chrome&#34;;v=&#34;153&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Referer&#39;: &#39;https://manga-one.com/&#39;}</span>
 
         
     </div>
@@ -33445,7 +33517,7 @@ hands out.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Mangabox.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Mangabox.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Mangabox.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
 
         
     </div>
@@ -35062,7 +35134,7 @@ so unlike the default this takes http as well as https.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Meets.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Meets.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Meets.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
 
         
     </div>
@@ -37368,7 +37440,7 @@ listed; the work page walks twenty episodes a page.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="NicoManga.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="NicoManga.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;151&#34;, &#34;Microsoft Edge&#34;;v=&#34;151&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Accept&#39;: &#39;application/json&#39;, &#39;Origin&#39;: &#39;https://manga.nicovideo.jp&#39;}</span>
+            <label class="view-value-button pdoc-button" for="NicoManga.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;153&#34;, &#34;Google Chrome&#34;;v=&#34;153&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Accept&#39;: &#39;application/json&#39;, &#39;Origin&#39;: &#39;https://manga.nicovideo.jp&#39;}</span>
 
         
     </div>
@@ -40459,7 +40531,7 @@ not an episode page (a work page, a news post).</li>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Piccoma.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Piccoma.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;151&#34;, &#34;Microsoft Edge&#34;;v=&#34;151&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Referer&#39;: &#39;https://piccoma.com/&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Piccoma.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;153&#34;, &#34;Google Chrome&#34;;v=&#34;153&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Referer&#39;: &#39;https://piccoma.com/&#39;}</span>
 
         
     </div>
@@ -42071,7 +42143,7 @@ page describes no episode.</li>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="PixivComic.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="PixivComic.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
+            <label class="view-value-button pdoc-button" for="PixivComic.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
 
         
     </div>
@@ -48279,7 +48351,7 @@ no longer serves it (404).</li>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="Vcomi.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="Vcomi.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
+            <label class="view-value-button pdoc-button" for="Vcomi.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
 
         
     </div>
@@ -49741,7 +49813,7 @@ episodes come from. A work page is fetched once per run.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="YanJan.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="YanJan.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;151&#34;, &#34;Microsoft Edge&#34;;v=&#34;151&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Accept&#39;: &#39;application/json&#39;, &#39;Origin&#39;: &#39;https://ynjn.jp&#39;, &#39;Referer&#39;: &#39;https://ynjn.jp/&#39;}</span>
+            <label class="view-value-button pdoc-button" for="YanJan.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Not A(Brand&#34;;v=&#34;99&#34;, &#34;Chromium&#34;;v=&#34;153&#34;, &#34;Google Chrome&#34;;v=&#34;153&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Windows&#34;&#39;, &#39;Accept&#39;: &#39;application/json&#39;, &#39;Origin&#39;: &#39;https://ynjn.jp&#39;, &#39;Referer&#39;: &#39;https://ynjn.jp/&#39;}</span>
 
         
     </div>
@@ -52242,7 +52314,7 @@ from <code>bibGetCntntInfo</code>, which sit on the shared session.</p>
                                 <div class="attr variable">
             <span class="name">HEADERS</span><span class="annotation">: ClassVar[dict[str, str]]</span>        =
 <input id="ZeroSum.HEADERS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="ZeroSum.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
+            <label class="view-value-button pdoc-button" for="ZeroSum.HEADERS-view-value"></label><span class="default_value">{&#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36&#39;, &#39;Accept-Language&#39;: &#39;ja,en-US;q=0.9,en;q=0.8&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Google Chrome&#34;;v=&#34;131&#34;, &#34;Chromium&#34;;v=&#34;131&#34;, &#34;Not_A Brand&#34;;v=&#34;24&#34;&#39;, &#39;sec-ch-ua-mobile&#39;: &#39;?0&#39;, &#39;sec-ch-ua-platform&#39;: &#39;&#34;Linux&#34;&#39;}</span>
 
         
     </div>
