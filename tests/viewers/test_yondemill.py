@@ -4,7 +4,7 @@ import json
 from http import HTTPStatus
 
 import pytest
-from httpx import HTTPStatusError
+from httpx2 import HTTPStatusError
 
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError
 from getjmanga.extractor import Extractor

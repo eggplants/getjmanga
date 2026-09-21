@@ -41,7 +41,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page
 
 if TYPE_CHECKING:
-    from httpx import Response
+    from httpx2 import Response
 
 # A work or story page: `/inside/comic.php`, or `/inside/comic2p.php` for the spread layout.
 _COMIC_PATH = re.compile(r"^/inside/comic(?:2p)?\.php$")

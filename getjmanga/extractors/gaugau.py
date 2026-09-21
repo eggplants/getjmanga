@@ -22,7 +22,7 @@ from getjmanga.extractor import Episode, Extractor, neighbours, ordinal, publish
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
     from getjmanga.extractor import Page

@@ -23,7 +23,7 @@ from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlEr
 from getjmanga.extractor import Episode, Extractor, Page, numbered
 
 if TYPE_CHECKING:
-    from httpx import Client, Response
+    from httpx2 import Client, Response
 
 BASE_URL = "https://lezhin.jp"
 #: The API the Next.js app talks to; same origin, no token needed for a free chapter.

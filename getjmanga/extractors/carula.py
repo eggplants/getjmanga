@@ -35,7 +35,7 @@ from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, p
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
 
-    from httpx import Client
+    from httpx2 import Client
 
 _CATALOGUE_HOST = "carula.jp"
 _NOTE_HOST = "note.com"

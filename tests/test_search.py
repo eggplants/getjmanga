@@ -3,7 +3,7 @@ from __future__ import annotations
 from itertools import islice
 
 import pytest
-from httpx import HTTPStatusError
+from httpx2 import HTTPStatusError
 
 from getjmanga.extractors import Comici, GigaViewer, Piccoma
 from getjmanga.search import downloadable_links, numbered_pages, search

@@ -40,7 +40,7 @@ from getjmanga.viewers.speedbinb import split_title
 from getjmanga.viewers.yondemill import Content, content_url
 
 if TYPE_CHECKING:
-    from httpx import Client
+    from httpx2 import Client
 
 #: Where the work and story pages are.
 HOST = "comics.pie.co.jp"

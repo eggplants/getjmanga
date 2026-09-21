@@ -33,7 +33,7 @@ from getjmanga.extractor import Episode, Extractor, Page, neighbours, numbered, 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from httpx import Client
+    from httpx2 import Client
 
 BASE_URL = "https://www.beltoon.jp"
 API_URL = f"{BASE_URL}/api/balcony-api-v2"

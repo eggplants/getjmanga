@@ -43,7 +43,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
-    from httpx import Client, Response
+    from httpx2 import Client, Response
 
 # A ツイ4 strip page, or the `-all` page of a 座談会 entry.
 _TWI4_EPISODE = re.compile(r"^/comics/twi4/(?P<work>[^/]+)/(?P<number>\d{4})(?P<all>-all)?\.html$")

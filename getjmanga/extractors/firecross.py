@@ -54,7 +54,7 @@ from getjmanga.extractor import Episode, Extractor, Page, published_on
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
 _READER_PATH = re.compile(r"^/reader/(?:colophon/)?(?P<id>\d+)/?$")

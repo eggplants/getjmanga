@@ -29,7 +29,7 @@ from getjmanga.viewers.speedbinb import split_title
 from getjmanga.viewers.yondemill import CONTENT_HOST, Content, content_url
 
 if TYPE_CHECKING:
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
 #: Where the publisher's work pages are.

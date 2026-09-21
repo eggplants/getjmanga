@@ -38,7 +38,7 @@ from getjmanga.protobuf import integer, message, messages, raw, string
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from httpx import Client, Response
+    from httpx2 import Client, Response
 
 MANGAONE_URL = "https://manga-one.com"
 FLOWERCOMICS_URL = "https://flowercomics.jp"

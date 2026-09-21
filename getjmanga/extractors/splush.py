@@ -28,7 +28,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from httpx import Client
+    from httpx2 import Client
 
 # A work page or an episode page: WordPress hands both out at `/series/<id>/`.
 _SERIES_PATH = re.compile(r"^/series/(?P<id>\d+)/?$")

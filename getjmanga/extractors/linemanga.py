@@ -21,7 +21,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal
 
 if TYPE_CHECKING:
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
 BASE_URL = "https://manga.line.me"

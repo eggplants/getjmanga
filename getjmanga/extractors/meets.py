@@ -27,7 +27,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 
 if TYPE_CHECKING:
-    from httpx import Client
+    from httpx2 import Client
 
 # `/comics/<dir_name>/<sort_volume>`: one episode of a work.
 _EPISODE_PATH = re.compile(r"^/comics/(?P<dir>[A-Za-z0-9_-]+)/(?P<vol>\d+)/?$")

@@ -16,7 +16,7 @@ from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlEr
 from getjmanga.extractor import Episode, Extractor, Page, numbered, published_on
 
 if TYPE_CHECKING:
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
 # https://regex101.com/r/j0nUsd/1

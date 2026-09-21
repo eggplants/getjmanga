@@ -5,7 +5,7 @@ from http import HTTPStatus
 from io import BytesIO
 
 import pytest
-from httpx import ReadTimeout
+from httpx2 import ReadTimeout
 from PIL import Image
 
 from getjmanga.downloader import Downloader

@@ -51,7 +51,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from httpx import Client
+    from httpx2 import Client
 
 BASE_URL = "https://gakcomic.gakken.jp"
 LICENSE_URL = "https://license.keyring.net"

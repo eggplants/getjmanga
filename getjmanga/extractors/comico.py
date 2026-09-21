@@ -19,7 +19,7 @@ from getjmanga.extractor import Episode, Extractor, Page, neighbours, numbered, 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from httpx import Client
+    from httpx2 import Client
 
 BASE_URL = "https://www.comico.jp"
 API_URL = "https://api.comico.jp"

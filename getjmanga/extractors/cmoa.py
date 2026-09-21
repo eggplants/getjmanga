@@ -40,7 +40,7 @@ from getjmanga.viewers import speedbinb
 if TYPE_CHECKING:
     from datetime import date
 
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
 HOST = "www.cmoa.jp"

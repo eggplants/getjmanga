@@ -34,7 +34,7 @@ from getjmanga.viewers import speedbinb
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
 BASE_URL = "https://www.yomonga.com"

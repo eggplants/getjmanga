@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import ClassVar
 
 import pytest
-from httpx import HTTPStatusError, Request, Response
+from httpx2 import HTTPStatusError, Request, Response
 
 from getjmanga import __version__
 from getjmanga.cli import apply_config, download, extractor_list, main, parse_args

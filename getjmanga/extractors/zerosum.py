@@ -26,7 +26,7 @@ from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_
 from getjmanga.protobuf import integer, message, messages, string
 
 if TYPE_CHECKING:
-    from httpx import Client
+    from httpx2 import Client
 
 BASE_URL = "https://zerosumonline.com"
 API_URL = "https://api.zerosumonline.com/api/v1"

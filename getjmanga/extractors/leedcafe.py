@@ -35,7 +35,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 
 if TYPE_CHECKING:
-    from httpx import Client
+    from httpx2 import Client
 
 HOST = "leedcafe.com"
 

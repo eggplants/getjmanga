@@ -39,7 +39,7 @@ from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
 if TYPE_CHECKING:
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
 HOST = "bloom.homesha.co.jp"

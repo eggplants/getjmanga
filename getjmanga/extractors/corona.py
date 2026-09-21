@@ -9,7 +9,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlparse
 
-from httpx import HTTPError
+from httpx2 import HTTPError
 
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page, published_on
@@ -17,7 +17,7 @@ from getjmanga.extractor import Episode, Extractor, Page, published_on
 if TYPE_CHECKING:
     from datetime import date
 
-    from httpx import Client, Response
+    from httpx2 import Client, Response
     from PIL import Image
 
 BASE_URL = "https://to-corona-ex.com"

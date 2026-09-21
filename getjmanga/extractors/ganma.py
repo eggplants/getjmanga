@@ -13,7 +13,7 @@ from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, p
 if TYPE_CHECKING:
     from datetime import date
 
-    from httpx import Client
+    from httpx2 import Client
 
 BASE_URL = "https://ganma.jp"
 #: The Next.js app's backend. Every query the reader makes goes through here.

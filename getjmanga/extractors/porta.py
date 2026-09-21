@@ -18,7 +18,7 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from httpx import HTTPError
+from httpx2 import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
@@ -26,7 +26,7 @@ from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
 if TYPE_CHECKING:
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
 # An episode: the directory of one SpeedBinb export.

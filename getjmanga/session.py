@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import httpx
+import httpx2
 import ua_generator
 from ua_generator.options import Options
 
 if TYPE_CHECKING:
-    from httpx._types import QueryParamTypes
+    from httpx2._types import QueryParamTypes
 
 #: How many times a connection that fails to open is tried again.
 RETRIES = 10
@@ -43,22 +43,22 @@ def browser_headers() -> dict[str, str]:
 HEADERS = browser_headers()
 
 
-class Session(httpx.Client):
-    """An `httpx.Client` whose `params` add to a URL's own query instead of replacing it.
+class Session(httpx2.Client):
+    """An `httpx2.Client` whose `params` add to a URL's own query instead of replacing it.
 
     The extractors build URLs like `/api/csr?rq=title/detail` and pass the
-    endpoint's own parameters separately; `httpx` would drop the `rq`, and
+    endpoint's own parameters separately; `httpx2` would drop the `rq`, and
     re-encode it as `title%2Fdetail` if asked to merge. The query the URL
     carries is sent as written, the way `requests` sent it.
     """
 
     def build_request(
-        self, method: str, url: httpx.URL | str, *, params: QueryParamTypes | None = None, **kwargs: Any
-    ) -> httpx.Request:
+        self, method: str, url: httpx2.URL | str, *, params: QueryParamTypes | None = None, **kwargs: Any
+    ) -> httpx2.Request:
         """Build a request, appending `params` to the query `url` already carries."""
         if params is not None:
-            url = httpx.URL(url)
-            query = str(httpx.QueryParams(params)).encode()
+            url = httpx2.URL(url)
+            query = str(httpx2.QueryParams(params)).encode()
             if query:
                 url = url.copy_with(query=url.query + b"&" + query if url.query else query)
             params = None
@@ -71,4 +71,4 @@ def make_session() -> Session:
     Returns:
         A session whose connections are retried up to `RETRIES` times.
     """
-    return Session(follow_redirects=True, transport=httpx.HTTPTransport(retries=RETRIES))
+    return Session(follow_redirects=True, transport=httpx2.HTTPTransport(retries=RETRIES))

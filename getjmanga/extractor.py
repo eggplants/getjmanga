@@ -25,7 +25,7 @@ from .session import HEADERS, make_session
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from httpx import Client, Response
+    from httpx2 import Client, Response
 
 T = TypeVar("T")
 

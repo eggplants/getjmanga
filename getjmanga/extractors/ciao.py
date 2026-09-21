@@ -49,7 +49,7 @@ from getjmanga.viewers.kmanga import descramble as descramble_v2
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from httpx import Client, Response
+    from httpx2 import Client, Response
     from PIL import Image
 
 BASE_URL = "https://ciao.shogakukan.co.jp"

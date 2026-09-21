@@ -19,7 +19,7 @@ from getjmanga.protobuf import encode_bytes_field, encode_varint_field, integer,
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from httpx import Client
+    from httpx2 import Client
 
 BASE_URL = "https://comic-fuz.com"
 API_URL = "https://api.comic-fuz.com"

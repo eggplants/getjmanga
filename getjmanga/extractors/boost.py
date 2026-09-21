@@ -27,7 +27,7 @@ from getjmanga.extractor import Episode, Extractor, Page, published_on
 from getjmanga.viewers.publus import decode_pack, descramble, pages
 
 if TYPE_CHECKING:
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
 BASE_URL = "https://comic-boost.com"

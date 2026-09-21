@@ -34,7 +34,7 @@ from getjmanga.extractor import Episode, Extractor, Page, published_on
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from httpx import Client
+    from httpx2 import Client
 
 # A work page, or a one-shot's episode page: `/<work>/`, `/<work>/index.html`, `/<work>/index2.html`.
 _WORK_PATH = re.compile(r"^/(?P<work>[A-Za-z0-9_-]+)/?(?:index\d*\.html)?$")

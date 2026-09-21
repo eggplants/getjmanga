@@ -26,7 +26,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page, ordinal
 
 if TYPE_CHECKING:
-    from httpx import Client, Response
+    from httpx2 import Client, Response
 
 BASE_URL = "https://shiori-on.com"
 

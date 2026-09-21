@@ -5,7 +5,7 @@ from datetime import date
 from io import BytesIO
 
 import pytest
-from httpx import HTTPStatusError
+from httpx2 import HTTPStatusError
 from PIL import Image
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError

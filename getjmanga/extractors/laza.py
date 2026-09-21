@@ -36,7 +36,7 @@ from urllib.parse import urljoin, urlparse, urlunparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from httpx import Timeout, TransportError
+from httpx2 import Timeout, TransportError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal
@@ -44,7 +44,7 @@ from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from httpx import Client, Response
+    from httpx2 import Client, Response
 
 #: Seconds to wait for the next byte of a page before taking what arrived as the page.
 STALL_TIMEOUT = 10
@@ -176,7 +176,7 @@ def read_body(res: Response) -> bytes:
         The body, or as much of it as the site sent before hanging.
 
     Raises:
-        httpx.TransportError: Nothing arrived before the stall.
+        httpx2.TransportError: Nothing arrived before the stall.
     """
     body = bytearray()
     try:

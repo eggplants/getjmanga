@@ -36,7 +36,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, published_on
 
 if TYPE_CHECKING:
-    from httpx import Client
+    from httpx2 import Client
 
 # An episode page: `/viewer.php?id=<id>`, or its older `/pcviewer.php` spelling.
 _VIEWER_PATH = re.compile(r"^/(?:pc)?viewer\.php$")

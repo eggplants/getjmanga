@@ -14,7 +14,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
-    from httpx import Response
+    from httpx2 import Response
 
 BASE_URL = "https://souffle.life"
 

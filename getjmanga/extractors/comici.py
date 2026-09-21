@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from datetime import date
 
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
 _DOCUMENT_HEADERS = {

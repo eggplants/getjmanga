@@ -15,7 +15,7 @@ from .session import HEADERS
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from httpx import Client
+    from httpx2 import Client
 
     from .extractor import Extractor
 
@@ -84,7 +84,7 @@ def search(session: Client, url: str, extractor: type[Extractor] | None = None) 
         where the page ended up after redirects.
 
     Raises:
-        httpx.HTTPError: The page could not be fetched.
+        httpx2.HTTPError: The page could not be fetched.
     """
     res = session.get(url, headers=HEADERS, timeout=TIMEOUT)
     res.raise_for_status()

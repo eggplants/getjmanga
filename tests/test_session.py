@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import httpx
+import httpx2
 
 from getjmanga.session import HEADERS, browser_headers, make_session
 
@@ -29,10 +29,10 @@ def test_session_params_add_to_the_query_the_url_carries():
 
     def echo(request):
         seen.append(str(request.url))
-        return httpx.Response(200)
+        return httpx2.Response(200)
 
     session = make_session()
-    session._transport = httpx.MockTransport(echo)
+    session._transport = httpx2.MockTransport(echo)
     session.get("https://example.com/api?rq=title/detail", params={"title_id": 1})
     session.get("https://example.com/api", params={"page": 2})
     session.get("https://example.com/api?rq=viewer")
@@ -46,11 +46,11 @@ def test_session_params_add_to_the_query_the_url_carries():
 def test_session_follows_redirects():
     def hop(request):
         if request.url.path == "/old":
-            return httpx.Response(302, headers={"Location": "https://example.com/new"})
-        return httpx.Response(200, text="landed")
+            return httpx2.Response(302, headers={"Location": "https://example.com/new"})
+        return httpx2.Response(200, text="landed")
 
     session = make_session()
-    session._transport = httpx.MockTransport(hop)
+    session._transport = httpx2.MockTransport(hop)
     res = session.get("https://example.com/old")
     assert res.text == "landed"
     assert str(res.url) == "https://example.com/new"

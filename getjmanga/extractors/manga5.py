@@ -53,7 +53,7 @@ from getjmanga.viewers.publus import pages as publus_pages
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
 
-    from httpx import Client, Response
+    from httpx2 import Client, Response
 
 BASE_URL = "https://manga-5.com"
 #: The viewer's license call; the `cid` of the viewer URL goes in decoded.

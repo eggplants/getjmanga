@@ -33,7 +33,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 from urllib.parse import unquote, urlparse
 
-from httpx import HTTPStatusError
+from httpx2 import HTTPStatusError
 
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page, numbered, published_on
@@ -41,7 +41,7 @@ from getjmanga.extractor import Episode, Extractor, Page, numbered, published_on
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from httpx import Client, Response
+    from httpx2 import Client, Response
     from PIL import Image
 
 BASE_URL = "https://manga-no.com"

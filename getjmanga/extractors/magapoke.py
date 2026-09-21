@@ -47,7 +47,7 @@ from getjmanga.viewers.kmanga import descramble, service_hash
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
 _TITLE_PATH = re.compile(r"^/title/(?P<title>\d{5})/?$")

@@ -21,13 +21,13 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from httpx import HTTPStatusError
+from httpx2 import HTTPStatusError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page, ordinal, published_on
 
 if TYPE_CHECKING:
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
 _EPISODE_PATH = re.compile(r"^/manga/(?P<id>[A-Za-z0-9_-]+)\.html$")

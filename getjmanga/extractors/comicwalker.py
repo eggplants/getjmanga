@@ -15,7 +15,7 @@ from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
 from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 
 if TYPE_CHECKING:
-    from httpx import Client, Response
+    from httpx2 import Client, Response
 
 BASE_URL = "https://comic-walker.com"
 #: The Next.js app's own backend; the work page and the viewer read everything through it.

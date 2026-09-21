@@ -7,7 +7,7 @@ from io import BytesIO
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from httpx import HTTPStatusError
+from httpx2 import HTTPStatusError
 from PIL import Image
 
 from getjmanga.downloader import Downloader

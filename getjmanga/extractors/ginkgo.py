@@ -35,7 +35,7 @@ from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from httpx import Client
+    from httpx2 import Client
 
 #: What the コミックいわてWEB work pages are episodes of.
 IWATE_SERIES_TITLE = "コミックいわてWEB"

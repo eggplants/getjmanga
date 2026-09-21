@@ -40,7 +40,7 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from httpx import HTTPStatusError
+from httpx2 import HTTPStatusError
 from PIL import Image
 
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
@@ -49,7 +49,7 @@ from getjmanga.extractor import Episode, Extractor, Page, neighbours, ordinal, p
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from httpx import Client, Response
+    from httpx2 import Client, Response
 
 HOST = "www.shinshokan.com"
 BASE_URL = f"https://{HOST}/webwings/"

@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, get_args
 from urllib.parse import urlparse
 
-from httpx import HTTPError
+from httpx2 import HTTPError
 
 from . import __version__
 from .config import (
@@ -605,7 +605,7 @@ class Runner:
 
         Raises:
             NothingReadableError: The page, or every page of the range, links to nothing an extractor takes.
-            httpx.HTTPError: The page could not be fetched; a numbered page is only reported.
+            httpx2.HTTPError: The page could not be fetched; a numbered page is only reported.
         """
         extractor = get_extractor(self.parsed.extractor) if self.parsed.extractor else None
         expanded = numbered_pages(url)

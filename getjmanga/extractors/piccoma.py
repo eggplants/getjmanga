@@ -17,7 +17,7 @@ from getjmanga.viewers.seedrandom import descramble as descramble_tiles
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
 BASE_URL = "https://piccoma.com"

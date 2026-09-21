@@ -30,7 +30,7 @@ from getjmanga.extractor import Episode, Extractor, Page, ordinal, published_on
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from httpx import Client
+    from httpx2 import Client
 
 BASE_URL = "https://www.alphapolis.co.jp"
 LOGIN_URL = f"{BASE_URL}/login"

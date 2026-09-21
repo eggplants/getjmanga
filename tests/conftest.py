@@ -1,4 +1,4 @@
-"""Fakes every test file shares: a canned `httpx.Client` and its responses."""
+"""Fakes every test file shares: a canned `httpx2.Client` and its responses."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from http import HTTPStatus
 from typing import cast
 
 import pytest
-from httpx import Client, HTTPStatusError, Request, Response
+from httpx2 import Client, HTTPStatusError, Request, Response
 
 
 class FakeResponse:

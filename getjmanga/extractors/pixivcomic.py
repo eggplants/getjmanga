@@ -51,7 +51,7 @@ from getjmanga.extractor import Episode, Extractor, Page, published_on
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from httpx import Client, Response
+    from httpx2 import Client, Response
     from PIL import Image
 
 BASE_URL = "https://comic.pixiv.net"

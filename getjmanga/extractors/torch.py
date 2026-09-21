@@ -36,7 +36,7 @@ from getjmanga.extractor import Episode, Extractor, Page
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from httpx import Response
+    from httpx2 import Response
 
 # An episode page: `/story/<slug>`. A slug may be percent-encoded Japanese.
 _STORY_PATH = re.compile(r"^/story/(?P<slug>[^/]+)/?$")

@@ -22,7 +22,7 @@ from getjmanga.extractor import Episode, Extractor, Page, numbered, published_on
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from httpx import Client, Response
+    from httpx2 import Client, Response
 
 BASE_URL = "https://drecomi-plus.jp"
 #: The Next.js app's backend; the work page, the viewer and sign-in all go through it.

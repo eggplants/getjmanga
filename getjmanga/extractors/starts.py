@@ -25,7 +25,7 @@ from getjmanga.extractor import Episode, Extractor, Page, published_on
 from getjmanga.viewers.seedrandom import descramble as _descramble_tiles
 
 if TYPE_CHECKING:
-    from httpx import Client
+    from httpx2 import Client
     from PIL import Image
 
 # `/comic/serial/n<serial>/n<story>/<page>`; the site itself redirects a URL

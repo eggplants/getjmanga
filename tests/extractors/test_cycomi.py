@@ -4,7 +4,7 @@ from datetime import date
 from io import BytesIO
 
 import pytest
-from httpx import Client
+from httpx2 import Client
 from PIL import Image
 
 from getjmanga.downloader import Downloader

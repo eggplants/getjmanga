@@ -39,7 +39,7 @@ dependencies = [
   "beautifulsoup4>=4.12",
   "cbz>=4",
   "cryptography>=43",
-  "httpx>=0.28",
+  "httpx2>=2.13",
   "pathvalidate>=3.2",
   "pillow>=10.4",
   "rich>=13.7",
@@ -98,8 +98,8 @@ lint.per-file-ignores."getjmanga/downloader.py" = [
   "PLR0913", # Too many arguments (one keyword per command line flag)
 ]
 lint.per-file-ignores."getjmanga/session.py" = [
-  "ANN401",  # `Any` in `**kwargs` (the override hands httpx's own keyword arguments on untouched)
-  "PLC2701", # Private import (httpx keeps its parameter type aliases in `httpx._types`)
+  "ANN401",  # `Any` in `**kwargs` (the override hands httpx2's own keyword arguments on untouched)
+  "PLC2701", # Private import (httpx2 keeps its parameter type aliases in `httpx2._types`)
 ]
 lint.per-file-ignores."getjmanga/viewers/*.py" = [
   "SLF001", # Private member access (a viewer sends its requests through the extractor's `_get` and `_fetch_image`)

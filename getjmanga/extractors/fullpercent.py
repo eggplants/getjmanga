@@ -37,7 +37,7 @@ from getjmanga.extractor import Episode, Extractor, Page, neighbours
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from httpx import Client
+    from httpx2 import Client
 
 BASE_URL = "https://fullpercent.net"
 LOGIN_URL = f"{BASE_URL}/user/login_ajax"
