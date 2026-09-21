@@ -9,7 +9,7 @@ from httpx import HTTPStatusError
 from PIL import Image
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, numbered, ordinal, published_on
 
 
 class Plain(Extractor):
@@ -112,6 +112,14 @@ def test_published_on_reads_what_the_sites_write(value, expected):
     assert published_on(value) == expected
 
 
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [(70, 70), ("12", 12), (" 3 ", 3), (0, None), (-1, None), ("", None), (None, None), (True, None), ("第3話", None)],
+)
+def test_numbered_reads_what_the_sites_count(value, expected):
+    assert numbered(value) == expected
+
+
 def test_dated_by_upload_reads_the_last_modified_header(fake_session, fake_response):
     session = fake_session(
         {"cdn.example": fake_response(b"", headers={"last-modified": "Thu, 21 Aug 2025 08:16:41 GMT"})}
@@ -157,6 +165,12 @@ def test_neighbours_looks_either_side_of_an_item():
     assert neighbours(["a", "b"], "x") == (None, None)
 
 
+def test_ordinal_counts_from_one():
+    assert ordinal(["a", "b", "c"], "a") == 1
+    assert ordinal(["a", "b", "c"], "c") == 3
+    assert ordinal(["a", "b"], "x") is None
+
+
 class Listing(Extractor):
     """Lists three episodes, counting how often it was asked."""
 
@@ -191,6 +205,8 @@ def test_listed_neighbours_reads_the_series_once():
         "https://example.com/ep/2",
     )
     assert extractor._listed_neighbours("https://example.com/s", "https://example.com/ep/9") == (None, None)
+    assert extractor._listed_number("https://example.com/s", "https://example.com/ep/2") == 2
+    assert extractor._listed_number("https://example.com/s", "https://example.com/ep/9") is None
     assert extractor.listed == 1
 
 
@@ -198,4 +214,5 @@ def test_listed_neighbours_shrugs_at_a_series_it_cannot_list():
     extractor = Listing()
     assert extractor._listed_neighbours("https://example.com/gone", "https://example.com/ep/2") == (None, None)
     assert extractor._listed_neighbours("https://example.com/gone", "https://example.com/ep/2") == (None, None)
+    assert extractor._listed_number("https://example.com/gone", "https://example.com/ep/2") is None
     assert extractor.listed == 1

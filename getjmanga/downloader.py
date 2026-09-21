@@ -164,6 +164,7 @@ class Downloader:
             [PageInfo.load(path) for path in files],
             title=episode.episode_title,
             series=episode.series_title,
+            number=episode.number,
             writer=episode.writer,
             publisher=episode.publisher,
             year=published.year if published else None,

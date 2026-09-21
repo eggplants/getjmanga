@@ -42,6 +42,7 @@ def episode(pages=3, series_title="Series", episode_title="Episode 1"):
         writer="Author",
         publisher="House",
         published=date(2026, 9, 21),
+        number=7,
     )
 
 
@@ -102,7 +103,7 @@ def test_download_writes_metadata_when_asked(tmp_path):
     assert metadata["next_url"] == "https://example.com/ep/2"
     assert metadata["metadata"] == {"raw": True}
     assert (metadata["writer"], metadata["publisher"]) == ("Author", "House")
-    assert metadata["published"] == "2026-09-21"
+    assert (metadata["published"], metadata["number"]) == ("2026-09-21", 7)
     assert [page["extra"]["n"] for page in metadata["pages"]] == [0, 1, 2]
 
 
@@ -139,7 +140,12 @@ def test_cbz_packs_the_saved_pages_as_they_are_under_the_series(tmp_path):
     assert result.archive is not None
     comic = ComicInfo.from_cbz(result.archive)
     assert [page.suffix for page in comic] == [".png"] * 3
-    assert (comic.title, comic.series, comic.web) == ("Episode 1", "Series", "https://example.com/ep/1")
+    assert (comic.title, comic.series, comic.number, comic.web) == (
+        "Episode 1",
+        "Series",
+        7,
+        "https://example.com/ep/1",
+    )
     assert (comic.writer, comic.publisher) == ("Author", "House")
     assert (comic.year, comic.month, comic.day) == (2026, 9, 21)
     assert str(comic.manga) == "Yes"

@@ -87,6 +87,25 @@ def _written_day(text: str) -> date | None:
         return None
 
 
+def numbered(value: object) -> int | None:
+    """The episode number a site's field holds, for `Episode.number`.
+
+    Args:
+        value: What the site said: an integer, or a string holding one
+            (`"12"`, `" 12 "`).
+
+    Returns:
+        The number, or None when `value` is empty, no whole number, or below 1.
+    """
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        number = int(str(value).strip())
+    except ValueError:
+        return None
+    return number if number > 0 else None
+
+
 def neighbours(items: Sequence[T], current: T) -> tuple[T | None, T | None]:
     """The items before and after `current` in `items`, for `prev_url` and `next_url`.
 
@@ -104,6 +123,22 @@ def neighbours(items: Sequence[T], current: T) -> tuple[T | None, T | None]:
     before = items[position - 1] if position else None
     after = items[position + 1] if position + 1 < len(items) else None
     return before, after
+
+
+def ordinal(items: Sequence[T], current: T) -> int | None:
+    """Where `current` stands in `items`, counted from 1, for `Episode.number`.
+
+    Args:
+        items: The series' whole listing in reading order.
+        current: The episode to count up to.
+
+    Returns:
+        The 1-based position, or None when `current` is not listed.
+    """
+    try:
+        return items.index(current) + 1
+    except ValueError:
+        return None
 
 
 @dataclass(frozen=True)
@@ -143,6 +178,10 @@ class Episode:
     #: The day the episode came out, in Japan -- or, on a site that never says,
     #: the day its first page was last uploaded. None when neither is known.
     published: date | None = None
+    #: Where the episode stands in the series, counted from 1 in reading
+    #: order -- the site's own count, not the number in the title. None when
+    #: the site does not number its episodes.
+    number: int | None = None
 
     @property
     def readable(self) -> bool:
@@ -182,7 +221,7 @@ class Extractor(ABC):
             session: A session to reuse. A retrying one is made when omitted.
         """
         self._session = session if session is not None else make_session()
-        #: `series_urls()` answers, by series URL, for `_listed_neighbours()`.
+        #: `series_urls()` answers, by series URL, for `_listed_neighbours()` and `_listed_number()`.
         self._series_listings: dict[str, list[str]] = {}
 
     @property
@@ -259,12 +298,31 @@ class Extractor(ABC):
             `(before, after)`; None at either end, or both when the series
             cannot be listed or does not list the episode.
         """
+        return neighbours(self._series_listing(series_url), episode_url)
+
+    def _listed_number(self, series_url: str, episode_url: str) -> int | None:
+        """Where `series_urls(series_url)` lists `episode_url`, counted from 1.
+
+        The same listing `_listed_neighbours()` reads, fetched once per series.
+
+        Args:
+            series_url: The series `episode_url` belongs to.
+            episode_url: The episode, spelled the way `series_urls()` spells it.
+
+        Returns:
+            The position, or None when the series cannot be listed or does not
+            list the episode.
+        """
+        return ordinal(self._series_listing(series_url), episode_url)
+
+    def _series_listing(self, series_url: str) -> list[str]:
+        """`series_urls(series_url)`, read once; empty when the series cannot be listed."""
         if series_url not in self._series_listings:
             try:
                 self._series_listings[series_url] = self.series_urls(series_url)
             except GetjmangaError:
                 self._series_listings[series_url] = []
-        return neighbours(self._series_listings[series_url], episode_url)
+        return self._series_listings[series_url]
 
     @abstractmethod
     def episode(self, url: str) -> Episode:

@@ -100,7 +100,7 @@ from typing import TYPE_CHECKING, ClassVar
 from urllib.parse import urlparse
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, ordinal, published_on
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -167,6 +167,7 @@ class Example(Extractor):
             writer=credits,             # `名前 (役割), 名前 (役割)` as the site credits the work; "" when it does not
             publisher=self.PUBLISHER,   # or what the page names, on a site that carries several publishers
             published=published_on(released),  # the day it came out, from whatever the site writes; None when it does not
+            number=ordinal(chapter_ids, chapter_id),  # where it stands in the series, counted from 1; None when unknown
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -215,6 +216,15 @@ ways the offline tests will not catch.
   `self._dated_by_upload(Episode(...))` instead: one HEAD on the first page
   image, whose `Last-Modified` is the day it was uploaded -- close to the
   release, never after it. Skip it where the CDN sends no such header.
+- **`number` is where the episode stands in the series, counted from 1** --
+  the site's own count, not the number in the title (a 特別読切 slotted in
+  after 第11話 is 12, and 第12話 is 13). Use the site's own field when it
+  sends one (`numbered(value)`), else `ordinal(listing, episode)` on the
+  listing `episode()` already has for `prev_url`, or
+  `self._listed_number(series_url, url)` for a listing one request away
+  (kept for the series, like `_listed_neighbours()`). None where the
+  listing would cost a walk of many pages. `-C` writes it as the archive's
+  Number.
 - **`suitable()` is cheap and offline.** It runs against every URL on the
   command line for every extractor; a regex on the URL, never a request.
 - **`series_urls()` returns episode URLs `episode()` accepts**, deduplicated,
