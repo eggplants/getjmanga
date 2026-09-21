@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import struct
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -99,7 +100,7 @@ MO_CHAPTERS = [(354637, "第3話", 30), (353548, "第2話", 0), (353545, "第1�
 def mo_chapter(chapter_id, name, points=0, description=""):
     fields = encode_varint_field(1, chapter_id) + encode_bytes_field(2, name)
     if description:
-        fields += encode_bytes_field(3, description)
+        fields += encode_bytes_field(3, description) + encode_bytes_field(5, "2019/09/19")
     fields += encode_bytes_field(16, encode_varint_field(1, 1) + encode_varint_field(2, points) if points else b"")
     return fields
 
@@ -201,6 +202,7 @@ def test_mangaone_episode_reads_the_titles_the_pages_and_the_next_chapter(mangao
     assert episode.series_title == "女の子を天国に連れていくには"
     assert episode.episode_title == "第1話"
     assert (episode.writer, episode.publisher) == ("高見奈緒", "小学館")
+    assert episode.published == date(2019, 9, 19)
     assert [page.url for page in episode.pages] == [MO_IMAGE.format(1), MO_IMAGE.format(2)]
     assert episode.pages[0].extra == {"key": KEY, "iv": IV}
     assert (episode.pages[0].width, episode.pages[0].height) == (720, 1020)
@@ -320,6 +322,7 @@ def fc_row(chapter_id, title, priority, chapter_type=0):
         "chapterType": chapter_type,
         "dialog": "$undefined" if chapter_type == 0 else {"chapterId": chapter_id},
         "priority": priority,
+        "updated": f"2026/06/{priority:02d}",
     }
 
 
@@ -409,6 +412,7 @@ def test_flower_episode_reads_the_viewer_props(flower):
     assert episode.series_title == "死神の初恋 〜没落華族の令嬢は愛を知らない死神に嫁ぐ〜"
     assert episode.episode_title == "第1話 -1"
     assert (episode.writer, episode.publisher) == ("美麻りん", "小学館")
+    assert episode.published == date(2026, 6, 1)
     assert [page.url for page in episode.pages] == [FC_IMAGE.format(1), FC_IMAGE.format(2)]
     assert episode.pages[0].extra == {"key": KEY, "iv": IV}
     assert episode.next_url == f"{FLOWERCOMICS_URL}/chapter/96935"
@@ -594,6 +598,11 @@ def test_gangan_episode_reads_the_page_json(gangan):
     assert session.calls == [GG_CHAPTER_URL, GG_TITLE_URL]
 
 
+def test_gangan_episode_is_dated_by_its_first_page_upload(gangan, fake_response, uploaded):
+    extractor, _ = gangan({"/secure/": fake_response(b"", headers=uploaded)})
+    assert extractor.episode(GG_CHAPTER_URL).published == date(2025, 8, 21)
+
+
 def test_gangan_episode_stops_at_the_last_chapter(gangan, fake_response):
     extractor, _ = gangan({"/chapter/": fake_response(text=gg_page({"data": gg_chapter_data(next_id=0)}))})
     assert extractor.episode(GG_CHAPTER_URL).next_url is None
@@ -718,6 +727,7 @@ def mp_row(chapter_id, name, subname, free):
             <div class="thumbnail"><img class="chapterThumb" src="https://manga-park.com:443/static/c/x/t/1.jpg"></div>
             <div class="info"><div class="info-body">
               <p class="chapterTitle txtColorSubjectSP" data-truncation="2">{subname}</p>
+              <div class="date"><span class="txtColorSubjectSP">2017/8/{chapter_id % 28 + 1}</span></div>
             </div></div>
           </div>
         </li>"""
@@ -806,6 +816,7 @@ def test_park_episode_reads_the_title_page_and_the_chapter_api(park):
     assert episode.series_title == "アクトジジョウ"
     assert episode.episode_title == "#１①"
     assert (episode.writer, episode.publisher) == ("原作：糸加　作画：白藤圭", "白泉社")
+    assert episode.published == date(2017, 8, 397003 % 28 + 1)
     assert [page.url for page in episode.pages] == [MP_IMAGE.format(0), MP_IMAGE.format(1)]
     assert episode.pages[0].extra == {"key": MP_KEY}
     assert episode.next_url == f"{MANGAPARK_URL}/title/33142/397006"
@@ -1043,6 +1054,11 @@ def test_lab_episode_reads_the_chapter_and_walks_the_title_list_upwards(lab):
     assert [c["title"] for c in episode.metadata["chapters"]] == ["1", "2", "第3話", "4"]
     json.dumps(episode.metadata)
     assert session.calls == [f"{MANGALAB_URL}/api/title/chapter/809956/", f"{MANGALAB_URL}/api/title/105830/"]
+
+
+def test_lab_episode_is_dated_by_its_first_page_upload(lab, fake_response, uploaded):
+    extractor, _ = lab({"/static/": fake_response(b"", headers=uploaded)})
+    assert extractor.episode(ML_CHAPTER_URL).published == date(2025, 8, 21)
 
 
 def test_lab_episode_prefers_the_chapter_name(lab, fake_response):

@@ -36,7 +36,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import parse_qs, unquote, urlencode, urlparse
 
@@ -45,7 +45,7 @@ from bs4.element import Tag
 from PIL import Image
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 from getjmanga.viewers.publus import Slice, decode_pack
 from getjmanga.viewers.publus import descramble as descramble_keyed
 from getjmanga.viewers.publus import pages as publus_pages
@@ -218,6 +218,8 @@ class Listing:
     has_next: bool
     #: The work's own `ul.author-list` entries, comma-separated.
     writer: str = ""
+    #: Product id -> its `update-date`, `2023/04/18 更新`.
+    dates: Mapping[str, str] = field(default_factory=dict)
 
 
 def product_url(product_id: str) -> str:
@@ -333,10 +335,14 @@ def parse_listing(html: str | bytes) -> Listing:
     """
     soup = BeautifulSoup(html, "html.parser")
     heading = soup.select_one("h1.comic-title")
+    rows = soup.select("a.book-product-list-item[data-id]")
     items = tuple(
-        (str(item.attrs["data-id"]), " ".join(str(item.attrs.get("data-title") or "").split()))
-        for item in soup.select("a.book-product-list-item[data-id]")
+        (str(item.attrs["data-id"]), " ".join(str(item.attrs.get("data-title") or "").split())) for item in rows
     )
+    dates = {}
+    for item in rows:
+        dated = item.select_one("p.update-date")
+        dates[str(item.attrs["data-id"])] = dated.get_text(strip=True) if isinstance(dated, Tag) else ""
     pager_next = soup.select_one("li.to-next")
     has_next = isinstance(pager_next, Tag) and "disabled" not in (pager_next.get("class") or [])
     authors = soup.select_one("ul.author-list")
@@ -346,6 +352,7 @@ def parse_listing(html: str | bytes) -> Listing:
         items=items,
         has_next=has_next,
         writer=", ".join(name for name in names if name),
+        dates=dates,
     )
 
 
@@ -431,6 +438,8 @@ class Manga5(Extractor):
         super().__init__(session)
         #: The credits of each work whose listing was read, by content id.
         self._credits: dict[str, str] = {}
+        #: The `update-date` of every listed episode seen so far, by product id.
+        self._dates: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -542,6 +551,7 @@ class Manga5(Extractor):
                 metadata={"viewer": data.raw, "license": license_},
                 writer=self._writer(series_id(product_id)),
                 publisher=self.PUBLISHER,
+                published=published_on(self._update_date(product_id)),
             )
         if not base.endswith("/"):
             base += "/"
@@ -557,7 +567,16 @@ class Manga5(Extractor):
             metadata={"viewer": data.raw, "license": license_, **described},
             writer=self._writer(series_id(product_id)),
             publisher=self.PUBLISHER,
+            published=published_on(self._update_date(product_id)),
         )
+
+    def _update_date(self, product_id: str) -> str:
+        """The `update-date` the work page lists for `product_id`: walked for, oldest first."""
+        if product_id not in self._dates:
+            for _ in self._listings(series_id(product_id)):
+                if product_id in self._dates:
+                    break
+        return self._dates.get(product_id, "")
 
     def _writer(self, content_id: str) -> str:
         """The credits off the work page's first listing page, read once per work."""
@@ -620,6 +639,7 @@ class Manga5(Extractor):
         for page in range(1, self.MAX_LISTING_PAGES + 1):
             listing = parse_listing(self._get(listing_url, params={"order": "asc", "p": page}).content)
             self._credits.setdefault(content_id, listing.writer)
+            self._dates.update(listing.dates)
             yield listing
             if not listing.has_next:
                 break
@@ -651,4 +671,5 @@ class Manga5(Extractor):
             metadata={"listing": {"content_id": series_id(product_id), "found": found}},
             writer=self._credits.get(series_id(product_id), ""),
             publisher=self.PUBLISHER,
+            published=published_on(self._update_date(product_id)),
         )

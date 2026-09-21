@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -183,6 +184,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_chapter(client):
 
     assert episode.series_title == "ELDER ONE"
     assert (episode.writer, episode.publisher) == ("Ai Otsuki", "アムタス")
+    assert episode.published == date(2026, 4, 1)
     assert episode.episode_title == "第1話 黒腕-②"
     assert [page.url for page in episode.pages] == [page["imgUrl"] for page in PAGES]
     assert episode.pages[0].width == 0

@@ -25,7 +25,7 @@ from bs4.element import Tag
 from PIL import Image
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -351,15 +351,17 @@ class AlphaPolis(Extractor):
         episode = data.get("episode") or {}
         tables = parse_puzzles(str(page.get("placeholder") or ""))
         images = page.get("images") or []
-        prev_url, next_url = _neighbours(
-            url, [urljoin(BASE_URL, str(entry["url"])) for entry in data.get("episodes") or []]
-        )
+        listed = data.get("episodes") or []
+        prev_url, next_url = _neighbours(url, [urljoin(BASE_URL, str(entry["url"])) for entry in listed])
+        # `upTime`: `2026.08.05更新` on the episode's own row.
+        up_time = next((e.get("upTime") for e in listed if urljoin(BASE_URL, str(e.get("url"))) == url), "")
         return Episode(
             url=url,
             series_title=str(manga.get("title") or "").strip() or work_url.rsplit("/", 1)[-1],
             episode_title=str(episode.get("mainTitle") or episode.get("title") or "").strip() or episode_no,
             writer=self.work(work_url).writer,
             publisher=self.PUBLISHER,
+            published=published_on(up_time),
             pages=tuple(
                 Page(
                     url=str(image["url"]),

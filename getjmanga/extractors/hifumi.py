@@ -26,7 +26,7 @@ episode page.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 from urllib.parse import urljoin, urlparse
@@ -36,7 +36,7 @@ from bs4.element import Tag
 from httpx import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
@@ -70,6 +70,8 @@ class Listing:
     title: str
     #: Canonical episode URL -> the episode's title (`第1話`, `予告編`, ...), oldest first.
     episodes: dict[str, str]
+    #: Canonical episode URL -> the `2026年03月13日更新` line next to its number.
+    dates: dict[str, str] = field(default_factory=dict)
 
 
 def episode_url(url: str) -> str | None:
@@ -132,6 +134,7 @@ def parse_work(html: str | bytes, url: str) -> Listing:
         msg = f"no work page at {url}."
         raise NotAnEpisodePageError(msg)
     episodes: dict[str, str] = {}
+    dates: dict[str, str] = {}
     for item in listing.select("li") if isinstance(listing, Tag) else []:
         anchor = item.select_one("div.btn a[href]")
         if anchor is None:
@@ -141,10 +144,14 @@ def parse_work(html: str | bytes, url: str) -> Listing:
             continue
         number = item.select_one("span.story-num")
         episodes.setdefault(canonical, number.get_text(strip=True) if isinstance(number, Tag) else "")
+        story = item.select_one("div.story")
+        if isinstance(story, Tag):
+            dates.setdefault(canonical, story.get_text(" ", strip=True))
     return Listing(
         url=url,
         title=heading.get_text(strip=True) if isinstance(heading, Tag) else "",
         episodes=episodes,
+        dates=dates,
     )
 
 
@@ -283,6 +290,7 @@ class Hifumi(Extractor):
             },
             # Neither imprint credits an author anywhere but the copyright line.
             publisher=self.PUBLISHER,
+            published=published_on(listing.dates.get(canonical, "")) if listing else None,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

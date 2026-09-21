@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlparse
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -220,6 +220,7 @@ class Meets(Extractor):
             metadata={"comic": comic, "episode": entry, "viewer": viewer},
             writer=", ".join(str(name) for name in comic.get("authors") or [] if name),
             publisher=self.PUBLISHER,
+            published=published_on(entry.get("published_at")),
         )
 
     def _listing(self, origin: str, dir_name: str, referer: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:

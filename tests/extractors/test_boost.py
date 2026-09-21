@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from io import BytesIO
 
 import pytest
@@ -107,7 +108,13 @@ CONTENT_HTML = """
   <li class="author">作画：<a href="/author/%E4%BB%8A">今中千尋</a></li>
   <li class="author">キャラクター原案：<a href="/author/%E3%81%88">えいひ</a></li>
 </ul>
-<div class="book-product-list"></div>
+<div class="book-product-list">
+  <a id="product-1" class="book-product-list-item" href="/product/01700001" data-id="01700001" data-title="第1話">
+    <div class="right"><p class="update-date">2026/02/03</p></div></a>
+  <a id="product-2" class="book-product-list-item" href="/product/01700002" data-id="01700002" data-title="第2話">
+    <div class="right"><p class="update-date">2026/02/17</p></div></a>
+</div>
+<ul><li class="pagination-list-item to-next disabled"><a href="#"></a></li></ul>
 <ul class="author-list"><li class="author"><a href="/author/x">河合朗</a></li></ul>
 </body></html>
 """
@@ -228,6 +235,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
         "恵ノ島すず (原作), 今中千尋 (作画), えいひ (キャラクター原案)",
         "幻冬舎コミックス",
     )
+    assert episode.published == date(2026, 2, 3)
     assert [page.url for page in episode.pages] == [
         f"{CONTENT_URL}OEBPS/text/p-0001.xhtml/0.jpeg",
         f"{CONTENT_URL}OEBPS/text/p-0002.xhtml/0.jpeg",

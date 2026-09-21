@@ -13,7 +13,7 @@ from PIL import Image
 
 from getjmanga.cipher import aes_cbc_decrypt
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -243,6 +243,7 @@ class Goraku(Extractor):
             metadata=props,
             writer=str(props.get("author") or ""),
             publisher=self.PUBLISHER,
+            published=published_on(props.get("openAt")),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

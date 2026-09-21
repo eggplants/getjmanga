@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from hashlib import sha256
 from http import HTTPStatus
 from io import BytesIO
@@ -78,6 +79,7 @@ def story(story_id, title, subtitle, error=None):
         "isLast": False,
         "contentsAccessCondition": {"__typename": "FreeStoryContentsAccessCondition", "disableCM": True},
         "isPurchased": False,
+        "contentsRelease": 1677510000000,
         "storyContents": contents,
     }
 
@@ -192,21 +194,22 @@ def test_is_series(url, expected):
 
 
 def test_episode_reads_the_titles_the_pages_and_the_next_story(client):
-    ganma, session = client([READER])
+    ganma, session = client([READER, LISTING])
     episode = ganma.episode(EPISODE_URL)
 
     assert episode.url == EPISODE_URL
     assert episode.series_title == "ウルフちゃんは澄ましたい"
     assert episode.episode_title == "第2話 占いとお菓子"
     assert (episode.writer, episode.publisher) == ("ホンノシオリ", "コミスマ")
+    assert episode.published == date(2023, 2, 28)
     assert [page.url for page in episode.pages] == PAGES
     assert all(page.extra == {} for page in episode.pages)
     assert (episode.prev_url, episode.next_url) == (f"{BASE_URL}/web/reader/wolfchan/{STORY_1}/0", LOCKED_URL)
     assert episode.metadata["storyContents"]["pageImages"]["pageCount"] == 2
     json.dumps(episode.metadata)
 
-    # One persisted query, with the site's headers.
-    assert len(session.posts) == 1
+    # The reader query, with the site's headers, then the listing for the release date.
+    assert len(session.posts) == 2
     url, body = session.posts[0]
     assert url == GRAPHQL_URL
     assert body["operationName"] == "magazineStoryForReader"
@@ -234,7 +237,7 @@ def test_episode_sends_the_page_as_x_from(fake_response, fake_session):
 
 
 def test_episode_accepts_a_magazine_id_and_no_page_number(client):
-    ganma, session = client([READER])
+    ganma, session = client([READER, LISTING])
     episode = ganma.episode(f"https://ganma.jp/web/reader/{MAGAZINE_ID}/{STORY_2}")
     assert episode.url == f"{BASE_URL}/web/reader/{MAGAZINE_ID}/{STORY_2}/0"
     assert episode.next_url == f"{BASE_URL}/web/reader/{MAGAZINE_ID}/{STORY_3}/0"

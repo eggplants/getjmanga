@@ -36,7 +36,7 @@ from urllib.parse import unquote, urlparse
 from httpx import HTTPStatusError
 
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -73,6 +73,7 @@ query GetEpisode($id: ID!, $first: Int!, $after: String) {
       title
       number
       publicNumber
+      publishedAt
       status
       startPosition
       afterword
@@ -326,6 +327,7 @@ class MangaNo(Extractor):
             },
             writer=str((work.get("user") or {}).get("displayName") or ""),
             publisher=self.PUBLISHER,
+            published=published_on(node.get("publishedAt")),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

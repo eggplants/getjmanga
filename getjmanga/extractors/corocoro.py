@@ -21,7 +21,7 @@ from PIL import Image
 
 from getjmanga.cipher import aes_cbc_decrypt
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 from getjmanga.protobuf import integer, message, messages, raw, string
 
 if TYPE_CHECKING:
@@ -65,6 +65,8 @@ _CHAPTER_ID = 1
 _CHAPTER_MAIN_NAME = 2
 _CHAPTER_SUB_NAME = 3
 _CHAPTER_POINT_CONSUMPTION = 5
+#: When the chapter opened, as an epoch.
+_CHAPTER_START = 9
 _CHAPTER_BADGE = 11
 #: `Chapter.Badge`: NONE, UPDATE, FREE, ADVANCE (a ticket or points), PREMIUM (paid only).
 BADGES = ("none", "update", "free", "advance", "premium")
@@ -128,6 +130,7 @@ def chapter(buf: bytes) -> dict[str, Any]:
         "sub_name": string(fields, _CHAPTER_SUB_NAME),
         "badge": BADGES[badge] if 0 <= badge < len(BADGES) else str(badge),
         "point_consumption": cost,
+        "start_at": integer(fields, _CHAPTER_START),
     }
 
 
@@ -337,6 +340,7 @@ class Corocoro(Extractor):
             },
             writer=", ".join(f"{a['name']} ({a['role']})" if a["role"] else a["name"] for a in authors if a["name"]),
             publisher=self.PUBLISHER,
+            published=published_on(current["start_at"]),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

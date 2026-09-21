@@ -49,7 +49,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -125,6 +125,8 @@ class FireCross(Extractor):
         super().__init__(session)
         #: The credits of each work page read, by URL.
         self._credits: dict[str, str] = {}
+        #: The `公開：` line of every listed episode seen so far, by reader URL.
+        self._releases: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -177,11 +179,13 @@ class FireCross(Extractor):
         while True:
             soup = BeautifulSoup(self._get(series_url, params={"page": page}).content, "html.parser")
             self._credits.setdefault(series_url, _credits(soup))
-            found = [
-                _reader_url(origin, str(item["data-id"]))
-                for item in soup.select("div.shop-item--episode[data-id]")
-                if str(item["data-id"]).isdigit()
-            ]
+            found = []
+            for item in soup.select("div.shop-item--episode[data-id]"):
+                if not str(item["data-id"]).isdigit():
+                    continue
+                found.append(_reader_url(origin, str(item["data-id"])))
+                release = item.select_one(".shop-item-info-release")
+                self._releases.setdefault(found[-1], _text(release).removeprefix("公開：").strip())
             fresh = [episode_url for episode_url in dict.fromkeys(found) if episode_url not in urls]
             if not fresh:
                 break
@@ -228,6 +232,7 @@ class FireCross(Extractor):
         # and credits the work, which the listing keeps for here.
         prev_url = self._listed_neighbours(series_url, episode_url)[0] if series_url else None
         writer = self._credits.get(series_url or "", "")
+        published = published_on(self._releases.get(episode_url, ""))
         metadata: dict[str, Any] = {
             "ebook_id": int(episode_id),
             "series_url": str(home["href"]) if isinstance(home, Tag) else None,
@@ -245,6 +250,7 @@ class FireCross(Extractor):
                 metadata={**metadata, "locked": True},
                 writer=writer,
                 publisher=self.PUBLISHER,
+                published=published,
             )
         reader = BeautifulSoup(self._get(reader_url, headers=self.HEADERS).content, "html.parser")
         cgi, param = _reader_meta(reader)
@@ -279,6 +285,7 @@ class FireCross(Extractor):
             metadata=metadata,
             writer=writer,
             publisher=self.PUBLISHER,
+            published=published,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

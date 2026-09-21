@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 from PIL import Image
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -275,6 +275,7 @@ class Cycomi(Extractor):
             metadata={"chapter": chapter, "pages": pages_data},
             writer=str(chapter.get("author") or ""),
             publisher=self.PUBLISHER,
+            published=published_on(chapter.get("startAt")),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

@@ -22,7 +22,7 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 from getjmanga.protobuf import integer, message, messages, string
 
 if TYPE_CHECKING:
@@ -362,6 +362,7 @@ class ZeroSum(Extractor):
             metadata={"title": listing["title"], "chapter": chapter, "viewer": viewer},
             writer=str(listing["title"].get("author") or ""),
             publisher=self.PUBLISHER,
+            published=published_on(chapter.get("startTime")),
         )
 
     def _listing(self, tag: str, referer: str) -> dict[str, Any]:

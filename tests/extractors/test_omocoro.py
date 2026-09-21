@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -305,6 +306,7 @@ def test_episode_reads_the_titles_and_the_pages(client):
     assert episode.series_title == "dollly"
     assert episode.episode_title == "【漫画】聖剣"
     assert (episode.writer, episode.publisher) == ("dollly", "バーグハンバーグバーグ")
+    assert episode.published == date(2026, 9, 17)
     assert [page.url for page in episode.pages] == [f"{UPLOADS}/page{index:02d}.jpg" for index in range(1, 4)]
     assert episode.next_url is None
     assert episode.readable

@@ -32,7 +32,7 @@ from PIL import Image
 
 from getjmanga.cipher import aes_cbc_decrypt, xor_unmask
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 from getjmanga.protobuf import integer, message, messages, raw, string
 
 if TYPE_CHECKING:
@@ -70,6 +70,8 @@ class Chapter:
     title: str
     #: Free to read without points, a ticket or the app.
     free: bool = True
+    #: The day it came out, as the site writes it, when the list says.
+    released: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -207,6 +209,7 @@ class LinkU(Extractor):
             },
             writer=self._credits.get(title_id, ""),
             publisher=self.PUBLISHER,
+            published=published_on(next((c.released for c in chapters if c.id == chapter_id), "")),
         )
 
     @staticmethod
@@ -365,6 +368,7 @@ class MangaOne(LinkU):
             },
             writer=string(title, 5),
             publisher=self.PUBLISHER,
+            published=published_on(string(current, 5)),
         )
 
     def _chapter_list(self, title_id: int) -> list[Chapter]:
@@ -532,8 +536,9 @@ class FlowerComics(LinkU):
         title_id = int(viewer.get("titleID") or 0)
         following = viewer.get("nextChapter")
         next_id = int(following.get("id") or 0) if isinstance(following, dict) else 0
-        # The viewer names the next chapter only; the page's chapter list has the one before.
+        # The viewer names the next chapter only; the page's chapter list has the one before, and the dates.
         _, chapters = _flower_title(res.text)
+        released = next((c.released for c in chapters if c.id == chapter_id), "")
         return Episode(
             url=url,
             series_title=str(viewer.get("titleName") or title_id),
@@ -549,6 +554,7 @@ class FlowerComics(LinkU):
             },
             writer=self._writer(title_id),
             publisher=self.PUBLISHER,
+            published=published_on(released),
         )
 
     def _writer(self, title_id: int) -> str:
@@ -593,7 +599,12 @@ def _flower_title(html: str) -> tuple[str, list[Chapter]]:
     ]
     rows.sort(key=lambda row: int(row.get("priority") or 0))
     chapters = [
-        Chapter(int(row["id"]), str(row.get("title") or row["id"]), free=row.get("chapterType") == _FLOWER_TYPE_FREE)
+        Chapter(
+            int(row["id"]),
+            str(row.get("title") or row["id"]),
+            free=row.get("chapterType") == _FLOWER_TYPE_FREE,
+            released=str(row.get("updated") or ""),
+        )
         for row in rows
     ]
     return heading.get_text(strip=True) if heading is not None else "", chapters
@@ -720,21 +731,23 @@ class GanganOnline(LinkU):
         prev_url = self._listed_neighbours(
             f"{GANGANONLINE_URL}/title/{title_id}", self.chapter_url(title_id, chapter_id)
         )[0]
-        return Episode(
-            url=url,
-            series_title=str(data.get("titleName") or title_id),
-            episode_title=str(data.get("chapterName") or chapter_id),
-            pages=tuple(self._pages(data)),
-            prev_url=prev_url,
-            next_url=self.chapter_url(title_id, next_id) if next_id else None,
-            metadata={
-                "title_id": title_id,
-                "chapter_id": chapter_id,
-                "author": data.get("author"),
-                "left_start": data.get("ifLeftStart"),
-            },
-            writer=str(data.get("author") or ""),
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=url,
+                series_title=str(data.get("titleName") or title_id),
+                episode_title=str(data.get("chapterName") or chapter_id),
+                pages=tuple(self._pages(data)),
+                prev_url=prev_url,
+                next_url=self.chapter_url(title_id, next_id) if next_id else None,
+                metadata={
+                    "title_id": title_id,
+                    "chapter_id": chapter_id,
+                    "author": data.get("author"),
+                    "left_start": data.get("ifLeftStart"),
+                },
+                writer=str(data.get("author") or ""),
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _page_props(self, url: str) -> tuple[dict[str, Any], bool]:
@@ -935,6 +948,7 @@ class MangaPark(LinkU):
             },
             writer=locked.writer,
             publisher=self.PUBLISHER,
+            published=locked.published,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -1031,7 +1045,9 @@ def _park_title(html: str) -> tuple[str, list[Chapter]]:
         heading = row.select_one(".chapterTitle")
         name = (heading.get_text(strip=True) if heading is not None else "") or str(row.get("data-chapter-name") or "")
         free = row.select_one(".free-badge img") is not None
-        chapters.append(Chapter(int(chapter_id), name or chapter_id, free=free))
+        dated = row.select_one(".date")
+        released = dated.get_text(strip=True) if dated is not None else ""
+        chapters.append(Chapter(int(chapter_id), name or chapter_id, free=free, released=released))
     return str(named.get("data-title-name") or "") if named is not None else "", chapters
 
 
@@ -1152,23 +1168,25 @@ class MangaLab(LinkU):
         title_id = integer(answer, 7)
         series_title, chapters = self._title(title_id) if title_id else ("", [])
         number = _lab_number(chapter, 3)
-        return Episode(
-            url=url,
-            series_title=string(answer, 1) or series_title or str(title_id),
-            episode_title=string(chapter, 2) or _lab_chapter_name(number, chapter_id),
-            pages=tuple(Page(url=value.decode()) for value in messages(chapter, 4) if value),
-            prev_url=self._neighbour_urls(title_id, chapters, chapter_id)[0],
-            next_url=self._neighbour_urls(title_id, chapters, chapter_id)[1],
-            metadata={
-                "title_id": title_id,
-                "chapter_id": chapter_id,
-                "number": number,
-                "author": string(author, 2),
-                "begin_with_blank_page": bool(integer(chapter, 5)),
-                "chapters": [{"id": c.id, "title": c.title, "free": c.free} for c in chapters],
-            },
-            writer=string(author, 2),
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=url,
+                series_title=string(answer, 1) or series_title or str(title_id),
+                episode_title=string(chapter, 2) or _lab_chapter_name(number, chapter_id),
+                pages=tuple(Page(url=value.decode()) for value in messages(chapter, 4) if value),
+                prev_url=self._neighbour_urls(title_id, chapters, chapter_id)[0],
+                next_url=self._neighbour_urls(title_id, chapters, chapter_id)[1],
+                metadata={
+                    "title_id": title_id,
+                    "chapter_id": chapter_id,
+                    "number": number,
+                    "author": string(author, 2),
+                    "begin_with_blank_page": bool(integer(chapter, 5)),
+                    "chapters": [{"id": c.id, "title": c.title, "free": c.free} for c in chapters],
+                },
+                writer=string(author, 2),
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _title(self, title_id: int) -> tuple[str, list[Chapter]]:

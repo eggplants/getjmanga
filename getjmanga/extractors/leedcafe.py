@@ -32,7 +32,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -382,6 +382,7 @@ class LeedCafe(Extractor):
             },
             writer=page.writer,
             publisher=self.PUBLISHER,
+            published=published_on(page.updated),
         )
 
     def _work(self, slug: str) -> tuple[Work, dict[str, str]]:

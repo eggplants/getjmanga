@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, neighbours
+from getjmanga.extractor import Episode, Extractor, neighbours, published_on
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
@@ -143,6 +143,8 @@ class Gaugau(Extractor):
         series_title = _series_title(soup, work_id)
         episode_title = _episode_title(soup)
         writer = _credits(soup)
+        dated = soup.select_one("div.detailHead__body")
+        published = published_on(dated.get_text(" ", strip=True)) if isinstance(dated, Tag) else None
         viewer = soup.select_one(f"#{_VIEWER_ID}[data-ptbinb][data-ptbinb-cid]")
         prev_url, next_url = self._neighbours(url, work_id, kind)
 
@@ -159,6 +161,7 @@ class Gaugau(Extractor):
                 metadata={"work_id": work_id, "locked": True},
                 writer=writer,
                 publisher=self.PUBLISHER,
+                published=published,
             )
 
         content_id = str(viewer.attrs["data-ptbinb-cid"])
@@ -191,6 +194,7 @@ class Gaugau(Extractor):
             },
             writer=writer,
             publisher=self.PUBLISHER,
+            published=published,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

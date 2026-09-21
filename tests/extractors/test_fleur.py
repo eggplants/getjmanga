@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -89,7 +90,9 @@ def story_link(href: str, title: str) -> str:
     return f"""<li class="cb-story-links__item">
 <a href="{href}" target="_blank" class="cb-story-links__item--link">
 <div class="cb-story-links__item--image"><img alt="{title}" src="/media/016/x.jpg" /></div>
-<div class="cb-story-links__item--description"><div class="cb-story-links__item--title"> {title} </div></div>
+<div class="cb-story-links__item--description"><div class="cb-story-links__item--description__head">
+<div class="cb-story-links__item--date"> 2026/07/{href.rsplit("_", 1)[-1][:2]} 更新 </div></div>
+<div class="cb-story-links__item--title"> {title} </div></div>
 </a></li>"""
 
 
@@ -202,6 +205,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.series_title == "ゆきあいの青"
     assert episode.episode_title == "第1話"
     assert (episode.writer, episode.publisher) == ("たつもとみお", "KADOKAWA")
+    assert episode.published == date(2026, 7, 1)
     assert [page.url for page in episode.pages] == ORIGINALS
     assert [page.extra["served"] for page in episode.pages] == SERVED
     assert episode.next_url == NEXT_URL

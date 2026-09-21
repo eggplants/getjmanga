@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 from urllib.parse import parse_qs, urlparse
@@ -169,6 +170,14 @@ class InfoResponse:
         return {"result": 1, "ShopUserID": "", "eurl": "errorpage.php", "items": [item]}
 
 
+VOLUME_HTML = """<html><body>
+<div class="category_line"><div class="category_line_f_l_l">DL期限</div>
+<div class="category_line_f_r_l"><span class="margin_r5">：</span> 無期限 </div></div>
+<div class="category_line"><div class="category_line_f_l_l">配信開始日</div>
+<div class="category_line_f_r_l"><span class="margin_r5">：</span> 2015年11月17日 </div></div>
+</body></html>"""
+
+
 @pytest.fixture
 def client(fake_session, fake_response):
     """A Cmoa on a fake store: the title page in two lineup pages, the sample link, the API, the page list."""
@@ -181,6 +190,8 @@ def client(fake_session, fake_response):
             "/bib/speedreader/": fake_response(text=READER_HTML),
             "bibGetCntntInfo": InfoResponse(session, **info),
             "sbcGetCntnt.php": fake_response(text=content_jsonp()),
+            # The volume page, for its 配信開始日; it is matched before the title page it sits under.
+            "/vol/": fake_response(text=VOLUME_HTML),
             TITLE_URL: [fake_response(text=PAGE_ONE), fake_response(text=PAGE_TWO)],
         }
         session.routes.update(routes or {})
@@ -282,6 +293,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_volume(client):
     assert episode.series_title == "ダイヤのA act2"
     assert episode.episode_title == "ダイヤのＡ　ａｃｔ２（１）"
     assert (episode.writer, episode.publisher) == ("寺嶋裕二", "講談社")
+    assert episode.published == date(2015, 11, 17)
     assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert [page.width for page in episode.pages] == [392, 392]
     page = urlparse(episode.pages[0].url)
@@ -304,8 +316,9 @@ def test_episode_reads_the_titles_the_pages_and_the_next_volume(client):
     assert episode.metadata["locked"] is False
     assert "ctbl" not in episode.metadata["info"]
     json.dumps(episode.metadata)
-    # The lineup (two pages), the sample link that lands on the reader, the API, the page list.
-    assert session.calls == [TITLE_URL, TITLE_URL, SAMPLE_URL, INFO_URL, f"{SERVER}/sbcGetCntnt.php"]
+    # The lineup (two pages), the sample link that lands on the reader, the API,
+    # the volume page for its 配信開始日, the page list.
+    assert session.calls == [TITLE_URL, TITLE_URL, SAMPLE_URL, INFO_URL, VOLUME_URL, f"{SERVER}/sbcGetCntnt.php"]
 
 
 def test_episode_calls_the_api_the_way_the_reader_does(client):

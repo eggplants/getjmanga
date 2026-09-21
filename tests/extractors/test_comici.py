@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from http import HTTPStatus
 
 import pytest
@@ -18,6 +19,7 @@ EPISODE_HTML = """
 <title>IRUKA・prologue | MANGABU!</title>
 <meta property="og:title" content="IRUKA・prologue | MANGABU!(マンガ部!)"/>
 </head><body>
+<div class="ep-main-h-main"><h1 class="ep-main-h-h">prologue</h1><p class="ep-main-h-date">2026年8月28日</p></div>
 <div class="series-h-credit-user">
   <a class="g-author mode-link" href="/authors/981"><span class="g-author-name">施川ユウキ</span>
     <span class="g-author-role">(<!-- -->原作<!-- -->)</span></a>
@@ -163,6 +165,7 @@ def test_episode_carries_the_pages_with_their_scramble(fake_session, fake_respon
     assert episode.series_title == "IRUKA"
     assert episode.episode_title == "prologue"
     assert (episode.writer, episode.publisher) == ("施川ユウキ (原作), nniko (作画)", "ファムエンタテイメント")
+    assert episode.published == date(2026, 8, 28)
     assert [item.url for item in episode.pages] == ["u1", "u2"]
     assert parse_scramble(episode.pages[1].extra["scramble"]) == SCRAMBLE
     assert (episode.prev_url, episode.next_url) == (

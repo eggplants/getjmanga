@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from httpx import Response
@@ -200,6 +200,7 @@ class Souffle(Extractor):
             },
             writer=title_match["author"].strip() if title_match else "",
             publisher=self.PUBLISHER,
+            published=published_on(date.get_text(strip=True) if isinstance(date, Tag) else ""),
         )
 
     def _ajax_episode_urls(self, url: str, author: str) -> list[str]:

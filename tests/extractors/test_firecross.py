@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -108,6 +109,8 @@ def episode_item(episode_id, title, *, free=True):
     return f"""
 <div js-shop-item class="shop-item--episode" id="ep{episode_id}" data-id="{episode_id}">
   <div class="shop-item-info"><span class="shop-item-info-name">{title}</span>
+    <div class="shop-item-info-meta">
+      <span class="shop-item-info-release">公開：2025/12/{episode_id % 28 + 1}</span></div>
     <ul class="shop-item-btnset"><li class="shop-item-btn">{button}</li></ul></div>
 </div>
 """
@@ -248,6 +251,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, f
     assert episode.series_title == "コーヴァ -KOHVA-"
     assert episode.episode_title == "第1話"
     assert (episode.writer, episode.publisher) == ("Konata (漫画)", "ホビージャパン")
+    assert episode.published == date(2025, 12, 18592 % 28 + 1)
     assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert episode.readable
     assert [page.url.split("?", 1)[1].split("&param=")[0] for page in episode.pages] == [

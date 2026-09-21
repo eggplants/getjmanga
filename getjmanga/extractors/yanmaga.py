@@ -41,11 +41,12 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from datetime import date
 
     from httpx import Client
     from PIL import Image
@@ -81,6 +82,8 @@ class Listed:
     title: str
     #: True when the listing marks the entry as wanting a sign-in or a rental.
     locked: bool
+    #: `time.mod-episode-date`, `2024/11/25`.
+    released: str = ""
 
 
 def canonical_title(raw: str) -> str:
@@ -145,11 +148,13 @@ def parse_listing(text: str) -> list[Listed]:
             continue
         seen.add(url)
         classes = item.get("class") or []
+        dated = item.select_one("time.mod-episode-date")
         listed.append(
             Listed(
                 url=url,
                 title=" ".join(str(item.get("data-episode-title") or "").split()),
                 locked="js-modal" in classes,
+                released=dated.get_text(strip=True) if isinstance(dated, Tag) else "",
             ),
         )
     return listed
@@ -315,7 +320,13 @@ class YanMaga(Extractor):
             },
             writer=_authors(item),
             publisher=str(item.get("Publisher") or "") or self.PUBLISHER,
+            published=self._released(title, canonical),
         )
+
+    def _released(self, title: str, canonical: str) -> date | None:
+        """The day the work's listing dates the episode; the viewer's item carries none."""
+        entry = next((e for e in self.listing(title) if e.url == canonical), None)
+        return published_on(entry.released) if entry else None
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
         """Fetch one page and put its tiles back where they belong.
@@ -393,6 +404,7 @@ class YanMaga(Extractor):
             metadata={"episode_id": episode_id, "content_id": content_id, "locked": True},
             # A locked episode's page names no author; the viewer's item would.
             publisher=self.PUBLISHER,
+            published=published_on(listed[urls.index(canonical)].released) if canonical in urls else None,
         )
 
 

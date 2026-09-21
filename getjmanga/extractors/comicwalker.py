@@ -12,7 +12,7 @@ from PIL import Image
 
 from getjmanga.cipher import xor_unmask
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 
 if TYPE_CHECKING:
     from httpx import Client, Response
@@ -205,6 +205,7 @@ class ComicWalker(Extractor):
             metadata={"work": work.get("work"), "episode": entry, "viewer": viewer},
             writer=_authors(work.get("work") or {}),
             publisher=self.PUBLISHER,
+            published=published_on(entry.get("updateDate")),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

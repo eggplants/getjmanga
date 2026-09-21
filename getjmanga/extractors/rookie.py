@@ -29,7 +29,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -170,6 +170,7 @@ class Rookie(Extractor):
             },
             writer=author.get_text(strip=True) if isinstance(author, Tag) else "",
             publisher=self.PUBLISHER,
+            published=published_on(published.get_text(strip=True) if isinstance(published, Tag) else ""),
         )
 
     def _page(self, url: str) -> BeautifulSoup:

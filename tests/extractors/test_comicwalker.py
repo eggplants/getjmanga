@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -196,6 +197,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.series_title == "月華国奇医伝"
     assert episode.episode_title == "第一話"
     assert (episode.writer, episode.publisher) == ("ひむか透留 (著者)", "KADOKAWA")
+    assert episode.published == date(2024, 9, 26)
     # Pages come back in `page` order, whatever order the site listed them in.
     assert [page.url for page in episode.pages] == [MANUSCRIPTS[1]["drmImageUrl"], MANUSCRIPTS[0]["drmImageUrl"]]
     assert episode.pages[0].extra == {"drm_mode": "xor", "drm_hash": "62e07285b272877b"}

@@ -14,10 +14,11 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from datetime import date
 
     from httpx import Client
     from PIL import Image
@@ -84,6 +85,8 @@ class Viewer:
     member_jwt: str = ""
     #: The series header's credits, `名前 (役割)` each.
     writer: str = ""
+    #: The day the episode came out, off the page's own header.
+    published: date | None = None
     # `data-content-id`, which sites that serve several imprints off one domain
     # (rimacomiplus.jp) set. `contentsInfo` answers `bad contentId` without it;
     # sites that leave the attribute off reject the parameter, so it is only
@@ -345,6 +348,7 @@ class Comici(Extractor):
             metadata={"viewer_id": viewer.viewer_id, "api_base": viewer.api_base, "pages": raw},
             writer=viewer.writer,
             publisher=self.publisher(viewer.url),
+            published=viewer.published,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -425,11 +429,13 @@ class Comici(Extractor):
         res = self._get(url, headers=self._headers(url, _DOCUMENT_HEADERS))
         soup = BeautifulSoup(res.content, "html.parser")
 
-        # The series header credits the work on every site, hydrated or not.
+        # The series header credits the work, and the episode header dates it, on every site, hydrated or not.
         writer = _credits(soup)
+        dated = soup.select_one("p.ep-main-h-date")
+        published = published_on(dated.get_text(strip=True)) if isinstance(dated, Tag) else None
         element = soup.find(id=_VIEWER_ID)
         if not isinstance(element, Tag):
-            return replace(self._viewer_from_api(url), writer=writer)
+            return replace(self._viewer_from_api(url), writer=writer, published=published)
 
         viewer_id = str(element.attrs.get("data-comici-viewer-id", "")) or None
         if viewer_id is None:
@@ -458,6 +464,7 @@ class Comici(Extractor):
             prev_url=urljoin(url, prev_id) if prev_id else None,
             next_url=urljoin(url, next_id) if next_id else None,
             writer=writer,
+            published=published,
         )
 
     def pages(self, viewer: Viewer, member_jwt: str | None = None) -> list[dict[str, Any]]:

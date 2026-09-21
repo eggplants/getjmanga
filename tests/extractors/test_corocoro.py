@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -38,7 +39,7 @@ def chapter_message(chapter_id, main_name, sub_name="", *, badge=2, cost=None):
     if cost is not None:
         kind, amount = cost
         fields += encode_bytes_field(5, encode_varint_field(1, kind) + encode_varint_field(2, amount))
-    return fields + encode_varint_field(11, badge)
+    return fields + encode_varint_field(9, 1781683200) + encode_varint_field(11, badge)
 
 
 def title_message(title_id=1186, name="スーパーフィッシング グランダー武蔵", *, reversed_list=True):
@@ -158,6 +159,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_chapter(client, fake_re
     assert episode.metadata["chapter"]["badge"] == "free"
     assert episode.metadata["authors"] == [{"name": "てしろぎたかし", "role": ""}]
     assert (episode.writer, episode.publisher) == ("てしろぎたかし", "小学館")
+    assert episode.published == date(2026, 6, 17)
     assert [entry["id"] for entry in episode.metadata["chapters"]] == [51001, 51043, 50845]
 
     url, params = session.puts[0]
@@ -189,6 +191,7 @@ def test_episode_is_locked_when_the_site_says_so(client, fake_response):
         "sub_name": "",
         "badge": "premium",
         "point_consumption": {"type": 2, "amount": 60},
+        "start_at": 1781683200,
     }
     assert episode.metadata["prev_chapter"]["id"] == 51043
     assert episode.metadata["next_chapter"] is None

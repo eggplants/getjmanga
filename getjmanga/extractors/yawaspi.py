@@ -29,7 +29,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -279,6 +279,7 @@ class Yawaspi(Extractor):
             },
             writer=document.author,
             publisher=self.PUBLISHER,
+            published=published_on(document.updated),
         )
 
     def _document(self, url: str) -> Document:

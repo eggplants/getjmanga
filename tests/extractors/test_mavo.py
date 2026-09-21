@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from io import BytesIO
 
 import pytest
@@ -174,6 +175,7 @@ def test_episode_reads_the_page_and_names_the_next_from_the_work_page(client, ro
     assert episode.next_url == "http://mavo.takekuma.jp/viewer.php?id=1560"
     assert episode.metadata["author"] == "小島瑛"
     assert (episode.writer, episode.publisher) == ("小島瑛", "電脳マヴォ")
+    assert episode.published == date(2022, 3, 21)
     assert episode.metadata["id"] == "1545"
     assert session.calls == [EPISODE_URL, "http://mavo.takekuma.jp/title.php?title=123"]
     assert session.params_seen == [None, None]

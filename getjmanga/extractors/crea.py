@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from httpx import Response
@@ -181,6 +181,7 @@ class Crea(Extractor):
             },
             writer=_text(soup, "article-head__author"),
             publisher=self.PUBLISHER,
+            published=published_on(_text(soup, "article-head__date")),
         )
 
     def _listing_urls(self, url: str) -> list[str]:

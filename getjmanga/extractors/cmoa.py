@@ -34,10 +34,12 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
+    from datetime import date
+
     from httpx import Client
     from PIL import Image
 
@@ -363,6 +365,7 @@ class Cmoa(Extractor):
             "reader_url": reader_url,
             "shop_url": urljoin(BASE_URL, shop_url) if shop_url else None,
         }
+        published = self._released(canonical) if volume else None
         if content is None:
             return Episode(
                 url=canonical,
@@ -373,6 +376,7 @@ class Cmoa(Extractor):
                 metadata={**metadata, "locked": True},
                 writer=listing.writer if listing else "",
                 publisher=(listing.publisher if listing else "") or self.PUBLISHER,
+                published=published,
             )
 
         book = speedbinb.page_list(self, content, referer=reader_url, params=forwarded)
@@ -392,7 +396,20 @@ class Cmoa(Extractor):
             },
             writer=listing.writer if listing else "",
             publisher=(listing.publisher if listing else "") or self.PUBLISHER,
+            published=published,
         )
+
+    def _released(self, volume_url: str) -> date | None:
+        """The `配信開始日` a volume page shows, which nothing the reader answers carries."""
+        res = self._session.get(volume_url, headers=self.HEADERS, timeout=self.TIMEOUT)
+        if not res.is_success:
+            return None
+        soup = BeautifulSoup(res.content, "html.parser")
+        for label in soup.select("div.category_line_f_l_l"):
+            if label.get_text(strip=True) == "配信開始日":
+                value = label.find_next_sibling("div")
+                return published_on(value.get_text(" ", strip=True)) if isinstance(value, Tag) else None
+        return None
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
         """Fetch one page and put its tiles back where they belong.

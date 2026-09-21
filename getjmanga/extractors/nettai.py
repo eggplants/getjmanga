@@ -29,7 +29,7 @@ an anonymous token -- so `login()` is the default.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 
@@ -37,7 +37,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 from getjmanga.viewers.publus import decode_pack, descramble, pages
 
 if TYPE_CHECKING:
@@ -81,6 +81,8 @@ class Listing:
     has_next: bool
     #: The `.detail__author__list` entries, comma-separated.
     writer: str = ""
+    #: The `sdate` (`2021.10.22`) by `book_content_id`.
+    dates: Mapping[str, str] = field(default_factory=dict)
 
 
 def viewer_url(cid: str) -> str:
@@ -140,6 +142,7 @@ def parse_listing(html: str | bytes) -> Listing | None:
         return None
     urls: list[str] = []
     titles: dict[str, str] = {}
+    dates: dict[str, str] = {}
     for item in soup.select(".detail--product__item"):
         href = item.attrs.get("href")
         if href and viewer_cid(urljoin(BASE_URL, str(href))) is not None:
@@ -149,6 +152,9 @@ def parse_listing(html: str | bytes) -> Listing | None:
         found = _THUMB_ID.search(str(thumb.attrs["data-src"])) if isinstance(thumb, Tag) else None
         if found and isinstance(title, Tag):
             titles[found["id"]] = " ".join(title.get_text().split())
+        dated = item.select_one(".detail--product__item__sdate")
+        if found and isinstance(dated, Tag):
+            dates[found["id"]] = dated.get_text(strip=True)
     # The pager's "next" is always written out; on the last page its `li` is hidden.
     pager_next = soup.select_one("li.pagenation__item:not(.is-hidde) > a.pagenation__item__link--next")
     has_next = isinstance(pager_next, Tag)
@@ -159,6 +165,7 @@ def parse_listing(html: str | bytes) -> Listing | None:
         titles=titles,
         has_next=has_next,
         writer=", ".join(name for name in authors if name),
+        dates=dates,
     )
 
 
@@ -283,6 +290,7 @@ class Nettai(Extractor):
             "last_page": last_page,
         }
         writer = listing.writer if listing is not None else ""
+        published = published_on(listing.dates.get(content_id, "")) if listing is not None else None
         if not licensed:
             return Episode(
                 url=canonical,
@@ -293,6 +301,7 @@ class Nettai(Extractor):
                 metadata=metadata,
                 writer=writer,
                 publisher=self.PUBLISHER,
+                published=published,
             )
 
         content_url = str(license_["url"])
@@ -307,6 +316,7 @@ class Nettai(Extractor):
             metadata={**metadata, "configuration": pack.content["configuration"]},
             writer=writer,
             publisher=self.PUBLISHER,
+            published=published,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

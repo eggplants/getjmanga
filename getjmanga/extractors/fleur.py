@@ -24,7 +24,7 @@ from bs4.element import Tag
 from httpx import HTTPStatusError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -71,8 +71,8 @@ class Fleur(Extractor):
             session: A session to reuse. A retrying one is made when omitted.
         """
         super().__init__(session)
-        #: The credits of each work page read, by URL.
-        self._credits: dict[str, str] = {}
+        #: What each work page read says: its credits, and the `更新` date of every episode it links.
+        self._works: dict[str, tuple[str, dict[str, str]]] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -168,6 +168,7 @@ class Fleur(Extractor):
         prev_url = self._pager(soup, url, "_prev")
         next_url = self._pager(soup, url, "_next")
         work = soup.select_one(".manga-header__name a[href]")
+        writer, dates = self._work(urljoin(url, str(work["href"]))) if isinstance(work, Tag) else ("", {})
 
         return Episode(
             url=url,
@@ -181,18 +182,25 @@ class Fleur(Extractor):
                 "images": served,
                 "prev_url": self._pager(soup, url, "_prev"),
             },
-            writer=self._writer(urljoin(url, str(work["href"]))) if isinstance(work, Tag) else "",
+            writer=writer,
             publisher=self.PUBLISHER,
+            published=published_on(dates.get(url, "")),
         )
 
-    def _writer(self, work_url: str) -> str:
-        """The authors the work page links in `.cb-author`, read once per work; an episode names none itself."""
-        if work_url not in self._credits:
+    def _work(self, work_url: str) -> tuple[str, dict[str, str]]:
+        """The work page, read once: the authors `.cb-author` links, and each linked episode's `更新` date."""
+        if work_url not in self._works:
             soup = self._page(work_url)
-            self._credits[work_url] = ", ".join(
-                link.get_text(strip=True) for link in soup.select(".cb-author a.cb-author__link")
-            )
-        return self._credits[work_url]
+            writer = ", ".join(link.get_text(strip=True) for link in soup.select(".cb-author a.cb-author__link"))
+            dates: dict[str, str] = {}
+            for item in soup.select("li.cb-story-links__item"):
+                anchor = item.select_one("a.cb-story-links__item--link[href]")
+                dated = item.select_one(".cb-story-links__item--date")
+                if isinstance(anchor, Tag) and isinstance(dated, Tag):
+                    href = urljoin(work_url, str(anchor["href"])).split("?", 1)[0].split("#", 1)[0]
+                    dates.setdefault(href, dated.get_text(strip=True))
+            self._works[work_url] = (writer, dates)
+        return self._works[work_url]
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
         """Fetch one page, at full size when the CMS still has the original.

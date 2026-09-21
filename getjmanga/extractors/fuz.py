@@ -13,7 +13,7 @@ from PIL import Image
 
 from getjmanga.cipher import aes_cbc_decrypt
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 from getjmanga.protobuf import encode_bytes_field, encode_varint_field, integer, message, messages, raw, string
 
 if TYPE_CHECKING:
@@ -52,6 +52,8 @@ class Chapter:
     title: str
     #: Points the chapter costs; 0 means free to read.
     points: int = 0
+    #: The day it came out, `2026/09/23` in the list.
+    released: str = ""
 
     @property
     def url(self) -> str:
@@ -168,6 +170,7 @@ class Fuz(Extractor):
 
         manga_id, series_title, chapters = self._remember(res)
         data = message(raw(res, 2))
+        released = next((c.released for c in chapters if c.id == chapter_id), "")
         return Episode(
             url=url,
             series_title=series_title or str(manga_id),
@@ -182,6 +185,7 @@ class Fuz(Extractor):
             },
             writer=self._credits.get(manga_id, ""),
             publisher=self.PUBLISHER,
+            published=published_on(released),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -250,7 +254,12 @@ class Fuz(Extractor):
                 fields = message(chapter)
                 title = " ".join(part for part in (string(fields, 2), string(fields, 3)) if part)
                 chapters.append(
-                    Chapter(integer(fields, 1), title or str(integer(fields, 1)), integer(message(raw(fields, 5)), 2))
+                    Chapter(
+                        integer(fields, 1),
+                        title or str(integer(fields, 1)),
+                        integer(message(raw(fields, 5)), 2),
+                        string(fields, 8),
+                    )
                 )
         chapters.reverse()
         # `authorships`: one `Author` (name in field 2) and their role each.
@@ -269,16 +278,17 @@ class Fuz(Extractor):
         """Describe a chapter the API would not open, from a chapter list seen earlier."""
         for manga_id, (series_title, chapters) in self._chapters.items():
             if any(chapter.id == chapter_id for chapter in chapters):
-                title = next(chapter.title for chapter in chapters if chapter.id == chapter_id)
+                listed = next(chapter for chapter in chapters if chapter.id == chapter_id)
                 return Episode(
                     url=url,
                     series_title=series_title,
-                    episode_title=title,
+                    episode_title=listed.title,
                     prev_url=self._neighbours(chapters, chapter_id)[0],
                     next_url=self._neighbours(chapters, chapter_id)[1],
                     metadata={"chapter_id": chapter_id, "manga_id": manga_id},
                     writer=self._credits.get(manga_id, ""),
                     publisher=self.PUBLISHER,
+                    published=published_on(listed.released),
                 )
         return Episode(url=url, series_title=str(chapter_id), episode_title=str(chapter_id), publisher=self.PUBLISHER)
 

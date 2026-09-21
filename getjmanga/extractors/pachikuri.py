@@ -33,7 +33,7 @@ from bs4.element import Tag
 from PIL import Image
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 HOST = "pachikuri.jp"
 
@@ -334,6 +334,7 @@ class Pachikuri(Extractor):
             metadata=metadata,
             writer=post.author,
             publisher=self.PUBLISHER,
+            published=published_on(post.date),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

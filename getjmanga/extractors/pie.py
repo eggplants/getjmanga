@@ -34,7 +34,7 @@ from bs4.element import Tag
 from PIL import Image
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 from getjmanga.viewers import yondemill
 from getjmanga.viewers.speedbinb import split_title
 from getjmanga.viewers.yondemill import Content, content_url
@@ -122,6 +122,8 @@ class Story:
     next_url: str | None
     #: `p.p-work_author`.
     author: str = ""
+    #: `article:published_time`, when WordPress wrote one.
+    published: str = ""
 
 
 def episode_url(href: str) -> str | None:
@@ -228,6 +230,7 @@ def parse_story(html: str | bytes, url: str) -> Story:
 
     images = tuple(urljoin(url, str(img["src"])) for img in content.select("img[src]"))
     author = soup.select_one("p.p-work_author")
+    published = soup.find("meta", property="article:published_time")
     return Story(
         url=url,
         title=(title.get_text(strip=True).removesuffix(_TITLE_SUFFIX) if isinstance(title, Tag) else ""),
@@ -239,6 +242,7 @@ def parse_story(html: str | bytes, url: str) -> Story:
         prev_url=_neighbour(soup, url, "prev"),
         next_url=_neighbour(soup, url, "next"),
         author=author.get_text(strip=True) if isinstance(author, Tag) else "",
+        published=str(published.get("content") or "") if isinstance(published, Tag) else "",
     )
 
 
@@ -406,6 +410,7 @@ class Pie(Extractor):
             },
             writer=story.author,
             publisher=self.PUBLISHER,
+            published=published_on(story.published),
         )
 
     def _content(self, canonical: str) -> Episode:

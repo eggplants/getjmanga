@@ -42,7 +42,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlparse
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 from getjmanga.viewers.kmanga import GRID, SEED_MAX, SEED_MIN, UNIT, tile_order
 from getjmanga.viewers.kmanga import descramble as descramble_v2
 
@@ -284,6 +284,7 @@ class Ciao(Extractor):
             metadata={"episode": entry, "title": title, "viewer": viewer},
             writer=_authors(title),
             publisher=self.PUBLISHER,
+            published=published_on(entry.get("start_time")),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

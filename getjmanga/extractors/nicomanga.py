@@ -12,7 +12,7 @@ from PIL import Image
 
 from getjmanga.cipher import xor_unmask
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -244,6 +244,7 @@ class NicoManga(Extractor):
             },
             writer=str(content.get("display_author_name") or ""),
             publisher=_publisher(content) or self.PUBLISHER,
+            published=published_on(meta.get("publish_at")),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

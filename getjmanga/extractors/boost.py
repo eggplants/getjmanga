@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 from getjmanga.viewers.publus import decode_pack, descramble, pages
 
 if TYPE_CHECKING:
@@ -60,6 +60,12 @@ def _prev_link(soup: BeautifulSoup, next_link: Tag | None) -> str | None:
         if anchor is not next_link:
             return urljoin(BASE_URL, str(anchor.attrs["href"]))
     return None
+
+
+def _update_date(item: Tag) -> str:
+    """A listed episode's `p.update-date`, `2026/02/03`."""
+    dated = item.select_one("p.update-date")
+    return dated.get_text(strip=True) if isinstance(dated, Tag) else ""
 
 
 def _credit(text: str) -> str:
@@ -129,6 +135,8 @@ class Boost(Extractor):
         super().__init__(session)
         #: The credits of each work page read, by URL.
         self._credits: dict[str, str] = {}
+        #: The `update-date` of every listed episode seen so far, by product id.
+        self._dates: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -185,6 +193,7 @@ class Boost(Extractor):
             fresh = False
             for item in soup.select("a.book-product-list-item[data-id]"):
                 candidate = product_url(str(item.attrs["data-id"]))
+                self._dates.setdefault(str(item.attrs["data-id"]), _update_date(item))
                 if candidate not in urls:
                     urls.append(candidate)
                     fresh = True
@@ -234,6 +243,7 @@ class Boost(Extractor):
                 metadata={"colophon": colophon.raw},
                 writer=self._writer(colophon.content_url),
                 publisher=self.PUBLISHER,
+                published=published_on(self._update_date(colophon.content_url, product_id)),
             )
 
         license_ = self._get(LICENSE_URL, params={"cid": cid}, headers={**self.HEADERS, "Referer": landed}).json()
@@ -255,6 +265,7 @@ class Boost(Extractor):
                 metadata={"colophon": colophon.raw, "license": license_},
                 writer=self._writer(colophon.content_url),
                 publisher=self.PUBLISHER,
+                published=published_on(self._update_date(colophon.content_url, product_id)),
             )
         pack = decode_pack(self._get(urljoin(content_url, "configuration_pack.json")).text)
         return Episode(
@@ -267,7 +278,32 @@ class Boost(Extractor):
             metadata={"colophon": colophon.raw, "license": license_, "configuration": pack.content["configuration"]},
             writer=self._writer(colophon.content_url),
             publisher=self.PUBLISHER,
+            published=published_on(self._update_date(colophon.content_url, product_id)),
         )
+
+    def _update_date(self, content_url: str | None, product_id: str) -> str:
+        """The `update-date` the work page lists for `product_id`.
+
+        The listing is walked oldest first until the episode shows up, and
+        every episode passed on the way is remembered too.
+        """
+        if content_url is None:
+            return ""
+        if product_id not in self._dates:
+            for page in range(1, self.MAX_LISTING_PAGES + 1):
+                soup = BeautifulSoup(self._get(content_url, params={"order": "asc", "p": page}).content, "html.parser")
+                items = soup.select("a.book-product-list-item[data-id]")
+                for item in items:
+                    self._dates.setdefault(str(item.attrs["data-id"]), _update_date(item))
+                pager_next = soup.select_one("li.to-next")
+                if (
+                    product_id in self._dates
+                    or not items
+                    or pager_next is None
+                    or "disabled" in (pager_next.get("class") or [])
+                ):
+                    break
+        return self._dates.get(product_id, "")
 
     def _writer(self, content_url: str | None) -> str:
         """The credits off the work page the colophon links back to, read once per work.

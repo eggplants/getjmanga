@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -39,16 +40,16 @@ def work_html(title="Poetic Horror", items=None, *, sections=None):
     blocks = []
     for heading, entries in sections:
         rows = []
-        for date, name, href in entries:
+        for updated, name, href in entries:
             if href is None:
                 rows.append(
-                    f'<li class="p-series_item"><span class="p-series_nolink"><time>{date}更新</time>'
+                    f'<li class="p-series_item"><span class="p-series_nolink"><time>{updated}更新</time>'
                     f'<span class="p-series_itemTitle">{name}</span></span></li>',
                 )
             else:
                 rows.append(
                     f'<li class="p-series_item"><a href="{href}" class="p-series_link" target="_blank">'
-                    f'<div class="p-series_item_text"><time>{date}更新</time>'
+                    f'<div class="p-series_item_text"><time>{updated}更新</time>'
                     f'<span class="p-series_itemTitle">{name}</span></div>'
                     '<div class="p-series_item_btn"><span class="c-btn">読む</span></div></a></li>',
                 )
@@ -112,6 +113,7 @@ def story_html(
 <html><head><title>{title} | PIE COMICS</title>
 <link rel="canonical" href="{STORY_URL}/" /></head><body>
 <header class="p-work_header">
+<meta property="article:published_time" content="2026-02-04T09:01:55+00:00" />
 <h1 class="p-work_headerTitle is-2row">Poetic Horror<span class="p-work_latestUpdate">26.02.04更新</span></h1>
 <p class="p-work_author">坂月さかな</p>
 <div class="p-work_nav"><ul><li><a href="https://comics.pie.co.jp/comicart/illustration/">イラスト</a><i>></i></li>
@@ -333,6 +335,7 @@ def test_episode_reads_a_story(client):
     assert episode.series_title == "Poetic Horror"
     assert episode.episode_title == "【Part 1】Alicia"
     assert (episode.writer, episode.publisher) == ("坂月さかな", "パイ インターナショナル")
+    assert episode.published == date(2026, 2, 4)
     assert [page.url for page in episode.pages] == [f"{UPLOADS}/2025/07/01_A_1.jpg"]
     assert episode.pages[0].extra == {}
     assert episode.next_url == NEXT_STORY_URL

@@ -32,7 +32,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 _WORK_PATH = re.compile(r"^/(?:sp/)?works/(?P<work>[0-9a-f]+)\.html$")
 _EPISODE_PATH = re.compile(r"^/(?:sp/)?works/(?P<work>[0-9a-f]+)/episode/(?P<episode>[0-9a-f]+)\.html$")
@@ -185,6 +185,7 @@ class DaysNeo(Extractor):
             metadata=metadata,
             writer=str(metadata["author"]),
             publisher=self.PUBLISHER,
+            published=published_on(str(metadata["published"])),
         )
 
 

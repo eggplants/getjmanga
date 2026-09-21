@@ -25,7 +25,7 @@ redirects that to https, so both schemes are taken.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urljoin, urlparse
 
@@ -33,7 +33,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -68,6 +68,8 @@ class Listing:
     title: str
     #: Episode URL (`viewer.php?id=<id>`, absolute) -> the title the listing gives it.
     titles: dict[str, str]
+    #: Episode URL -> its `p.up-date` line, `更新：2013-05-08`.
+    dates: dict[str, str] = field(default_factory=dict)
 
     @property
     def urls(self) -> list[str]:
@@ -210,6 +212,7 @@ def parse_listing(html: str | bytes, url: str) -> Listing:
         if isinstance(img, Tag):
             title = str(img["alt"]).strip()
     newest_first: dict[str, str] = {}
+    dates: dict[str, str] = {}
     block = soup.find(id="title")
     anchors = block.find_all("a", href=True) if isinstance(block, Tag) else []
     for anchor in anchors:
@@ -224,7 +227,9 @@ def parse_listing(html: str | bytes, url: str) -> Listing:
             continue
         name = anchor.find(class_="mangatitle")
         newest_first[key] = name.get_text(strip=True) if isinstance(name, Tag) else anchor.get_text(strip=True)
-    return Listing(title=title, titles=dict(reversed(list(newest_first.items()))))
+        dated = anchor.find(class_="up-date")
+        dates[key] = dated.get_text(strip=True) if isinstance(dated, Tag) else ""
+    return Listing(title=title, titles=dict(reversed(list(newest_first.items()))), dates=dates)
 
 
 class Mavo(Extractor):
@@ -345,6 +350,7 @@ class Mavo(Extractor):
             },
             writer=viewer.author,
             publisher=self.PUBLISHER,
+            published=published_on(listing.dates.get(listed or key, "")),
         )
 
     def _listing(self, url: str) -> Listing:

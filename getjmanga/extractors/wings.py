@@ -44,7 +44,7 @@ from httpx import HTTPStatusError
 from PIL import Image
 
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -511,6 +511,7 @@ class Wings(Extractor):
                 metadata={**metadata, "locked": True},
                 writer=work.writer if work else "",
                 publisher=self.PUBLISHER,
+                published=published_on(book.fields.get("publishDate")),
             )
         pages = tuple(
             Page(
@@ -539,6 +540,7 @@ class Wings(Extractor):
             metadata=metadata,
             writer=work.writer if work else "",
             publisher=self.PUBLISHER,
+            published=published_on(book.fields.get("publishDate")),
         )
 
     def _smoozy_episode(self, canonical: str, slug: str, work: Work | None, title: str) -> Episode:

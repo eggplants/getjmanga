@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -211,6 +212,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == EPISODE_TITLE
     assert (episode.writer, episode.publisher) == ("藤沢とおる", "講談社")
+    assert episode.published == date(2026, 6, 9)
     assert [page.url for page in episode.pages] == [PAGE_1, PAGE_2]
     assert all(page.extra == {"seed": SEED} for page in episode.pages)
     assert episode.next_url == NEXT_URL

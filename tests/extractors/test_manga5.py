@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from io import BytesIO
 
 import pytest
@@ -100,7 +101,8 @@ MISSING_HTML = """<html><head><script>
 def listing_html(title, items, *, has_next):
     rows = "\n".join(
         f'<a class="book-product-list-item" href="/product/{item_id}" data-id="{item_id}" '
-        f'data-title="{item_title}" data-sub="閲覧期限：無期限" data-show-coin="false" data-coin="0"></a>'
+        f'data-title="{item_title}" data-sub="閲覧期限：無期限" data-show-coin="false" data-coin="0">'
+        f'<p class="update-date">2023/04/{int(item_id[-2:]) + 17:02d} 更新</p></a>'
         for item_id, item_title in items
     )
     disabled = "" if has_next else " disabled"
@@ -400,6 +402,7 @@ def test_episode_reads_a_koma_episode(client):
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == "作品No.1"
     assert (episode.writer, episode.publisher) == ("餅月あんこ", "レベルファイブ")
+    assert episode.published == date(2023, 4, 18)
     assert episode.next_url == f"{BASE_URL}/product/00850002"
     assert [page.url for page in episode.pages] == [
         f"{KOMA_BASE}picture/26(01)_001.jpg?{AUTH}",
@@ -510,6 +513,7 @@ def test_refused_license_means_locked_but_keeps_the_viewer_titles(client, fake_r
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == "作品No.1"
     assert (episode.writer, episode.publisher) == ("餅月あんこ", "レベルファイブ")
+    assert episode.published == date(2023, 4, 18)
     assert episode.next_url == f"{BASE_URL}/product/00850002"
     assert episode.metadata == {"viewer": VIEWER_DATA, "license": REFUSED_LICENSE}
 

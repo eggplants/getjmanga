@@ -11,7 +11,7 @@ reads. No API, no cookie, no Referer check.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 from urllib.parse import urljoin, urlparse
@@ -21,7 +21,7 @@ from bs4.element import Tag
 from httpx import HTTPError
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 from getjmanga.viewers import speedbinb
 from getjmanga.viewers.speedbinb import split_title
 
@@ -50,6 +50,8 @@ class Listing:
     urls: tuple[str, ...]
     #: `p.authors`, as the page writes it.
     writer: str = ""
+    #: Episode URL -> its `p.update` line, `2025年5月23日 更新`.
+    dates: dict[str, str] = field(default_factory=dict)
 
 
 class Porta(Extractor):
@@ -184,6 +186,7 @@ class Porta(Extractor):
             },
             writer=listing.writer if listing else "",
             publisher=self.PUBLISHER,
+            published=published_on(listing.dates.get(url, "")) if listing else None,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -244,8 +247,23 @@ class Porta(Extractor):
                 title=heading.get_text(strip=True) if isinstance(heading, Tag) else "",
                 urls=tuple(self._episode_links(soup, key)),
                 writer=authors.get_text(strip=True) if isinstance(authors, Tag) else "",
+                dates=self._episode_dates(soup, key),
             )
         return self._listings[key]
+
+    @staticmethod
+    def _episode_dates(soup: BeautifulSoup, url: str) -> dict[str, str]:
+        """Each `li.episode` entry's `p.update` line, by the episode it links."""
+        dates: dict[str, str] = {}
+        for item in soup.select("li.episode"):
+            anchor = item.select_one("a[href]")
+            dated = item.select_one("p.update")
+            if not isinstance(anchor, Tag) or not isinstance(dated, Tag):
+                continue
+            absolute = urljoin(url, str(anchor["href"]).split("?", 1)[0].split("#", 1)[0])
+            if _EPISODE_PATH.match(urlparse(absolute).path):
+                dates.setdefault(absolute, dated.get_text(strip=True))
+        return dates
 
     @staticmethod
     def _episode_links(soup: BeautifulSoup, url: str) -> list[str]:

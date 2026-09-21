@@ -31,7 +31,7 @@ from bs4 import BeautifulSoup
 from bs4.element import NavigableString, Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -349,4 +349,5 @@ class Omocoro(Extractor):
             },
             writer=", ".join(article.writers),
             publisher=self.PUBLISHER,
+            published=published_on(article.date),
         )

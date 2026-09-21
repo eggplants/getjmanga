@@ -8,9 +8,11 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlparse
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 
 if TYPE_CHECKING:
+    from datetime import date
+
     from httpx import Client
 
 BASE_URL = "https://ganma.jp"
@@ -398,6 +400,7 @@ class Ganma(Extractor):
         series_title = str(magazine.get("title") or magazine_key)
         writer = str(magazine.get("authorName") or "")
 
+        released = self._release(magazine_key, story_id, url)
         if contents.get("__typename") == "StoryContents":
             info = contents.get("storyInfo") or {}
             prev_story = (info.get("previousStoryInfo") or {}).get("storyId")
@@ -412,6 +415,7 @@ class Ganma(Extractor):
                 metadata=magazine,
                 writer=writer,
                 publisher=self.PUBLISHER,
+                published=released,
             )
 
         if contents.get("error") == _STORY_NOT_FOUND:
@@ -432,7 +436,13 @@ class Ganma(Extractor):
             metadata={**magazine, "storyInfo": story},
             writer=writer,
             publisher=self.PUBLISHER,
+            published=released,
         )
+
+    def _release(self, magazine_key: str, story_id: str, referer: str) -> date | None:
+        """The day the listing says the story came out (`contentsRelease`); the reader answer has no date."""
+        entry = next((s for s in self._listing(magazine_key, referer) if s.get("storyId") == story_id), None)
+        return published_on(entry.get("contentsRelease")) if entry else None
 
     def login(self, url: str, username: str, password: str) -> None:
         """Sign in with an email address, so purchased stories become readable.

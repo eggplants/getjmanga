@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -110,7 +111,8 @@ def listing_js(entries=LISTING, *, title_enc=TITLE_ENC):
             f'<li class=\\"{classes}\\" data-episode-title=\\"{episode_title}\\" data-is-free=\\"true\\" '
             f'data-modal=\\"registration\\" data-original-url=\\"{url}\\">\\n'
             f'<div class=\\"mod-episode-public\\">\\n<a class=\\"mod-episode-link    \\" href=\\"{url}\\">'
-            f'<p class=\\"mod-episode-title\\">{episode_title}<\\/p><\\/a><\\/div>\\n<\\/li>\\n'
+            f'<p class=\\"mod-episode-title\\">{episode_title}<\\/p>'
+            f'<time class=\\"mod-episode-date\\">2024\\/11\\/25<\\/time><\\/a><\\/div>\\n<\\/li>\\n'
         )
         lines.append(f"    target.insertAdjacentHTML('beforeend', \"{li}\")")
     return "\n".join(lines)
@@ -319,6 +321,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "妹は知っている"
     assert (episode.writer, episode.publisher) == ("雁木万里", "講談社")
+    assert episode.published == date(2024, 11, 25)
     assert episode.episode_title == "第１話　三木貴一郎という男"
     assert [page.url for page in episode.pages] == [f"{SERVER}/img/pages/a.jpg", f"{SERVER}/img/pages/b.jpg"]
     assert episode.pages[0].width == 392
@@ -349,7 +352,8 @@ def test_episode_calls_the_api_and_the_content_server_the_way_the_reader_does(cl
     content_call = next(index for index, url in enumerate(session.calls) if url == f"{SERVER}/content")
     assert session.params_seen[content_call] is None
     assert session.headers_seen[content_call]["Referer"] == READER_URL
-    assert not any("/episodes" in url for url in session.calls)
+    # The listing is read for the episode's date, once, after the pages are settled.
+    assert [url for url in session.calls if "/episodes" in url] == [session.calls[-1]]
 
 
 @pytest.mark.parametrize(

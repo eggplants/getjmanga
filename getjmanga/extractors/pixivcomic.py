@@ -46,7 +46,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlparse
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -355,6 +355,7 @@ class PixivComic(Extractor):
             # The work's description names its author and its magazine, not who publishes it.
             writer=self._writer(str(reading.get("work_id") or ""), page_url),
             publisher=self.PUBLISHER,
+            published=published_on(reading.get("read_start_at")),
         )
 
     def _writer(self, work_id: str, referer: str) -> str:

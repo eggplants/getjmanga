@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import GetjmangaError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 from getjmanga.viewers.seedrandom import descramble as _descramble_tiles
 
 if TYPE_CHECKING:
@@ -49,6 +49,8 @@ class Story:
     #: False for an episode whose free period is over ("各電子書店で読む"),
     #: which the site lists without a link and answers 404 for.
     readable: bool
+    #: The `更新` line, `2026/09/17 更新`, when the row has one.
+    updated: str = ""
 
 
 def descramble(image: Image.Image, seed: str, size: int) -> Image.Image:
@@ -150,6 +152,7 @@ def parse_listing(html: str | bytes, origin: str, serial: str) -> tuple[str, lis
         number = int(str(label.attrs["data-story-number"]))
         article = label.find_parent("article")
         readable = isinstance(article, Tag) and article.find("a", href=True) is not None
+        updated = article.find("p", class_="update") if isinstance(article, Tag) else None
         stories.setdefault(
             number,
             Story(
@@ -157,6 +160,7 @@ def parse_listing(html: str | bytes, origin: str, serial: str) -> tuple[str, lis
                 title=" ".join(label.get_text().split()),
                 url=episode_url(origin, serial, number),
                 readable=readable,
+                updated=updated.get_text(strip=True) if isinstance(updated, Tag) else "",
             ),
         )
     return title, [stories[number] for number in sorted(stories)]
@@ -329,6 +333,7 @@ class Starts(Extractor):
             metadata={"comic_data": data, "story": asdict(story) if story else None, "images": images},
             writer=self._credits.get(series_url(origin, serial), ""),
             publisher=self.PUBLISHER,
+            published=published_on(story.updated) if story else None,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

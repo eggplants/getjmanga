@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -231,6 +232,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert episode.readable
     assert episode.metadata["author"] == "ゆりかわ"
     assert (episode.writer, episode.publisher) == ("ゆりかわ", "小学館")
+    assert episode.published == date(2025, 4, 9)
     assert episode.metadata["updated"] == "更新日: 2025/4/9"
     assert episode.metadata["prev_url"] is None
     assert episode.metadata["images"] == [page.url for page in episode.pages]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from io import BytesIO
 
 import pytest
@@ -48,9 +49,9 @@ SERIES_HTML = """
 </ul></div>
 <section id="backnumber">
   <dl class="bn-list"><dt class="list-title">1～</dt><dd><ul class="episode-list">
-    <li class="episode"><p class="title">OLと人魚</p>
+    <li class="episode"><p class="update">2025年5月23日 更新</p><p class="title">OLと人魚</p>
       <p class="episode-btn"><a href="https://comic-porta.com/p_data/ol_ningyo001al/?utm=x"><span>無料版</span></a></p></li>
-    <li class="episode"><p class="title">ゆびきりげんまん</p>
+    <li class="episode"><p class="update">2025年6月13日 更新</p><p class="title">ゆびきりげんまん</p>
       <p class="episode-btn"><a href="https://comic-porta.com/p_data/ol_ningyo002ns/"><span>無料版</span></a></p></li>
     <li class="episode"><p class="title">おわった話</p><p class="note">無料公開は終了しました</p></li>
     <li class="episode"><p class="title">同じ話</p>
@@ -162,6 +163,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, f
     assert episode.url == EPISODE_URL
     assert episode.series_title == "OLと人魚"
     assert (episode.writer, episode.publisher) == ("司馬舞", "イースト・プレス")
+    assert episode.published == date(2025, 5, 23)
     assert episode.episode_title == "OLと人魚"
     assert [page.url for page in episode.pages] == [
         "https://comic-porta.com/p_data/ol_ningyo001al/data/0001.ptimg.json",

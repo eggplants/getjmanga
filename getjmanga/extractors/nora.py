@@ -38,7 +38,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 from getjmanga.viewers.kmanga import SEED_MAX, SEED_MIN, descramble, service_hash
 
 if TYPE_CHECKING:
@@ -179,6 +179,7 @@ class Nora(Extractor):
                 metadata={**metadata, "viewer": None},
                 writer=writer,
                 publisher=self.PUBLISHER,
+                published=published_on(str(metadata["date"])),
             )
 
         viewer = self._viewer(work_url, episode_id)
@@ -199,6 +200,7 @@ class Nora(Extractor):
             metadata=metadata,
             writer=writer,
             publisher=self.PUBLISHER,
+            published=published_on(str(metadata["date"])),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

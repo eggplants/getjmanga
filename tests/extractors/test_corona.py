@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -239,24 +240,28 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.series_title == "クズ勇者のその日暮らし@COMIC"
     assert episode.episode_title == " 第1話"
     assert (episode.writer, episode.publisher) == ("OFURO (漫画), 珍比良 (原作)", "TOブックス")
+    assert episode.published == date(2026, 3, 9)
     assert [page.url.split("?")[0] for page in episode.pages] == [f"{CDN}/aaaa", f"{CDN}/bbbb"]
     assert [page.extra for page in episode.pages] == [{"drm_hash": SHUFFLE}, {"drm_hash": ""}]
     assert episode.next_url == SECOND_URL
     assert episode.metadata["episode"] == BEGIN
     assert episode.metadata["neighbours"]["next_episode"]["id"] == "245765062348538"
 
-    assert session.calls == [
+    # The reader calls, the work for its credits, then the series listing for the episode's date.
+    assert session.calls[:3] == [
         f"{API_URL}/episodes/245764154232569/begin_reading",
         f"{API_URL}/episodes/245764154232569/end_reading",
         f"{API_URL}/comics/{COMIC_ID}",
     ]
-    assert session.params_seen == [
+    assert all(url == f"{API_URL}/episodes" for url in session.calls[3:])
+    assert session.params_seen[:3] == [
         None,
         {"previous_and_next_episode_status": "free_viewing,only_for_subscription"},
         None,
     ]
     for headers in session.headers_seen:
         assert headers["X-API-Environment-Key"] == API_ENVIRONMENT_KEY
+    for headers in session.headers_seen[:3]:
         assert headers["Referer"] == EPISODE_URL
         assert headers["Origin"] == BASE_URL
         assert "Authorization" not in headers

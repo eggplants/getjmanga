@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -44,6 +45,7 @@ def note(**overrides):
         "is_purchased": False,
         "remained_figure_num": 0,
         "remained_image_num": 0,
+        "publish_at": "2024-12-16T11:00:00.000+09:00",
         "user": {"urlname": "carula", "nickname": "コミックカルラ"},
         **overrides,
     }
@@ -157,6 +159,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, a
     assert episode.series_title == "留学ろっく!!"
     assert episode.episode_title == "Lesson 1　パパはダイヤモンドチューバー‼"
     assert (episode.writer, episode.publisher) == ("一本木蛮", "世界文化ブックス")
+    assert episode.published == date(2024, 12, 16)
     assert [page.url for page in episode.pages] == [PAGE_1, PAGE_2]
     assert (episode.prev_url, episode.next_url) == (None, NEXT_URL)
     assert episode.metadata["key"] == "nb016b73d0f1d"

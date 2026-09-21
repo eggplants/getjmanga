@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -37,6 +38,7 @@ def episode_entry(episode_id, title, sell_status="free", content_id=30941):
             "share_url": f"{BASE_URL}/watch/mg{episode_id}",
             "price": 0,
             "is_playable": True,
+            "publish_at": 1510884050,
         },
         "own_status": {"sell_status": sell_status},
     }
@@ -173,6 +175,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.url == EPISODE_URL
     assert episode.series_title == "異世界のんびり農家"
     assert (episode.writer, episode.publisher) == ("剣康之(作画) 内藤騎之介(原作)", "カドコミ")
+    assert episode.published == date(2017, 11, 17)
     assert episode.episode_title == "第1話"
     assert [page.url for page in episode.pages] == [DRM_URL, PLAIN_URL]
     assert episode.pages[0].extra == {"drm_hash": DRM_HASH}

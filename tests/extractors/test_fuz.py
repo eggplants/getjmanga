@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -26,6 +27,7 @@ def chapter_message(chapter_id, title, points):
     fields = encode_varint_field(1, chapter_id) + encode_bytes_field(2, title)
     if points:
         fields += encode_bytes_field(5, encode_varint_field(1, 1) + encode_varint_field(2, points))
+    fields += encode_bytes_field(8, f"2026/07/{chapter_id % 28 + 1:02d}")
     return encode_bytes_field(2, fields)
 
 
@@ -125,6 +127,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_chapter(client):
     assert episode.series_title == "氷舞のアウフギーサー"
     assert episode.episode_title == "1話（1）"
     assert (episode.writer, episode.publisher) == ("笠間裕之 (原作), 相馬一 (作画)", "芳文社")
+    assert episode.published == date(2026, 7, 79232 % 28 + 1)
     assert [page.url for page in episode.pages] == [
         "https://img.comic-fuz.com/f/x/0.jpeg.enc?h=a",
         "https://img.comic-fuz.com/f/x/1.jpeg.enc?h=b",

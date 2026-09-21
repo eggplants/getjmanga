@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from http import HTTPStatus
 from io import BytesIO
 
@@ -54,6 +54,7 @@ READABLE = {
             "viewer_path": "/viewer/stories/244715",
             "is_tateyomi": False,
             "sales_type": "free",
+            "read_start_at": 1387508400000,
             "is_purchased": False,
             "state": "readable",
             "title": "1 第1話-1",
@@ -273,6 +274,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert episode.series_title == "異世界皇子、おしかけ求婚に参りました"
     assert episode.episode_title == "1 第1話-1"
     assert (episode.writer, episode.publisher) == ("紺乃みる/加藤沙羽", "ピクシブ")
+    assert episode.published == date(2013, 12, 20)
     assert [page.url for page in episode.pages] == [page["url"] for page in PAGES]
     assert all(page.extra == {"key": KEY, "gridsize": 32} for page in episode.pages)
     assert episode.pages[0].width == 721

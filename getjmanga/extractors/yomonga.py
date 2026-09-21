@@ -28,7 +28,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 from getjmanga.viewers import speedbinb
 
 if TYPE_CHECKING:
@@ -60,6 +60,8 @@ class Listed:
     title: str
     #: `"2026/10/01に公開終了"`, or "" when the episode has no end date.
     publish_end: str
+    #: `update-date`, `2026/09/11`.
+    updated: str = ""
 
 
 @dataclass(frozen=True)
@@ -128,6 +130,7 @@ def parse_work_page(html: str | bytes, url: str) -> WorkPage:
         link = row.select_one("a.episode-list-button[href]")
         name = row.select_one(".episode-name")
         end = row.select_one(".publish-end-date")
+        updated = row.select_one(".update-date")
         if not isinstance(link, Tag):
             continue
         query = parse_qs(urlparse(str(link["href"])).query)
@@ -146,6 +149,7 @@ def parse_work_page(html: str | bytes, url: str) -> WorkPage:
                 content_id=listed_cid,
                 title=name.get_text(strip=True) if isinstance(name, Tag) else "",
                 publish_end=expires,
+                updated=updated.get_text(strip=True) if isinstance(updated, Tag) else "",
             ),
         )
     return WorkPage(
@@ -292,6 +296,7 @@ class Yomonga(Extractor):
                 metadata={"title_id": title_id, "episode_no": number, "locked": True},
                 writer=work.writer,
                 publisher=self.PUBLISHER,
+                published=published_on(listed.updated) if listed else None,
             )
         if work.info_url is None:
             msg = f"no SpeedBinb viewer on {page_url}."
@@ -331,6 +336,7 @@ class Yomonga(Extractor):
             },
             writer=_authors(item) or work.writer,
             publisher=str(item.get("Publisher") or "") or self.PUBLISHER,
+            published=published_on(listed.updated),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

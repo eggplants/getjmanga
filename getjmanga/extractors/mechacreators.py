@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from httpx import Response
@@ -244,6 +244,7 @@ class MechaCreators(Extractor):
             },
             writer=str((data.get("user") or {}).get("name") or ""),
             publisher=self.PUBLISHER,
+            published=published_on(chapter.get("published")),
         )
 
     def _fetch(self, url: str) -> Response:

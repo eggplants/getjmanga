@@ -12,9 +12,11 @@ from urllib.parse import urlparse
 from httpx import HTTPError
 
 from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
+    from datetime import date
+
     from httpx import Client, Response
     from PIL import Image
 
@@ -160,6 +162,8 @@ class Corona(Extractor):
         self._token: str | None = None
         #: The credits of each work asked about, by comic id.
         self._credits: dict[str, str] = {}
+        #: `published_at` of every listed episode seen so far, by episode id.
+        self._published: dict[str, str] = {}
 
     @classmethod
     def suitable(cls, url: str) -> bool:
@@ -230,6 +234,7 @@ class Corona(Extractor):
             listing = res.json()
             for entry in listing.get("resources") or []:
                 candidate = episode_url(entry["id"])
+                self._published.setdefault(str(entry["id"]), str(entry.get("published_at") or ""))
                 if candidate not in urls:
                     urls.append(candidate)
             cursor = listing.get("next_cursor")
@@ -298,7 +303,15 @@ class Corona(Extractor):
             metadata={"episode": described, "neighbours": neighbours},
             writer=self._writer(str(described.get("comic_id") or ""), canonical),
             publisher=self.PUBLISHER,
+            published=self._published_on(str(described.get("comic_id") or ""), episode_id),
         )
+
+    def _published_on(self, comic_id: str, episode_id: str) -> date | None:
+        """The day the work's listing says the episode came out; the reader answers carry only the neighbours' dates."""
+        if episode_id not in self._published and comic_id:
+            # Listing the series fills in every episode's date, and is kept for the neighbours too.
+            self._listed_neighbours(f"{BASE_URL}/comics/{comic_id}", episode_url(episode_id))
+        return published_on(self._published.get(episode_id))
 
     def _writer(self, comic_id: str, referer: str) -> str:
         """The work's `authors` as `/comics/<id>` credits them, `名前 (役割)` each, asked for once per work."""

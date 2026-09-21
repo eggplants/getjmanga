@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -47,6 +48,7 @@ def episode_json(**overrides):
         "series": {"title": "SPY×FAMILY"},
         "isPublic": True,
         "hasPurchased": False,
+        "publishedAt": "2026-09-20T15:00:00Z",
         "prevReadableProductUri": PREV_URL,
         "nextReadableProductUri": NEXT_URL,
         "pageStructure": {
@@ -134,6 +136,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next_url(fake_session, fake_
     assert episode.series_title == "SPY×FAMILY"
     assert episode.episode_title == "第1話"
     assert (episode.writer, episode.publisher) == ("遠藤達哉", "集英社")
+    assert episode.published == date(2026, 9, 21)
     assert [page.url for page in episode.pages] == ["https://cdn.example/1.jpg", "https://cdn.example/2.jpg"]
     assert episode.pages[0].width == 64
     assert (episode.prev_url, episode.next_url) == (PREV_URL, NEXT_URL)

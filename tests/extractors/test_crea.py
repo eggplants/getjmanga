@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -269,6 +270,7 @@ def test_episode_reads_the_titles_and_the_pages(client):
     assert episode.series_title == "ごきげんな40歳になりたい"
     assert episode.episode_title == "第1回　はじめに"
     assert (episode.writer, episode.publisher) == ("おづ まりこ", "文藝春秋")
+    assert episode.published == date(2025, 10, 17)
     # The book cover inside the promotion box is not a page.
     assert [page.url for page in episode.pages] == [ORIGINAL_1, ORIGINAL_2]
     assert [(page.width, page.height) for page in episode.pages] == [(1250, 1824), (1250, 1824)]

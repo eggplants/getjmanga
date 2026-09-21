@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -57,7 +58,7 @@ SERIES_HTML = f"""
         <p class="serialTit"><span data-story-number="25" class="storyTitle">
             13話-①
         </span></p>
-        <div><p class="serialStatus ">11/19まで<br>無料公開中</p></div>
+        <div><p class="update">2026/09/17 更新</p><p class="serialStatus ">11/19まで<br>無料公開中</p></div>
     </a>
 </article>
 <article>
@@ -66,7 +67,7 @@ SERIES_HTML = f"""
         <p class="serialTit"><span data-story-number="24" class="storyTitle">
             12話-②
         </span></p>
-        <div><p class="serialStatus ">無料公開中</p></div>
+        <div><p class="update">2026/09/10 更新</p><p class="serialStatus ">無料公開中</p></div>
     </a>
 </article>
 <article class="close readByEbook">
@@ -256,6 +257,7 @@ def test_episode_reads_the_titles_the_pages_and_the_next(client):
         "タクヘイ (作画), 雨宮れん (原作), RAHWIA (キャラクター原案)",
         "スターツ出版",
     )
+    assert episode.published == date(2026, 9, 10)
     assert episode.episode_title == "12話-②"
     assert [page.url for page in episode.pages] == [
         f"{CONTENT}/cover.jpg?t={UPDATED_AT}",
@@ -266,7 +268,13 @@ def test_episode_reads_the_titles_the_pages_and_the_next(client):
     assert episode.next_url == f"{ORIGIN}/comic/serial/n53/n25/1"
     assert episode.metadata["comic_data"] == COMIC_DATA
     assert episode.metadata["images"] == INDEX
-    assert episode.metadata["story"] == {"number": 24, "title": "12話-②", "url": EPISODE_URL, "readable": True}
+    assert episode.metadata["story"] == {
+        "number": 24,
+        "title": "12話-②",
+        "url": EPISODE_URL,
+        "readable": True,
+        "updated": "2026/09/10 更新",
+    }
     json.dumps(episode.metadata)
     json.dumps([dict(page.extra) for page in episode.pages])
 

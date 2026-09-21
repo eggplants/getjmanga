@@ -13,7 +13,7 @@ from bs4.element import Tag
 from PIL import Image
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -236,6 +236,7 @@ class Mangabox(Extractor):
             metadata={"episode": entry, "images": images},
             writer=_authors(listing),
             publisher=self.PUBLISHER,
+            published=published_on(entry.get("publishedDate")),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

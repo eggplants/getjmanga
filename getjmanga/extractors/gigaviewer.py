@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page
+from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
     from httpx import Client
@@ -237,6 +237,7 @@ class GigaViewer(Extractor):
             metadata=episode_json,
             writer=_author(page),
             publisher=self.publisher(url),
+            published=published_on(product.get("publishedAt")),
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

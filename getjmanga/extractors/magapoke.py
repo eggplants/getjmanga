@@ -41,7 +41,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 from getjmanga.viewers.kmanga import descramble, service_hash
 
 if TYPE_CHECKING:
@@ -228,6 +228,7 @@ class MagaPoke(Extractor):
                 metadata={**metadata, "viewer": viewer},
                 writer=self._writer(title_id),
                 publisher=self.PUBLISHER,
+                published=published_on(info.get("start_time")),
             )
 
         raw_seed = viewer.get("scramble_seed")
@@ -248,6 +249,7 @@ class MagaPoke(Extractor):
             metadata={**metadata, "viewer": viewer},
             writer=self._writer(title_id),
             publisher=self.PUBLISHER,
+            published=published_on(info.get("start_time")),
         )
 
     def _writer(self, title_id: int) -> str:

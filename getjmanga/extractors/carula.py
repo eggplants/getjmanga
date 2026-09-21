@@ -30,7 +30,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from getjmanga.errors import NotAnEpisodePageError, UnsupportedUrlError
-from getjmanga.extractor import Episode, Extractor, Page, neighbours
+from getjmanga.extractor import Episode, Extractor, Page, neighbours, published_on
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -284,6 +284,7 @@ class Carula(Extractor):
             metadata=note,
             writer=self.credits(series_title),
             publisher=self.PUBLISHER,
+            published=published_on(note.get("publish_at")),
         )
 
     def credits(self, title: str) -> str:
