@@ -417,28 +417,32 @@ class Gakcomic(Extractor):
         metadata: dict[str, Any] = {"episode_id": item.id, "work_url": work.url, "work_title": work.title}
         if not item.content_id:
             metadata["image"] = item.image
-            return Episode(
+            return self._dated_by_upload(
+                Episode(
+                    url=url,
+                    series_title=work.title,
+                    episode_title=item.title,
+                    pages=(Page(url=item.image),),
+                    prev_url=work.prev_url(index),
+                    next_url=work.next_url(index),
+                    metadata=metadata,
+                    writer=work.writer,
+                    publisher=self.PUBLISHER,
+                )
+            )
+        content = self._open(item.content_id)
+        return self._dated_by_upload(
+            Episode(
                 url=url,
                 series_title=work.title,
                 episode_title=item.title,
-                pages=(Page(url=item.image),),
+                pages=self._pages(item.content_id, content),
                 prev_url=work.prev_url(index),
                 next_url=work.next_url(index),
-                metadata=metadata,
+                metadata={**metadata, "content_id": item.content_id, **content.info},
                 writer=work.writer,
                 publisher=self.PUBLISHER,
             )
-        content = self._open(item.content_id)
-        return Episode(
-            url=url,
-            series_title=work.title,
-            episode_title=item.title,
-            pages=self._pages(item.content_id, content),
-            prev_url=work.prev_url(index),
-            next_url=work.next_url(index),
-            metadata={**metadata, "content_id": item.content_id, **content.info},
-            writer=work.writer,
-            publisher=self.PUBLISHER,
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:
@@ -509,27 +513,31 @@ class Gakcomic(Extractor):
         for work in self._works.values():
             index = work.find(content_id=content_id)
             if index is not None:
-                return Episode(
-                    url=url,
-                    series_title=work.title,
-                    episode_title=work.items[index].title,
-                    pages=self._pages(content_id, content),
-                    prev_url=work.prev_url(index),
-                    next_url=work.next_url(index),
-                    metadata={**metadata, "episode_id": work.items[index].id, "work_url": work.url},
-                    writer=work.writer,
-                    publisher=self.PUBLISHER,
+                return self._dated_by_upload(
+                    Episode(
+                        url=url,
+                        series_title=work.title,
+                        episode_title=work.items[index].title,
+                        pages=self._pages(content_id, content),
+                        prev_url=work.prev_url(index),
+                        next_url=work.next_url(index),
+                        metadata={**metadata, "episode_id": work.items[index].id, "work_url": work.url},
+                        writer=work.writer,
+                        publisher=self.PUBLISHER,
+                    )
                 )
         title = str(content.info.get("title") or content_id)
         match = _EPUB_TITLE.match(title)
         series_title, episode_title = (match["series"], match["episode"]) if match else (title, title)
-        return Episode(
-            url=url,
-            series_title=series_title,
-            episode_title=episode_title,
-            pages=self._pages(content_id, content),
-            metadata=metadata,
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=url,
+                series_title=series_title,
+                episode_title=episode_title,
+                pages=self._pages(content_id, content),
+                metadata=metadata,
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _open(self, content_id: str) -> Content:

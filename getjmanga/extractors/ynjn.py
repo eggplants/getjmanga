@@ -248,16 +248,18 @@ class YanJan(Extractor):
         next_id = int(navigation.get("next_episode_id") or 0)
         if not next_id and not pages:
             next_id = listed_next
-        return Episode(
-            url=episode_url(title_id, episode_id),
-            series_title=str(navigation.get("title_name") or sheet.get("title_name") or title_id),
-            episode_title=str(navigation.get("name") or sheet.get("episode_name") or episode_id),
-            pages=tuple(pages),
-            prev_url=episode_url(title_id, prev_id) if prev_id else None,
-            next_url=episode_url(title_id, next_id) if next_id else None,
-            metadata=data,
-            writer=self._writer(title_id),
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=episode_url(title_id, episode_id),
+                series_title=str(navigation.get("title_name") or sheet.get("title_name") or title_id),
+                episode_title=str(navigation.get("name") or sheet.get("episode_name") or episode_id),
+                pages=tuple(pages),
+                prev_url=episode_url(title_id, prev_id) if prev_id else None,
+                next_url=episode_url(title_id, next_id) if next_id else None,
+                metadata=data,
+                writer=self._writer(title_id),
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _writer(self, title_id: str) -> str:

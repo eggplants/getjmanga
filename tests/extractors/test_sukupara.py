@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from io import BytesIO
 
 import pytest
@@ -240,6 +241,11 @@ def test_episode_walks_the_pages_and_reads_the_titles(client):
     assert session.calls == [FIRST_URL, f"{FIRST_URL}&page_no=2", f"{FIRST_URL}&page_no=3"]
     assert session.params_seen == [None, None, None]
     assert "User-Agent" in session.headers_seen[0]
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    sukupara, _ = client({f"/plus/manga/{MANGA}/2160/1.jpg": fake_response(b"", headers=uploaded)})
+    assert sukupara.episode(FIRST_URL).published == date(2025, 8, 21)
 
 
 def test_episode_ignores_the_page_number_in_the_url(client):

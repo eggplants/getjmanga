@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -341,6 +342,11 @@ def test_mt_episode_walks_the_pages_until_the_title_changes(client, mt_routes):
     assert session.calls.count(f"{HOST}/kimono-lolita/list.html") == 1
     assert f"{HOST}/kimono-lolita/manga/4kan.html" in session.calls
     assert f"{HOST}/kimono-lolita/manga/005.html" not in session.calls
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, mt_routes, fake_response, uploaded):
+    laza, _ = client({**mt_routes, "/up/2021/01/29/001.png": fake_response(b"", headers=uploaded)})
+    assert laza.episode(MT_EPISODE_URL).published == date(2025, 8, 21)
 
 
 def test_mt_episode_is_read_from_its_first_listed_page(client, mt_routes):

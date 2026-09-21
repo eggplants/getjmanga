@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -194,6 +195,16 @@ def test_episode_reads_a_story(client, fake_response):
     assert episode.metadata["prev_url"] is None
     assert session.calls == [STORY_URL]
     assert session.headers_seen[0]["User-Agent"].startswith("Mozilla/5.0")
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    neetsha, _ = client(
+        {
+            "comic.php?id=26627&story=1": fake_response(STORY_HTML.encode()),
+            "/up/2/6/26627/1.jpg": fake_response(b"", headers=uploaded),
+        }
+    )
+    assert neetsha.episode(STORY_URL).published == date(2025, 8, 21)
 
 
 def test_episode_reads_the_spread_layout_as_the_plain_one(client, fake_response):

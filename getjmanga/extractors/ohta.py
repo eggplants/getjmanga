@@ -218,24 +218,26 @@ class Ohta(Extractor):
                 writer=_credit(content.author),
                 publisher=content.label or self.PUBLISHER,
             )
-        return Episode(
-            url=canonical,
-            series_title=series_title,
-            episode_title=episode_title,
-            pages=opened.book.pages,
-            prev_url=prev_url,
-            next_url=next_url,
-            metadata={
-                **metadata,
-                "binb_id": opened.binb_id,
-                "contents_server": opened.info.server,
-                "reader_title": opened.info.item.get("Title"),
-                "view_mode": opened.info.item.get("ViewMode"),
-                "shop_url": opened.info.item.get("ShopURL") or None,
-                "address_list": opened.book.body.get("AddressList"),
-            },
-            writer=_credit(content.author),
-            publisher=content.label or self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=canonical,
+                series_title=series_title,
+                episode_title=episode_title,
+                pages=opened.book.pages,
+                prev_url=prev_url,
+                next_url=next_url,
+                metadata={
+                    **metadata,
+                    "binb_id": opened.binb_id,
+                    "contents_server": opened.info.server,
+                    "reader_title": opened.info.item.get("Title"),
+                    "view_mode": opened.info.item.get("ViewMode"),
+                    "shop_url": opened.info.item.get("ShopURL") or None,
+                    "address_list": opened.book.body.get("AddressList"),
+                },
+                writer=_credit(content.author),
+                publisher=content.label or self.PUBLISHER,
+            )
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

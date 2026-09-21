@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -274,6 +275,11 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert session.params_seen[0] is None
     assert session.headers_seen[0]["Origin"] == BASE_URL
     assert session.headers_seen[0]["Accept"] == "application/json"
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    ynjn, _ = client({"public.ynjn.jp": fake_response(b"", headers=uploaded)})
+    assert ynjn.episode(EPISODE_URL).published == date(2025, 8, 21)
 
 
 def test_episode_accepts_a_trailing_slash(client):

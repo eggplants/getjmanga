@@ -216,22 +216,24 @@ class Shuro(Extractor):
 
         slides = [slide for slide in viewer.find_all("div", class_="slide") if isinstance(slide, Tag)]
         pages = tuple(page for page in (self._page_of(slide, url) for slide in slides) if page is not None)
-        return Episode(
-            url=url,
-            series_title=series_title,
-            episode_title=episode_title,
-            pages=pages,
-            prev_url=prev_url,
-            next_url=next_url,
-            metadata={
-                "title": _text(soup.title),
-                "work_url": work_url,
-                "episode": entry,
-                "works": [{key: value for key, value in work.items() if key != "episodes"} for work in works],
-                "images": [page.url for page in pages],
-            },
-            writer=", ".join(credited),
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=url,
+                series_title=series_title,
+                episode_title=episode_title,
+                pages=pages,
+                prev_url=prev_url,
+                next_url=next_url,
+                metadata={
+                    "title": _text(soup.title),
+                    "work_url": work_url,
+                    "episode": entry,
+                    "works": [{key: value for key, value in work.items() if key != "episodes"} for work in works],
+                    "images": [page.url for page in pages],
+                },
+                writer=", ".join(credited),
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _page(self, url: str) -> str:

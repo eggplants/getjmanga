@@ -319,16 +319,18 @@ class LineManga(Extractor):
 
         next_id = (option.get("next_book") or {}).get("id")
         product_id = str(option.get("productId") or "")
-        return Episode(
-            url=canonical,
-            series_title=str(option.get("productName") or option.get("productId") or ""),
-            episode_title=str(option.get("title") or book_id),
-            pages=parse_pages(res.text),
-            prev_url=self._listed_before(flavour, product_id, book_id, canonical),
-            next_url=episode_url(str(next_id), indies=flavour == "indies") if next_id else None,
-            metadata={"option": option},
-            writer=str(option.get("authorName") or ""),
-            publisher=self._publisher(flavour, product_id, canonical),
+        return self._dated_by_upload(
+            Episode(
+                url=canonical,
+                series_title=str(option.get("productName") or option.get("productId") or ""),
+                episode_title=str(option.get("title") or book_id),
+                pages=parse_pages(res.text),
+                prev_url=self._listed_before(flavour, product_id, book_id, canonical),
+                next_url=episode_url(str(next_id), indies=flavour == "indies") if next_id else None,
+                metadata={"option": option},
+                writer=str(option.get("authorName") or ""),
+                publisher=self._publisher(flavour, product_id, canonical),
+            )
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

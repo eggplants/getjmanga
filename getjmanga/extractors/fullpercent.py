@@ -320,16 +320,18 @@ class FullPercent(Extractor):
             "page_count": len(viewer.images),
             "images": list(viewer.images),
         }
-        return Episode(
-            url=canonical,
-            series_title=series_title or (work.title if work is not None else work_id),
-            episode_title=(listed.title if listed is not None else "") or episode_title or episode_id,
-            pages=tuple(Page(url=src) for src in viewer.images),
-            prev_url=prev_url,
-            next_url=next_url,
-            metadata=metadata,
-            writer=str(metadata["author"]),
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=canonical,
+                series_title=series_title or (work.title if work is not None else work_id),
+                episode_title=(listed.title if listed is not None else "") or episode_title or episode_id,
+                pages=tuple(Page(url=src) for src in viewer.images),
+                prev_url=prev_url,
+                next_url=next_url,
+                metadata=metadata,
+                writer=str(metadata["author"]),
+                publisher=self.PUBLISHER,
+            )
         )
 
     def login(self, url: str, username: str, password: str) -> None:  # noqa: ARG002 (one site, one login route)

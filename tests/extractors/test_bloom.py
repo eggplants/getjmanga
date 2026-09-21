@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 from urllib.parse import parse_qs, urlparse
@@ -274,6 +275,12 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     json.dumps(episode.metadata)
     # The stub first (it sets the cookie), the reader, the work page it links, the API, the page list.
     assert session.calls == [EPISODE_URL, READER_URL, WORK_URL, INFO_URL, f"{SERVER}/sbcGetCntnt.php"]
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    bloom, session = client({"sbcGetImg.php": fake_response(b"", headers=uploaded)})
+    assert bloom.episode(EPISODE_URL).published == date(2025, 8, 21)
+    assert session.heads[0][1]["Referer"] == EPISODE_URL
 
 
 def test_episode_calls_the_api_the_way_the_reader_does(client):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -206,6 +207,16 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert episode.metadata["work_url"] == WORK_URL
     assert episode.metadata["expired"] is False
     assert episode.metadata["images"] == [page.url for page in episode.pages]
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    splush, _ = client(
+        {
+            "/series/14716/": fake_response(text=EPISODE_HTML),
+            "souta01_01tobira.jpg": fake_response(b"", headers=uploaded),
+        }
+    )
+    assert splush.episode(EPISODE_URL).published == date(2025, 8, 21)
 
 
 def test_episode_follows_a_redirect_to_the_canonical_url(client, fake_response):

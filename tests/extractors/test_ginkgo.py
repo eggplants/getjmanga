@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -257,6 +258,16 @@ def test_iwate_episode_is_one_of_the_anthology(client, fake_response):
     assert (episode.writer, episode.publisher) == ("蓮まこと", "銀杏社")
     assert episode.metadata["site"] == "comiciwate"
     assert session.headers_seen[-1]["User-Agent"].startswith("Mozilla/5.0")
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    ginkgo, _ = client(
+        {
+            "/comic/tsuchinokioku/images/01.jpg": fake_response(b"", headers=uploaded),
+            "/comic/tsuchinokioku/": fake_response(text=IWATE_HTML),
+        }
+    )
+    assert ginkgo.episode(IWATE_URL).published == date(2025, 8, 21)
 
 
 def test_iwate_translation_is_titled_with_its_language(client, fake_response):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from io import BytesIO
 
 import pytest
@@ -211,6 +212,11 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, f
         "https://michikusacomics.jp/wp-content/uploads/data/11_vegetable/01/last.html",
         SERIES_URL,
     ]
+
+
+def test_episode_is_dated_by_its_first_page_upload(fake_session, fake_response, uploaded):
+    session = site(fake_session, fake_response, **{"/data/0001.ptimg.json": fake_response(b"", headers=uploaded)})
+    assert Michikusa(session).episode(EPISODE_URL).published == date(2025, 8, 21)
 
 
 def test_episode_takes_a_directory_url_and_canonicalises_it(fake_session, fake_response):

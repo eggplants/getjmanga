@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -245,6 +246,11 @@ def test_episode_reads_titles_pages_and_the_next_chapter(client):
     assert session.headers_seen[-2]["Referer"] == EPISODE_URL
     assert session.headers_seen[-2]["Accept"] == "application/json"
     assert "Authorization" not in session.headers_seen[-2]
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    lezhin, _ = client({f"{CDN}/{FIRST}/p1.webp": fake_response(b"", headers=uploaded)})
+    assert lezhin.episode(EPISODE_URL).published == date(2025, 8, 21)
 
 
 def test_episode_is_locked_when_the_viewer_wants_a_purchase(client):

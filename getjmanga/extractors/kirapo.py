@@ -179,24 +179,26 @@ class Kirapo(Extractor):
             episode_title = listing.episodes.get(_reader_key(url)) or episode_title
             prev_url, next_url = neighbours(list(listing.episodes), _reader_key(url))
         match = _EPISODE_PATH.match(urlparse(url).path)
-        return Episode(
-            url=url,
-            series_title=series_title,
-            episode_title=episode_title,
-            pages=tuple(Page(url=ptimg, extra={"spread": spread}) for ptimg, spread in pages),
-            prev_url=prev_url,
-            next_url=next_url,
-            metadata={
-                "title": title.strip(),
-                "imprint": match["imprint"] if match else "",
-                "slug": match["slug"] if match else "",
-                "episode_id": match["id"] if match else "",
-                "direction": str(container.get("data-binbsp-direction") or ""),
-                "recommend": str(container.get("data-binbsp-recommend") or ""),
-                "ptimg": [ptimg for ptimg, _ in pages],
-            },
-            writer=listing.writer if listing else "",
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=url,
+                series_title=series_title,
+                episode_title=episode_title,
+                pages=tuple(Page(url=ptimg, extra={"spread": spread}) for ptimg, spread in pages),
+                prev_url=prev_url,
+                next_url=next_url,
+                metadata={
+                    "title": title.strip(),
+                    "imprint": match["imprint"] if match else "",
+                    "slug": match["slug"] if match else "",
+                    "episode_id": match["id"] if match else "",
+                    "direction": str(container.get("data-binbsp-direction") or ""),
+                    "recommend": str(container.get("data-binbsp-recommend") or ""),
+                    "ptimg": [ptimg for ptimg, _ in pages],
+                },
+                writer=listing.writer if listing else "",
+                publisher=self.PUBLISHER,
+            )
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

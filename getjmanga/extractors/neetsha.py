@@ -341,25 +341,27 @@ class Neetsha(Extractor):
         res = self._fetch(key)
         named = comic_url(key)
         story = parse_story(res.content, key)
-        return Episode(
-            url=key,
-            series_title=story.series_title or (named.work if named else ""),
-            episode_title=story.episode_title or f"story {named.story if named else ''}",
-            pages=tuple(Page(url=src) for src in story.images),
-            prev_url=story.prev_url,
-            next_url=story.next_url,
-            metadata={
-                "id": named.work if named else "",
-                "story": named.story if named else "",
-                "author": story.author,
-                "magazine": story.magazine,
-                "work_url": work_url(key),
-                "prev_url": story.prev_url,
-                "next_url": story.next_url,
-                "images": list(story.images),
-            },
-            writer=story.author,
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=key,
+                series_title=story.series_title or (named.work if named else ""),
+                episode_title=story.episode_title or f"story {named.story if named else ''}",
+                pages=tuple(Page(url=src) for src in story.images),
+                prev_url=story.prev_url,
+                next_url=story.next_url,
+                metadata={
+                    "id": named.work if named else "",
+                    "story": named.story if named else "",
+                    "author": story.author,
+                    "magazine": story.magazine,
+                    "work_url": work_url(key),
+                    "prev_url": story.prev_url,
+                    "next_url": story.next_url,
+                    "images": list(story.images),
+                },
+                writer=story.author,
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _fetch(self, url: str) -> Response:

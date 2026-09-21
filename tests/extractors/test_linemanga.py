@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -378,6 +379,11 @@ def test_episode_reads_a_webtoon(client):
     # The viewer page names the next episode; the previous one comes off the
     # work's listing, and the publisher off the work page.
     assert session.calls == [EPISODE_URL, f"{PERIODIC_LIST_URL}Z0001684", f"{BASE_URL}/product/periodic?id=Z0001684"]
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    linemanga, _ = client({"FFeZ7qqIlvhe4o8usLAUlGac.jpg": fake_response(b"", headers=uploaded)})
+    assert linemanga.episode(EPISODE_URL).published == date(2025, 8, 21)
 
 
 def test_episode_reads_a_print_comic_with_its_blocks(client):

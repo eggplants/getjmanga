@@ -349,14 +349,21 @@ class Ginkgo(Extractor):
         # language suffix of the slug (`_en`, `_fr`, `_han`, `_kan`) tells them apart.
         if section == "foreign" and "_" in slug:
             title = f"{title} ({slug.rsplit('_', 1)[1]})"
-        return Episode(
-            url=key,
-            series_title=IWATE_SERIES_TITLE,
-            episode_title=title,
-            pages=tuple(Page(url=src) for src in work.images),
-            metadata={"site": "comiciwate", "title": work.title, "author": work.author, "images": list(work.images)},
-            writer=work.author,
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=key,
+                series_title=IWATE_SERIES_TITLE,
+                episode_title=title,
+                pages=tuple(Page(url=src) for src in work.images),
+                metadata={
+                    "site": "comiciwate",
+                    "title": work.title,
+                    "author": work.author,
+                    "images": list(work.images),
+                },
+                writer=work.author,
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _gai_episode(self, url: str) -> Episode:
@@ -373,22 +380,24 @@ class Ginkgo(Extractor):
             raise NotAnEpisodePageError(msg)
         first = pages[0]
         listing = self._listing(first.index_url) if first.index_url else GaiListing({}, {})
-        return Episode(
-            url=urljoin(directory, "01.html"),
-            series_title=first.series_title or match["work"],
-            episode_title=listing.titles.get(match["episode"]) or match["episode"],
-            pages=tuple(Page(url=page.image) for page in pages if page.image),
-            prev_url=listing.neighbours_of(match["episode"])[0],
-            next_url=listing.neighbours_of(match["episode"])[1],
-            metadata={
-                "site": "manga-gai",
-                "work": match["work"],
-                "episode": match["episode"],
-                "index_url": first.index_url,
-                "pages": [page.url for page in pages],
-            },
-            # 漫画街 names its authors on its front page only, not on the work or its pages.
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=urljoin(directory, "01.html"),
+                series_title=first.series_title or match["work"],
+                episode_title=listing.titles.get(match["episode"]) or match["episode"],
+                pages=tuple(Page(url=page.image) for page in pages if page.image),
+                prev_url=listing.neighbours_of(match["episode"])[0],
+                next_url=listing.neighbours_of(match["episode"])[1],
+                metadata={
+                    "site": "manga-gai",
+                    "work": match["work"],
+                    "episode": match["episode"],
+                    "index_url": first.index_url,
+                    "pages": [page.url for page in pages],
+                },
+                # 漫画街 names its authors on its front page only, not on the work or its pages.
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _walk(self, url: str) -> Iterator[GaiPage]:

@@ -153,21 +153,23 @@ class Shiori(Extractor):
 
         series_title, episode_title = _titles(soup)
         series_url = _series_link(soup, page_url)
-        return Episode(
-            url=url,
-            series_title=series_title or episode_id.rsplit("_", 1)[0],
-            episode_title=episode_title or episode_id,
-            pages=tuple(Page(url=src) for src in image_urls),
-            prev_url=_nav_link(soup, "前の話", page_url),
-            next_url=_nav_link(soup, "次の話", page_url),
-            metadata={
-                "episode_id": episode_id,
-                "series_url": series_url,
-                "prev_url": _nav_link(soup, "前の話", page_url),
-                "images": image_urls,
-            },
-            writer=self._writer(series_url),
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=url,
+                series_title=series_title or episode_id.rsplit("_", 1)[0],
+                episode_title=episode_title or episode_id,
+                pages=tuple(Page(url=src) for src in image_urls),
+                prev_url=_nav_link(soup, "前の話", page_url),
+                next_url=_nav_link(soup, "次の話", page_url),
+                metadata={
+                    "episode_id": episode_id,
+                    "series_url": series_url,
+                    "prev_url": _nav_link(soup, "前の話", page_url),
+                    "images": image_urls,
+                },
+                writer=self._writer(series_url),
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _writer(self, series_url: str) -> str:

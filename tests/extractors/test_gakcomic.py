@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+from datetime import date
 from io import BytesIO
 from urllib.parse import quote
 
@@ -317,6 +318,11 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert session.calls[0] == WORK_URL
     assert session.params_seen[0] == {"sort": "asc"}
     assert session.params_seen[session.calls.index(f"{BASE_URL}/viewer/")] == {"content_id": CID_1}
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    gakcomic, _ = client({"book_000.xhtml": fake_response(encrypted_page((10, 20, 30)), headers=uploaded)})
+    assert gakcomic.episode(EPISODE_URL).published == date(2025, 8, 21)
 
 
 def test_episode_runs_the_handshake_the_viewer_runs(client):

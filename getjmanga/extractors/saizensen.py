@@ -442,24 +442,26 @@ class Saizensen(Extractor):
             document = parse_reader_page(res.content, url)
             prev_url = self._reader_neighbour(url, kind, step=-1)
             next_url = self._reader_neighbour(url, kind, step=1)
-        return Episode(
-            url=url,
-            series_title=document.series_title,
-            episode_title=document.episode_title,
-            pages=tuple(
-                Page(url=strips[0], extra={"strips": list(strips)} if len(strips) > 1 else {})
-                for strips in document.pages
-            ),
-            prev_url=prev_url,
-            next_url=next_url,
-            metadata={
-                "kind": document.kind,
-                "title": document.title,
-                "closed": document.closed,
-                "pages": [list(strips) for strips in document.pages],
-            },
-            writer=document.writer,
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=url,
+                series_title=document.series_title,
+                episode_title=document.episode_title,
+                pages=tuple(
+                    Page(url=strips[0], extra={"strips": list(strips)} if len(strips) > 1 else {})
+                    for strips in document.pages
+                ),
+                prev_url=prev_url,
+                next_url=next_url,
+                metadata={
+                    "kind": document.kind,
+                    "title": document.title,
+                    "closed": document.closed,
+                    "pages": [list(strips) for strips in document.pages],
+                },
+                writer=document.writer,
+                publisher=self.PUBLISHER,
+            )
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

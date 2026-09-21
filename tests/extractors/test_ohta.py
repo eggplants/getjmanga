@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -316,6 +317,11 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
         f"{SERVER}/content.js",
         WORK_URL,
     ]
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    ohta, _ = client({"/pages/a.jpg/M_H.jpg": fake_response(b"", headers=uploaded)})
+    assert ohta.episode(EPISODE_URL).published == date(2025, 8, 21)
 
 
 @pytest.mark.parametrize(

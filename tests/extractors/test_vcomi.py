@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -311,6 +312,11 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client):
     assert session.params_seen[1] == {"batch": "1", "input": '{"0": "[15693]"}'}
     assert session.headers_seen[1]["x-platform"] == "web"
     assert all(headers["Referer"] == EPISODE_URL for headers in session.headers_seen)
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    vcomi, _ = client({f"{IMAGE_URL}/{PATHS[0]}": fake_response(b"", headers=uploaded)})
+    assert vcomi.episode(EPISODE_URL).published == date(2025, 8, 21)
 
 
 @pytest.mark.parametrize("url", [f"{EPISODE_URL}/", f"{EPISODE_URL}?from=series", f"{EPISODE_URL}/?x=1"])

@@ -321,24 +321,26 @@ class Torch(Extractor):
             raise NotAnEpisodePageError(msg)
         res = self._fetch_page(url)
         viewer = parse_viewer(res.text, str(res.url or url))
-        return Episode(
-            url=url,
-            series_title=viewer.series_title,
-            episode_title=viewer.episode_title,
-            pages=tuple(Page(url=src) for src in viewer.images),
-            prev_url=viewer.prev_url,
-            next_url=viewer.next_url,
-            metadata={
-                "slug": story_slug(url),
-                "kind": viewer.kind,
-                "series_title": viewer.series_title,
-                "series_url": viewer.series_url,
-                "episode_title": viewer.episode_title,
-                "images": list(viewer.images),
-                "next_url": viewer.next_url,
-            },
-            writer=viewer.writer,
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=url,
+                series_title=viewer.series_title,
+                episode_title=viewer.episode_title,
+                pages=tuple(Page(url=src) for src in viewer.images),
+                prev_url=viewer.prev_url,
+                next_url=viewer.next_url,
+                metadata={
+                    "slug": story_slug(url),
+                    "kind": viewer.kind,
+                    "series_title": viewer.series_title,
+                    "series_url": viewer.series_url,
+                    "episode_title": viewer.episode_title,
+                    "images": list(viewer.images),
+                    "next_url": viewer.next_url,
+                },
+                writer=viewer.writer,
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _fetch_page(self, url: str) -> Response:

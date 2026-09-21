@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -213,6 +214,11 @@ def test_episode_reads_the_titles_and_the_pages(client):
     assert "User-Agent" in session.headers_seen[0]
 
 
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    comicessay, _ = client({"/archives/": fake_response(b"", headers=uploaded)})
+    assert comicessay.episode(EPISODE_URL).published == date(2025, 8, 21)
+
+
 def test_episode_at_the_end_of_a_series_has_no_next(client):
     comicessay, _ = client()
     episode = comicessay.episode(LAST_URL)
@@ -222,7 +228,7 @@ def test_episode_at_the_end_of_a_series_has_no_next(client):
     assert episode.metadata["prev_url"] == f"{BASE_URL}/read/{SERIES}/entry-53091.html"
 
 
-def test_episode_takes_the_older_url_shape(client, fake_response):
+def test_episode_takes_the_older_url_shape(client, fake_response, uploaded):
     comicessay, _ = client(
         {"/read/6/2763.html": fake_response(text=episode_html(series="ねことじいちゃん＋番外編", number="番外編40"))},
     )
@@ -235,7 +241,7 @@ def test_episode_takes_the_older_url_shape(client, fake_response):
     assert episode.metadata["series_url"] == f"{BASE_URL}/episode/6/"
 
 
-def test_episode_without_images_has_no_pages_but_still_a_next(client, fake_response):
+def test_episode_without_images_has_no_pages_but_still_a_next(client, fake_response, uploaded):
     comicessay, _ = client({"/entry-1.html": fake_response(text=episode_html(pages=()))})
     episode = comicessay.episode(f"{BASE_URL}/read/{SERIES}/entry-1.html")
 
@@ -266,7 +272,7 @@ def test_episode_rejects_a_page_without_the_reading_block(client, fake_response,
         comicessay.episode(f"{BASE_URL}/read/314/entry-1.html")
 
 
-def test_episode_rejects_a_404(client, fake_response):
+def test_episode_rejects_a_404(client, fake_response, uploaded):
     comicessay, _ = client({"/entry-1.html": fake_response(text=NOT_FOUND_HTML, status_code=HTTPStatus.NOT_FOUND)})
     with pytest.raises(NotAnEpisodePageError, match="no episode"):
         comicessay.episode(f"{BASE_URL}/read/314/entry-1.html")
@@ -317,13 +323,13 @@ def test_series_urls_stops_walking_at_an_episode_already_listed(client, fake_res
     assert session.calls == [SERIES_URL, episode_url(1)]
 
 
-def test_series_urls_raises_on_an_empty_listing(client, fake_response):
+def test_series_urls_raises_on_an_empty_listing(client, fake_response, uploaded):
     comicessay, _ = client({"/episode/": fake_response(text=series_html([]))})
     with pytest.raises(NotAnEpisodePageError, match="lists no episode"):
         comicessay.series_urls(SERIES_URL)
 
 
-def test_series_urls_raises_on_a_404(client, fake_response):
+def test_series_urls_raises_on_a_404(client, fake_response, uploaded):
     comicessay, _ = client({"/episode/": fake_response(text=NOT_FOUND_HTML, status_code=HTTPStatus.NOT_FOUND)})
     with pytest.raises(NotAnEpisodePageError, match="no work"):
         comicessay.series_urls(f"{BASE_URL}/episode/99999/")

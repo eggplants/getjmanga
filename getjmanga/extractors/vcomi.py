@@ -310,26 +310,28 @@ class Vcomi(Extractor):
         following = _dict(data.get("nextEpisode"))
         next_url = episode_url(following["id"]) if following.get("id") is not None else None
 
-        return Episode(
-            url=canonical,
-            series_title=str(series.get("title") or ""),
-            episode_title=episode_title(entry),
-            pages=tuple(pages),
-            prev_url=prev_url,
-            next_url=next_url,
-            metadata={
-                "episode": entry,
-                "nextEpisode": following or None,
-                "prevEpisode": data.get("prevEpisode"),
-                "viewer": viewer,
-            },
-            # `authors: [{author: {name}}]`, the site's own nesting.
-            writer=", ".join(
-                name
-                for item in series.get("authors") or []
-                if (name := str(_dict(_dict(item).get("author")).get("name") or ""))
-            ),
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=canonical,
+                series_title=str(series.get("title") or ""),
+                episode_title=episode_title(entry),
+                pages=tuple(pages),
+                prev_url=prev_url,
+                next_url=next_url,
+                metadata={
+                    "episode": entry,
+                    "nextEpisode": following or None,
+                    "prevEpisode": data.get("prevEpisode"),
+                    "viewer": viewer,
+                },
+                # `authors: [{author: {name}}]`, the site's own nesting.
+                writer=", ".join(
+                    name
+                    for item in series.get("authors") or []
+                    if (name := str(_dict(_dict(item).get("author")).get("name") or ""))
+                ),
+                publisher=self.PUBLISHER,
+            )
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

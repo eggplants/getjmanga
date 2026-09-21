@@ -259,21 +259,23 @@ class Bloom(Extractor):
 
         book = speedbinb.page_list(self, content, referer=reader_url)
 
-        return Episode(
-            url=canonical,
-            series_title=series_title,
-            episode_title=str(episode_title or content.item.get("Title") or match["id"]),
-            pages=book.pages,
-            prev_url=prev_url,
-            next_url=next_url,
-            metadata={
-                **metadata,
-                "locked": False,
-                "contents_server": content.server,
-                "info": content.info,
-            },
-            writer=writer,
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=canonical,
+                series_title=series_title,
+                episode_title=str(episode_title or content.item.get("Title") or match["id"]),
+                pages=book.pages,
+                prev_url=prev_url,
+                next_url=next_url,
+                metadata={
+                    **metadata,
+                    "locked": False,
+                    "contents_server": content.server,
+                    "info": content.info,
+                },
+                writer=writer,
+                publisher=self.PUBLISHER,
+            )
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

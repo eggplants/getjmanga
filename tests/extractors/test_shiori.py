@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -224,6 +225,11 @@ def test_episode_reads_the_titles_and_the_pages(client):
     assert session.calls == [EPISODE_URL, SERIES_URL]
     assert session.params_seen == [None, None]
     assert "User-Agent" in session.headers_seen[0]
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    shiori, _ = client({"/wp-content/uploads/": fake_response(b"", headers=uploaded)})
+    assert shiori.episode(EPISODE_URL).published == date(2025, 8, 21)
 
 
 def test_episode_at_the_end_of_a_series_has_no_next(client):

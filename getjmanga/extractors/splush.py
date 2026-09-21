@@ -233,23 +233,25 @@ class Splush(Extractor):
         if document.is_work:
             msg = f"{url} is a work page, not an episode."
             raise NotAnEpisodePageError(msg)
-        return Episode(
-            url=document.url,
-            series_title=document.series_title,
-            episode_title=document.episode_title,
-            pages=tuple(Page(url=src) for src in document.images),
-            prev_url=document.prev_url,
-            next_url=document.next_url,
-            metadata={
-                "title": document.title,
-                "notice": document.notice,
-                "expired": _EXPIRED_NOTICE in document.notice,
-                "prev_url": document.prev_url,
-                "work_url": document.work_url,
-                "images": list(document.images),
-            },
-            writer=document.writer,
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=document.url,
+                series_title=document.series_title,
+                episode_title=document.episode_title,
+                pages=tuple(Page(url=src) for src in document.images),
+                prev_url=document.prev_url,
+                next_url=document.next_url,
+                metadata={
+                    "title": document.title,
+                    "notice": document.notice,
+                    "expired": _EXPIRED_NOTICE in document.notice,
+                    "prev_url": document.prev_url,
+                    "work_url": document.work_url,
+                    "images": list(document.images),
+                },
+                writer=document.writer,
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _document(self, url: str) -> Document:

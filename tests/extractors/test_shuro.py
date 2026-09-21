@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -286,6 +287,16 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     assert episode.metadata["images"] == [page.url for page in episode.pages]
     assert "User-Agent" in session.headers_seen[-1]
     assert session.params_seen[-1] is None
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    shuro, _ = client(
+        {
+            "/episode/71005/": fake_response(text=EPISODE_HTML),
+            "/09204919/cover.jpg": fake_response(b"", headers=uploaded),
+        }
+    )
+    assert shuro.episode(EPISODE_URL).published == date(2025, 8, 21)
 
 
 def test_episode_matches_itself_in_manga_data_whatever_the_url_spelling(client, fake_response):

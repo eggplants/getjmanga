@@ -469,21 +469,23 @@ class Laza(Extractor):
         start = listing.start_of(url) or url
         pages, stop_url = self._mt_pages(start, listing)
         first = pages[0]
-        return Episode(
-            url=start,
-            series_title=first.series_title or _work_of(url),
-            episode_title=first.episode_title or first.title,
-            pages=tuple(Page(url=src) for page in pages for src in page.images),
-            prev_url=listing.neighbours_of(start)[0],
-            next_url=listing.neighbours_of(start)[1] or stop_url,
-            metadata={
-                "site": "laza",
-                "work": _work_of(url),
-                "label": listing.labels.get(start, ""),
-                "pages": [{"url": page.url, "title": page.title, "images": list(page.images)} for page in pages],
-            },
-            # A Movable Type work names nobody on its pages.
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=start,
+                series_title=first.series_title or _work_of(url),
+                episode_title=first.episode_title or first.title,
+                pages=tuple(Page(url=src) for page in pages for src in page.images),
+                prev_url=listing.neighbours_of(start)[0],
+                next_url=listing.neighbours_of(start)[1] or stop_url,
+                metadata={
+                    "site": "laza",
+                    "work": _work_of(url),
+                    "label": listing.labels.get(start, ""),
+                    "pages": [{"url": page.url, "title": page.title, "images": list(page.images)} for page in pages],
+                },
+                # A Movable Type work names nobody on its pages.
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _mt_pages(self, start: str, listing: MtListing) -> tuple[list[MtPage], str | None]:
@@ -541,24 +543,26 @@ class Laza(Extractor):
         listing = self._old_listing(self._base(url))
         match = _OLD_EPISODE_PATH.match(urlparse(url).path)
         number = match["number"] if match else ""
-        return Episode(
-            url=url,
-            series_title=page.series_title or _work_of(url),
-            episode_title=strips[0].caption or f"p{number}",
-            pages=tuple(Page(url=src) for strip in strips for src in strip.images),
-            prev_url=listing.neighbours_of(url)[0] or page.prev_url,
-            next_url=listing.neighbours_of(url)[1] or page.next_url,
-            metadata={
-                "site": "laza",
-                "work": _work_of(url),
-                "update": f"p{number}",
-                "date": listing.dates.get(url, ""),
-                "strips": [
-                    {"url": strip.url, "caption": strip.caption, "images": list(strip.images)} for strip in strips
-                ],
-            },
-            writer=page.writer,
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=url,
+                series_title=page.series_title or _work_of(url),
+                episode_title=strips[0].caption or f"p{number}",
+                pages=tuple(Page(url=src) for strip in strips for src in strip.images),
+                prev_url=listing.neighbours_of(url)[0] or page.prev_url,
+                next_url=listing.neighbours_of(url)[1] or page.next_url,
+                metadata={
+                    "site": "laza",
+                    "work": _work_of(url),
+                    "update": f"p{number}",
+                    "date": listing.dates.get(url, ""),
+                    "strips": [
+                        {"url": strip.url, "caption": strip.caption, "images": list(strip.images)} for strip in strips
+                    ],
+                },
+                writer=page.writer,
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _mt_listing(self, base: str) -> MtListing:

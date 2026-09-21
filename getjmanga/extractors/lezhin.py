@@ -259,16 +259,18 @@ class Lezhin(Extractor):
             )
             for entry in images
         )
-        return Episode(
-            url=canonical,
-            series_title=str((item.get("title") or {}).get("name") or title_id),
-            episode_title=str(item.get("name") or chapter_id),
-            pages=pages,
-            prev_url=prev_url,
-            next_url=next_url,
-            metadata={"info": info, "viewer": viewer, "error": None if pages else body.get("message")},
-            writer=self._writer(title_id),
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=canonical,
+                series_title=str((item.get("title") or {}).get("name") or title_id),
+                episode_title=str(item.get("name") or chapter_id),
+                pages=pages,
+                prev_url=prev_url,
+                next_url=next_url,
+                metadata={"info": info, "viewer": viewer, "error": None if pages else body.get("message")},
+                writer=self._writer(title_id),
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _writer(self, title_id: str) -> str:

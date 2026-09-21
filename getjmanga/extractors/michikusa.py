@@ -246,22 +246,24 @@ class Michikusa(Extractor):
         prev_url, next_url = neighbours(listing.urls, canonical) if listing else (None, None)
         if next_url is None and (listing is None or canonical not in listing.episodes):
             next_url = frame_next
-        return Episode(
-            url=canonical,
-            series_title=series_title,
-            episode_title=episode_title,
-            pages=tuple(Page(url=ptimg, extra={"spread": spread}) for ptimg, spread in pages),
-            prev_url=prev_url,
-            next_url=next_url,
-            metadata={
-                "title": title,
-                "direction": str(container.get("data-binbsp-direction") or ""),
-                "recommend": recommend,
-                "work_url": work_url,
-                "ptimg": [ptimg for ptimg, _ in pages],
-            },
-            writer=listing.writer if listing else "",
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=canonical,
+                series_title=series_title,
+                episode_title=episode_title,
+                pages=tuple(Page(url=ptimg, extra={"spread": spread}) for ptimg, spread in pages),
+                prev_url=prev_url,
+                next_url=next_url,
+                metadata={
+                    "title": title,
+                    "direction": str(container.get("data-binbsp-direction") or ""),
+                    "recommend": recommend,
+                    "work_url": work_url,
+                    "ptimg": [ptimg for ptimg, _ in pages],
+                },
+                writer=listing.writer if listing else "",
+                publisher=self.PUBLISHER,
+            )
         )
 
     def image(self, page: Page, episode: Episode) -> Image.Image:

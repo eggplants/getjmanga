@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from io import BytesIO
 
 import pytest
@@ -189,6 +190,17 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(client, fake_re
     # The work page is asked for oldest first, once per work.
     assert session.calls == [EPISODE_URL, WORK_URL]
     assert session.params_seen == [None, {"order": "episode_id_asc"}]
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    fullpercent, _ = client(
+        {
+            "/comic/view/2/2": fake_response(text=EPISODE_HTML),
+            "/comic/detail/2": fake_response(text=WORK_HTML),
+            PAGE_1: fake_response(b"", headers=uploaded),
+        },
+    )
+    assert fullpercent.episode(EPISODE_URL).published == date(2025, 8, 21)
 
 
 def test_episode_reads_the_work_page_once_per_work(client, fake_response):

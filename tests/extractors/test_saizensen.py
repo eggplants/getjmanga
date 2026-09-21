@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -439,6 +440,17 @@ def test_twi4_episode_reads_the_strip_and_skips_closed_ones_for_the_next(client,
     assert episode.metadata["closed"] is False
     assert session.calls == [TWI4_EPISODE_URL, f"{HOST}/comics/twi4/tsuredure/index.js"]
     assert "User-Agent" in session.headers_seen[0]
+
+
+def test_episode_is_dated_by_its_first_page_upload(client, fake_response, uploaded):
+    saizensen, _ = client(
+        {
+            "/tsuredure/index.js": fake_response(text=TWI4_INDEX_JS),
+            "/tsuredure/0009.html": fake_response(text=TWI4_HTML),
+            "/tsuredure/works/0009.": fake_response(b"", headers=uploaded),
+        },
+    )
+    assert saizensen.episode(TWI4_EPISODE_URL).published == date(2025, 8, 21)
 
 
 def test_twi4_next_comes_from_the_back_numbers_without_an_index(client, fake_response):

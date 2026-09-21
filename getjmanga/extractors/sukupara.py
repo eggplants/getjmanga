@@ -174,25 +174,27 @@ class Sukupara(Extractor):
         series_title = first.og_title or (match["series"] if match and match["series"] else "") or manga_id
         episode_title = (match["title"] if match else "") or first.heading or story_id
 
-        return Episode(
-            url=first_url,
-            series_title=series_title,
-            episode_title=episode_title,
-            pages=tuple(Page(url=src) for src in image_urls),
-            # The first page points back at the story before, the last page on to the one after.
-            prev_url=first.prev_story,
-            next_url=page.next_story,
-            metadata={
-                "manga_id": manga_id,
-                "story_id": story_id,
-                "heading": first.heading,
-                "series_url": series_url(manga_id),
-                "prev_url": first.prev_story,
-                "page_count": len(seen),
-                "images": image_urls,
-            },
-            writer=first.author,
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=first_url,
+                series_title=series_title,
+                episode_title=episode_title,
+                pages=tuple(Page(url=src) for src in image_urls),
+                # The first page points back at the story before, the last page on to the one after.
+                prev_url=first.prev_story,
+                next_url=page.next_story,
+                metadata={
+                    "manga_id": manga_id,
+                    "story_id": story_id,
+                    "heading": first.heading,
+                    "series_url": series_url(manga_id),
+                    "prev_url": first.prev_story,
+                    "page_count": len(seen),
+                    "images": image_urls,
+                },
+                writer=first.author,
+                publisher=self.PUBLISHER,
+            )
         )
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from io import BytesIO
 
 import pytest
@@ -230,6 +231,11 @@ def test_episode_reads_the_titles_the_pages_and_the_next_episode(fake_session, f
     # The reader, then the work page its URL names.
     assert session.calls == [EPISODE_URL, SERIES_URL]
     assert session.headers_seen[0]["User-Agent"]
+
+
+def test_episode_is_dated_by_its_first_page_upload(fake_session, fake_response, uploaded):
+    session = site(fake_session, fake_response, **{"/data/0001.ptimg.json": fake_response(b"", headers=uploaded)})
+    assert Kirapo(session).episode(EPISODE_URL).published == date(2025, 8, 21)
 
 
 def test_episode_takes_the_episode_name_from_the_work_page(fake_session, fake_response):

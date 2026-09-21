@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from http import HTTPStatus
 from io import BytesIO
 
@@ -237,6 +238,13 @@ def test_episode_reads_the_titles_the_pages_and_the_next(fake_session, fake_resp
     assert episode.metadata["slug"] == "fv_01"
     assert session.calls == [EPISODE_URL]
     assert session.headers_seen[0]["User-Agent"].startswith("Mozilla/5.0")
+
+
+def test_episode_is_dated_by_its_first_page_upload(fake_session, fake_response, uploaded):
+    session = fake_session(
+        {"/story/fv_01": fake_response(text=EPISODE_HTML), "fv01_001.jpg": fake_response(b"", headers=uploaded)}
+    )
+    assert Torch(session).episode(EPISODE_URL).published == date(2025, 8, 21)
 
 
 def test_episode_at_the_end_of_a_work_has_no_next(fake_session, fake_response):

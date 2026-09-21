@@ -156,24 +156,26 @@ class ComicEssay(Extractor):
         heading = _text(detail, "episode-detail__episode-ttl")
         episode_title = "　".join(part for part in (number, heading) if part) or episode_id
 
-        return Episode(
-            url=url,
-            series_title=series_title,
-            episode_title=episode_title,
-            pages=tuple(Page(url=src) for src in image_urls),
-            prev_url=_pager_link(detail, "_btn-pager-left", url),
-            next_url=_pager_link(detail, "_btn-pager-right", url),
-            metadata={
-                "series_id": series_id,
-                "episode_id": episode_id,
-                "number": number,
-                "heading": heading,
-                "series_url": f"{BASE_URL}/episode/{series_id}/" if series_id else "",
-                "prev_url": _pager_link(detail, "_btn-pager-left", url),
-                "images": image_urls,
-            },
-            writer=_credits(soup),
-            publisher=self.PUBLISHER,
+        return self._dated_by_upload(
+            Episode(
+                url=url,
+                series_title=series_title,
+                episode_title=episode_title,
+                pages=tuple(Page(url=src) for src in image_urls),
+                prev_url=_pager_link(detail, "_btn-pager-left", url),
+                next_url=_pager_link(detail, "_btn-pager-right", url),
+                metadata={
+                    "series_id": series_id,
+                    "episode_id": episode_id,
+                    "number": number,
+                    "heading": heading,
+                    "series_url": f"{BASE_URL}/episode/{series_id}/" if series_id else "",
+                    "prev_url": _pager_link(detail, "_btn-pager-left", url),
+                    "images": image_urls,
+                },
+                writer=_credits(soup),
+                publisher=self.PUBLISHER,
+            )
         )
 
     def _fetch_page(self, url: str, kind: str) -> Response:
