@@ -5,9 +5,11 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, get_args
 from urllib.parse import urlparse
 
+from cbz import ComicInfo, PageInfo
+from cbz import Format as ComicFormat
 from pathvalidate import sanitize_filename
 from rich.progress import (
     BarColumn,
@@ -26,6 +28,9 @@ if TYPE_CHECKING:
 #: The image format each page is saved as.
 Format = Literal["jpg", "png", "webp"]
 
+#: The directory under a series where `cbz=True` puts its archives.
+CBZ_DIR = "_cbz"
+
 #: What became of an episode: written, left alone because it was already
 #: there, or locked behind a purchase, a wait or a login.
 Status = Literal["saved", "exists", "locked"]
@@ -38,15 +43,17 @@ class Result:
     episode: Episode
     save_dir: Path
     status: Status
+    #: The `.cbz` the pages were packed into, when asked for; None otherwise.
+    archive: Path | None = None
 
     @property
     def saved(self) -> bool:
-        """Whether pages were written this time."""
+        """Whether pages, or the archive, were written this time."""
         return self.status == "saved"
 
 
 class Downloader:
-    """Write episodes to `<save_path>/<host>/<series>/<episode>/<page>.jpg`."""
+    """Write episodes to `<save_path>/<host>/<series>/<episode>/<page>.jpg`, and pack them into `.cbz` on request."""
 
     def __init__(
         self,
@@ -58,6 +65,7 @@ class Downloader:
         save_metadata: bool = False,
         progress: bool = False,
         fmt: Format = "jpg",
+        cbz: bool = False,
     ) -> None:
         """Build a downloader.
 
@@ -69,6 +77,9 @@ class Downloader:
             save_metadata: Also write `metadata.json` next to the pages.
             progress: Draw a progress bar.
             fmt: The image format to save each page as.
+            cbz: Also pack the saved pages into `<host>/<series>/_cbz/<episode>.cbz`,
+                with a `ComicInfo.xml` naming the episode. Pages already on disk are
+                packed as they are, without downloading them again.
         """
         self.extractor = extractor
         self.save_path = Path(save_path)
@@ -77,6 +88,7 @@ class Downloader:
         self.save_metadata = save_metadata
         self.progress = progress
         self.fmt = fmt
+        self.cbz = cbz
 
     def download(self, url: str) -> Result:
         """Download one episode.
@@ -88,22 +100,28 @@ class Downloader:
             The episode, the directory it belongs in, and what was done.
         """
         episode = self.extractor.episode(url)
-        save_dir = (
-            self.save_path / self._site(episode) / _dirname(episode.series_title) / _dirname(episode.episode_title)
-        )
-        if save_dir.exists() and not self.overwrite:
-            return Result(episode, save_dir, "exists")
-        if not episode.readable:
-            return Result(episode, save_dir, "locked")
+        series_dir = self.save_path / self._site(episode) / _dirname(episode.series_title)
+        stem = _dirname(episode.episode_title)
+        save_dir = series_dir / stem
+        archive = series_dir / CBZ_DIR / f"{stem}.cbz" if self.cbz else None
+        pages_there = save_dir.exists() and not self.overwrite
+        archive_there = archive is None or (archive.exists() and not self.overwrite)
+        if pages_there and archive_there:
+            return Result(episode, save_dir, "exists", archive)
 
-        save_dir.mkdir(parents=True, exist_ok=True)
-        if self.save_metadata:
-            (save_dir / "metadata.json").write_text(
-                json.dumps(asdict(episode), indent=4, ensure_ascii=False),
-                encoding="utf-8",
-            )
-        self._save_pages(episode, save_dir)
-        return Result(episode, save_dir, "saved")
+        if not pages_there:
+            if not episode.readable:
+                return Result(episode, save_dir, "locked", archive)
+            save_dir.mkdir(parents=True, exist_ok=True)
+            if self.save_metadata:
+                (save_dir / "metadata.json").write_text(
+                    json.dumps(asdict(episode), indent=4, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+            self._save_pages(episode, save_dir)
+        if archive is not None and not archive_there:
+            self._pack(episode, save_dir, archive)
+        return Result(episode, save_dir, "saved", archive)
 
     def _site(self, episode: Episode) -> str:
         """The directory a site's episodes go under: its host, or the extractor's name without one."""
@@ -136,6 +154,21 @@ class Downloader:
                 image.save(save_dir / f"{index:0{width}d}.{self.fmt}", quality=95)
                 progress.update(task, advance=1)
 
+    @staticmethod
+    def _pack(episode: Episode, save_dir: Path, archive: Path) -> None:
+        """Every page image in `save_dir`, as it is, into `archive` with a `ComicInfo.xml`."""
+        files = sorted(path for path in save_dir.iterdir() if path.suffix.lower() in _SUFFIXES)
+        comic = ComicInfo.from_pages(
+            [PageInfo.load(path) for path in files],
+            title=episode.episode_title,
+            series=episode.series_title,
+            web=episode.url,
+            format=ComicFormat.WEB_COMIC,
+            language_iso="ja",
+        )
+        archive.parent.mkdir(parents=True, exist_ok=True)
+        comic.save(archive)
+
 
 #: The image modes each format writes as they are; anything else is converted first.
 _MODES: dict[Format, tuple[str, ...]] = {
@@ -143,6 +176,9 @@ _MODES: dict[Format, tuple[str, ...]] = {
     "png": ("1", "L", "LA", "P", "RGB", "RGBA"),
     "webp": ("RGB", "RGBA"),
 }
+
+#: What `_pack` picks up out of an episode directory: the pages, not `metadata.json`.
+_SUFFIXES = frozenset(f".{fmt}" for fmt in get_args(Format))
 
 
 def _dirname(title: str) -> str:

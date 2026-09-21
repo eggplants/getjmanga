@@ -37,6 +37,7 @@ classifiers = [
 dynamic = [ "version" ]
 dependencies = [
   "beautifulsoup4>=4.12",
+  "cbz>=4",
   "cryptography>=43",
   "httpx>=0.28",
   "pathvalidate>=3.2",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 import pytest
+from cbz import ComicInfo
 from PIL import Image
 
 from getjmanga.downloader import Downloader
@@ -120,6 +121,62 @@ def test_png_converts_a_mode_png_cannot_hold(tmp_path):
     result = Downloader(Canned(episode(pages=1), mode="CMYK"), tmp_path, fmt="png").download("u")
     with Image.open(result.save_dir / "0.png") as saved:
         assert saved.mode == "RGB"
+
+
+def test_cbz_packs_the_saved_pages_as_they_are_under_the_series(tmp_path):
+    result = Downloader(Canned(episode()), tmp_path, fmt="png", cbz=True).download("u")
+
+    assert result.status == "saved"
+    assert result.archive == tmp_path / "example.com" / "Series" / "_cbz" / "Episode 1.cbz"
+    # The pages stay where they were; the archive is one more thing.
+    assert sorted(path.name for path in result.save_dir.iterdir()) == ["0.png", "1.png", "2.png"]
+    assert result.archive is not None
+    comic = ComicInfo.from_cbz(result.archive)
+    assert [page.suffix for page in comic] == [".png"] * 3
+    assert (comic.title, comic.series, comic.web) == ("Episode 1", "Series", "https://example.com/ep/1")
+    assert str(comic.language_iso) == "ja"
+
+
+def test_cbz_packs_pages_already_on_disk_without_downloading_them(tmp_path):
+    save_dir = tmp_path / "example.com" / "Series" / "Episode 1"
+    save_dir.mkdir(parents=True)
+    for name in ("1.jpg", "0.jpg"):
+        Image.new("RGB", (4, 4)).save(save_dir / name)
+    (save_dir / "metadata.json").write_text("{}")
+    extractor = Canned(episode())
+
+    result = Downloader(extractor, tmp_path, cbz=True).download("u")
+
+    assert result.status == "saved"
+    assert extractor.fetched == []
+    assert result.archive is not None
+    comic = ComicInfo.from_cbz(result.archive)
+    assert [page.suffix for page in comic] == [".jpeg", ".jpeg"]
+
+
+def test_cbz_leaves_an_existing_archive_alone(tmp_path):
+    (tmp_path / "example.com" / "Series" / "Episode 1").mkdir(parents=True)
+    (tmp_path / "example.com" / "Series" / "_cbz").mkdir()
+    (tmp_path / "example.com" / "Series" / "_cbz" / "Episode 1.cbz").write_bytes(b"")
+    extractor = Canned(episode())
+
+    result = Downloader(extractor, tmp_path, cbz=True).download("u")
+
+    assert result.status == "exists"
+    assert extractor.fetched == []
+    assert result.archive == tmp_path / "example.com" / "Series" / "_cbz" / "Episode 1.cbz"
+
+
+def test_a_locked_episode_gets_no_archive(tmp_path):
+    result = Downloader(Canned(episode(pages=0)), tmp_path, cbz=True).download("u")
+    assert result.status == "locked"
+    assert result.archive is not None
+    assert not result.archive.exists()
+
+
+def test_without_cbz_there_is_no_archive(tmp_path):
+    result = Downloader(Canned(episode()), tmp_path).download("u")
+    assert result.archive is None
 
 
 def test_titles_are_made_safe_for_the_file_system(tmp_path):

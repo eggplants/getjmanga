@@ -146,6 +146,12 @@ def parse_args(args: list[str] | None = None, *, patrol: bool = False) -> Namesp
         default="jpg",
         help="image format to save each page as",
     )
+    parser.add_argument(
+        "-C",
+        "--cbz",
+        action="store_true",
+        help="also pack the saved pages into <series>/_cbz/<episode>.cbz (pages already saved are packed as they are)",
+    )
     parser.add_argument("-o", "--overwrite", action=BooleanOptionalAction, help="download again if it exists")
     parser.add_argument("-m", "--metadata", action="store_true", help="save episode metadata as json")
     parser.add_argument("-u", "--username", metavar="ID", help="id or email address to log in with")
@@ -371,6 +377,8 @@ class Walk:
             print(f"skip: '{result.episode.episode_title}' needs a purchase, a wait or a login.", file=sys.stderr)
         elif not self.quiet:
             print("saved:" if result.saved else "skipped (already there):", result.save_dir)
+            if result.saved and result.archive is not None:
+                print("packed:", result.archive)
         return result
 
     def chain(self, start: Result, *, back: bool) -> list[Result]:
@@ -518,6 +526,7 @@ class Runner:
             save_metadata=parsed.metadata,
             progress=not parsed.quiet,
             fmt=parsed.format,
+            cbz=parsed.cbz,
         )
         queue = episode_urls(extractor, url, quiet=parsed.quiet)
         visited = download(
