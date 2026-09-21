@@ -610,6 +610,40 @@ def test_config_site_needs_a_username(isolated_config, monkeypatch, capsys):
     assert not isolated_config.exists()
 
 
+def test_config_patrol_reads_the_title_without_downloading(recording, isolated_config, capsys):
+    main(["c", "patrol", "https://mangabu.jp/episodes/0"])
+    assert load_config().patrol == (Work(url="https://mangabu.jp/episodes/0", title="S"),)
+    assert recording.instances[0].episodes == ["https://mangabu.jp/episodes/0"]
+    assert recording.instances[0].images == 0
+    assert f"saved: https://mangabu.jp/episodes/0 in {isolated_config}" in capsys.readouterr().out
+
+
+def test_config_patrol_reads_a_series_title_off_its_first_episode(recording, isolated_config):
+    main(["c", "patrol", "https://mangabu.jp/series/1"])
+    assert load_config().patrol == (Work(url="https://mangabu.jp/series/1", title="S"),)
+    assert recording.instances[0].episodes == ["https://mangabu.jp/episodes/feed0"]
+
+
+def test_config_patrol_signs_in_with_the_config_file(recording, isolated_config):
+    write_config(isolated_config, '[site."mangabu.jp"]\nusername = "me"\npassword = "pw"\n')
+    main(["c", "patrol", "https://mangabu.jp/episodes/0"])
+    assert recording.instances[0].logins == [("https://mangabu.jp/episodes/0", "me", "pw")]
+
+
+def test_config_patrol_dash_s_stores_a_page_as_is(recording, isolated_config, capsys):
+    main(["c", "patrol", "-s", "https://example.com/list/[1-]"])
+    assert load_config().patrol == (Work(url="https://example.com/list/[1-]", search=True),)
+    assert recording.instances == []
+
+
+def test_config_patrol_fails_on_a_url_no_extractor_takes(isolated_config, capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        main(["c", "patrol", "https://example.com/nothing"])
+    assert excinfo.value.code == 1
+    assert "no extractor takes" in capsys.readouterr().err
+    assert not isolated_config.exists()
+
+
 def test_config_site_stops_when_the_input_ends(isolated_config, monkeypatch, capsys):
     def eof(prompt):
         raise EOFError

@@ -90,7 +90,10 @@ jm c site piccoma
 jm c savedir ~/manga
 jm c overwrite true
 jm c bulk false
-jm c both true      # -B by default; turns bulk off, and the other way round
+jm c both true      # -B by default. Turns bulk off, and the other way round
+
+jm c patrol https://shonenjumpplus.com/episode/13932016480028799982
+jm c patrol -s https://shonenjumpplus.com/
 ```
 
 ### Patrol

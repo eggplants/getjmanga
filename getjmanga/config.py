@@ -33,8 +33,8 @@ extractor's `CONFIG_KEY`, so a per-host section beats the shared one.
 `jm config` writes the file: `init` lays down a commented template, `site`
 asks for an account, and `savedir` / `overwrite` / `bulk` / `both` set the
 defaults (`bulk` and `both` rule each other out: setting one clears the other).
-`-S` and `jm patrol` keep the `[[patrol]]` entries. The writes go through
-tomlkit so the comments in a hand-edited file survive.
+`-S`, `jm config patrol` and `jm patrol` keep the `[[patrol]]` entries. The
+writes go through tomlkit so the comments in a hand-edited file survive.
 """
 
 from __future__ import annotations
@@ -79,7 +79,7 @@ both = false
 
 # targets of `jm patrol`
 # patrol = [
-#   { url = "https://shonenjumpplus.com/episode/13932016480028799982", title = "SPY×FAMILY" },
+#   { url = "https://shonenjumpplus.com/episode/13932016480028799982", title = "阿波連さんははかれない" },
 #   { url = "https://shonenjumpplus.com/", search = true },
 #   ...
 # ]

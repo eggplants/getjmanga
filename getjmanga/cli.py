@@ -217,6 +217,9 @@ def parse_config_args(args: list[str]) -> Namespace:
     for name, flag in (("overwrite", "-o"), ("bulk", "-b (turns both off)"), ("both", "-B (turns bulk off)")):
         setter = commands.add_parser(name, help=f"set whether {flag} is on by default")
         setter.add_argument("value", choices=("true", "false"))
+    patrol = commands.add_parser("patrol", help="add a url for `getjmanga patrol`, without downloading it now")
+    patrol.add_argument("url", help="an episode or series url, whose title is read from the site, or a page with -s")
+    patrol.add_argument("-s", "--search", action="store_true", help="a web page to download the links of")
     if not args:
         parser.print_help()
         raise SystemExit(0)
@@ -259,7 +262,8 @@ def config_main(args: list[str]) -> None:
     """Run `jm config ...`.
 
     Raises:
-        SystemExit: The file could not be written, or no username was typed.
+        SystemExit: The file could not be written, no username was typed, or
+            the site `patrol` reads a title from could not be reached.
     """
     parsed = parse_config_args(args)
     try:
@@ -272,10 +276,18 @@ def config_main(args: list[str]) -> None:
         elif parsed.command == "savedir":
             path = set_option("savedir", str(parsed.dir.expanduser().absolute()), parsed.config)
             print(f"saved: savedir in {path}")
+        elif parsed.command == "patrol":
+            work = Work(url=parsed.url, search=True)
+            if not parsed.search:
+                # Only what `extractor()` and `login()` read of a command line: no -u, no -e, not -q.
+                runner = Runner(Namespace(username=None, extractor=None, quiet=False), load_config(parsed.config), None)
+                work = Work(url=parsed.url, title=runner.title(parsed.url))
+            path = store_work(work, parsed.config)
+            print(f"saved: {work.url} in {path}")
         else:
             path = set_option(parsed.command, parsed.value == "true", parsed.config)
             print(f"saved: {parsed.command} in {path}")
-    except GetjmangaError as exc:
+    except (GetjmangaError, HTTPError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
 
@@ -536,6 +548,26 @@ class Runner:
         chain = not self.extractor(work.url).is_series(work.url)
         pending = next((result for result in visited if result.status == "locked"), visited[-1])
         return Work(url=pending.episode.url if chain else work.url, title=visited[-1].episode.series_title)
+
+    def title(self, url: str) -> str:
+        """Read the series title at `url` off the site, without downloading anything.
+
+        Args:
+            url: An episode URL, or a series URL whose first listed episode is read.
+
+        Returns:
+            The `series_title` of the episode.
+
+        Raises:
+            NothingReadableError: The series lists no episode to read the title from.
+        """
+        extractor = self.extractor(url)
+        self.login(extractor, url)
+        episodes = episode_urls(extractor, url, quiet=True)
+        if not episodes:
+            msg = f"the series at {url} lists no episode."
+            raise NothingReadableError(msg)
+        return extractor.episode(episodes[0]).series_title
 
     def search(self, url: str) -> None:
         """Download every link on the page at `url` that an extractor takes.
