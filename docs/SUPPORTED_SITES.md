@@ -1,5 +1,138 @@
 # Supported sites
 
+```txt
+123hon.com
+alphapolis.co.jp
+asacomi.jp
+beltoon.jp
+berrys-cafe.jp
+bibibi-comic.com
+bigcomics.jp
+bloom.homesha.co.jp
+carula.jp
+challenge-mee.manga-meets.jp
+championcross.jp
+ciao.shogakukan.co.jp
+cmoa.jp
+comic-action.com
+comic-boost.com
+comicborder.com
+comic-days.com
+comic-earthstar.com
+comic-essay.com
+comic-fuz.com
+comic-gardo.com
+comic-growl.com
+comiciwate.jp
+comic.j-nbooks.jp
+comic.mf-fleur.jp
+comicnettai.com
+comic-ogyaaa.com
+comico.jp
+comicpash.jp
+comic.pixiv.net
+comic-porta.com
+comicride.jp
+comic-room-base.com
+comic-ryu.jp
+comics.comici.jp
+comic-seasons.com
+comics.manga-bang.com
+comics.pie.co.jp
+comic-trail.com
+comic-walker.com
+comic-y-ours.com
+comic-zenon.com
+comirela.com
+corocoro.jp
+crea.bunshun.jp
+creators.mechacomic.jp
+cycomi.com
+daysneo.com
+drecomi-plus.jp
+ebookstore.corkagency.com
+feelweb.jp
+firecross.jp
+flowercomics.jp
+fullpercent.net
+gakcomic.gakken.jp
+ganganonline.com
+ganma.jp
+gaugau.futabanet.jp
+g-comi.jp
+gorakuweb.com
+hanayume.com
+hayacomic.jp
+heros-web.com
+ichicomi.com
+kansai.mag-garden.co.jp
+kimicomi.com
+kirapo.jp
+kuragebunch.com
+laza.mandarake.co.jp
+leedcafe.com
+lezhin.jp
+magcomi.com
+manga-5.com
+mangabox.me
+mangabu.jp
+manga-gai.net
+manga-lab.net
+manga.line.me
+mangalt.jp
+manga-meets.jp
+manga.nicovideo.jp
+manga-no.com
+manga-one.com
+manga-park.com
+mangaspa.nikkan-spa.jp
+mangatime-square.com
+manga-zegra.com
+mavo.takekuma.jp
+michikusacomics.jp
+namicomic.jp
+neetsha.jp
+nikkangecchan.jp
+no-ichigo.jp
+nora.gakken.jp
+note.com
+novema.jp
+omocoro.jp
+ourfeel.jp
+pachikuri.jp
+piacomic.jp
+piccoma.com
+pocket.shonenmagazine.com
+rimacomiplus.jp
+rookie.shonenjump.com
+sai-zen-sen.jp
+seiga.nicovideo.jp
+shinshokan.com
+shiori-on.com
+shonenjumpplus.com
+shuro.world
+souffle.life
+splush.jp
+sp.manga.nicovideo.jp
+studio.booklista.co.jp
+sukupara.jp
+sunday-webry.com
+takecomic.jp
+to-corona-ex.com
+tonarinoyj.jp
+to-ti.in
+vcomi.jp
+webcomic.ohtabooks.com
+yanmaga.jp
+yawaspi.com
+ynjn.jp
+yomonga.com
+yondemill.jp
+younganimal.com
+youngchampion.jp
+zerosumonline.com
+```
+
 ## Sites
 
 | Site | Publisher | Platform | Extractor |
@@ -129,10 +262,6 @@
 | [路草](https://michikusacomics.jp/) | トゥーヴァージンズ | SpeedBinb | `michikusa` |
 | [コミックカルラ](https://carula.jp/) | 世界文化ブックス | note | `carula` |
 | [コミックシーモア](https://www.cmoa.jp/) | NTTソルマーレ | SpeedBinb | `cmoa` |
-
-コミックシーモア is read without an account: the 立ち読み of every volume, and the whole
-volume while it is on a free campaign. The store signs in through an OpenID provider
-guarded by reCAPTCHA, so `cmoa` has no `login()` and bought volumes are out of reach.
 
 ## URL formats
 
