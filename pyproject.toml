@@ -55,7 +55,7 @@ scripts.jm = "getjmanga.cli:main"
 [dependency-groups]
 dev = [
   "pymarkdownlnt>=0.9.33",
-  "pyproject-fmt>=2.11.1",
+  "pyproject-fmt-py>=0",
   "pytest>=9.0.2",
   "pytest-cov>=7",
 ]
@@ -75,6 +75,8 @@ default-groups = [
   "docs",
 ]
 exclude-newer = "P7D"
+# Own package: no cooldown needed.
+exclude-newer-package = { pyproject-fmt-py = "P0D" }
 preview = true
 
 [tool.ruff]
@@ -135,7 +137,7 @@ lint.per-file-ignores."tests/**" = [
   "SLF001",  # Private member access (the base class helpers the extractors share)
   "TRY003",  # Long exception messages (fakes raise inline)
 ]
-lint.allowed-confusables = [ "×", "／", "：", "｜" ]  # Fullwidth forms the sites put in titles and credits
+lint.allowed-confusables = [ "／", "：", "｜", "×" ]  # Fullwidth forms the sites put in titles and credits
 lint.pydocstyle.convention = "google"
 
 [tool.pytest]
