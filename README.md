@@ -10,6 +10,8 @@
   <https://github.com/eggplants/getjmanga/actions/workflows/ci.yml>
 )
 
+**Android App 👉 [Godlo](https://egpl.dev/godlo/)✨**
+
 Retrieve and save images from Japanese web comic sites.
 
 _Do not redistribute the downloaded images. Keep them for private use._
