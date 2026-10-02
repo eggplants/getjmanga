@@ -457,9 +457,12 @@ def test_image_puts_the_page_together(fake_session, fake_response):
 
 # --- the real site --------------------------------------------------------------------
 
-# One free episode per imprint; both imprints share the one host in `HOSTS`.
+# One free episode per imprint; both imprints share the one host in `HOSTS`. A polca
+# work keeps only its first and latest episodes up, so it needs one that has a latest.
+POLCA_EPISODE_URL = "https://www.123hon.com/vw/meshiya/sv_pt000682ee105ead99_01/"
+POLCA_SERIES_URL = "https://www.123hon.com/polca/web-comic/meshiya/"
 TEST_URLS: dict[str, str] = {
-    "www.123hon.com/polca": EPISODE_URL,
+    "www.123hon.com/polca": POLCA_EPISODE_URL,
     "www.123hon.com/nova": NOVA_EPISODE_URL,
 }
 
@@ -475,7 +478,9 @@ def test_site_download(tmp_path, imprint):
 
 
 @pytest.mark.network
-@pytest.mark.parametrize(("series_url", "first"), [(SERIES_URL, EPISODE_URL), (NOVA_SERIES_URL, NOVA_EPISODE_URL)])
+@pytest.mark.parametrize(
+    ("series_url", "first"), [(POLCA_SERIES_URL, POLCA_EPISODE_URL), (NOVA_SERIES_URL, NOVA_EPISODE_URL)]
+)
 def test_work_page_lists_episodes(series_url, first):
     urls = Hifumi().series_urls(series_url)
     assert urls[0] == first
