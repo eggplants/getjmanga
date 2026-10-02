@@ -26,7 +26,6 @@ from .ciao import Ciao
 from .cmoa import Cmoa
 from .comicessay import ComicEssay
 from .comici import Comici
-from .comico import Comico
 from .comicwalker import ComicWalker
 from .corocoro import Corocoro
 from .corona import Corona
@@ -102,7 +101,6 @@ EXTRACTORS: tuple[type[Extractor], ...] = (
     Splush,
     ZeroSum,
     Ginkgo,
-    Comico,
     Ohta,
     Nora,
     ComicWalker,
@@ -218,7 +216,6 @@ __all__ = (
     "ComicEssay",
     "ComicWalker",
     "Comici",
-    "Comico",
     "Corocoro",
     "Corona",
     "Crea",

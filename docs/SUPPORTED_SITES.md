@@ -28,7 +28,6 @@ comic.j-nbooks.jp
 comic.mf-fleur.jp
 comicnettai.com
 comic-ogyaaa.com
-comico.jp
 comicpash.jp
 comic.pixiv.net
 comic-porta.com
@@ -147,7 +146,6 @@ zerosumonline.com
 | [ゼロサムオンライン](https://zerosumonline.com/) | 一迅社 | - | `zerosum` |
 | [一迅プラス](https://ichicomi.com/) | 一迅社 | GigaViewer | `gigaviewer` |
 | [コミックいわてWEB](http://comiciwate.jp/) | 岩手県／銀杏社 | - | `ginkgo` |
-| [comico](https://www.comico.jp/) | NHN comico | - | `comico` |
 | [Ohta Web Comic](https://webcomic.ohtabooks.com/) | 太田出版 | YONDEMILL (SpeedBinb) | `ohta` |
 | [コミックガルド](https://comic-gardo.com/) | オーバーラップ | GigaViewer | `gigaviewer` |
 | [ピッコマ](https://piccoma.com/web/) | カカオピッコマ | - | `piccoma` |
@@ -295,8 +293,6 @@ zerosumonline.com
 | `ginkgo` | `http://comiciwate.jp/comic/<work>/` -- a one-shot, saved under `コミックいわてWEB/<title>/`; `/foreign/<work>_<lang>/` -- a translation |
 | | `http://www.manga-gai.net/manga/<work>/<episode>/01.html` -- one 漫画街 episode (any page of it) |
 | | `http://www.manga-gai.net/manga/<work>/<work>_index/<work>_index.html` -- every episode of a 漫画街 work, oldest first |
-| `comico` | `https://www.comico.jp/comic/<content>/chapter/<chapter>/product` (or `/trial`); `magazine_comic` works alike |
-| | `https://www.comico.jp/comic/<content>` -- every listed chapter (episodes, or volumes for volume-only books) |
 | `ohta` | `https://www.yondemill.jp/contents/<id>` -- what a work page's read button opens |
 | | `https://webcomic.ohtabooks.com/<slug>/` -- every episode still free, oldest first |
 | `nora` | `https://nora.gakken.jp/comic/page-<slug>/?episode_id=<id>` |
