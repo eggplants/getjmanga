@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from getjmanga.console import logger, setup, summary
+from getjmanga.console import logger, setup, site, summary
 from getjmanga.downloader import Result
 from getjmanga.extractor import Episode
 
@@ -60,3 +60,22 @@ def test_setup_replaces_what_it_set_up_before(capsys):
     setup()
     logger.info("once")
     assert capsys.readouterr().out == "once\n"
+
+
+def test_a_line_names_the_extractor_at_work(capsys):
+    setup()
+    with site("alphapolis"):
+        logger.info("hello")
+        logger.error("broken")
+    logger.info("done.")
+    assert capsys.readouterr() == ("[alphapolis] hello\ndone.\n", "error: [alphapolis] broken\n")
+
+
+def test_verbose_lines_name_the_extractor_at_work(capsys):
+    setup(verbose=True)
+    with site("alphapolis"):
+        logger.info("hello")
+    logger.info("done.")
+    lines = capsys.readouterr().err.splitlines()
+    assert lines[0].endswith("getjmanga: [alphapolis] hello")
+    assert lines[1].endswith("getjmanga: done.")

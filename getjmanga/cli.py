@@ -32,7 +32,7 @@ from .config import (
     set_site,
     store_work,
 )
-from .console import Display, logger, setup
+from .console import Display, logger, setup, site
 from .downloader import Downloader, Format
 from .errors import GetjmangaError, NotAnEpisodePageError, NothingReadableError
 from .extractors import EXTRACTORS, find_extractor, get_extractor
@@ -586,40 +586,41 @@ class Runner:
         """
         parsed = self.parsed
         extractor = self.extractor(url)
-        self.login(extractor, url)
+        with site(extractor.NAME):
+            self.login(extractor, url)
 
-        # A series listing already names every episode, so there is no next episode to follow.
-        series = extractor.is_series(url)
-        if series and bulk is None and (parsed.bulk or parsed.both):
-            logger.warning("warning: -b/-B does nothing for a series, every listed episode is downloaded.")
-        downloader = Downloader(
-            extractor,
-            parsed.savedir,
-            overwrite=parsed.overwrite,
-            only_first=parsed.first,
-            save_metadata=parsed.metadata,
-            progress=self.display.pages,
-            fmt=parsed.format,
-            cbz=parsed.cbz,
-        )
-        self.display.work(url)
-        try:
-            queue = episode_urls(extractor, url, self.display)
-            visited = download(
-                downloader,
-                queue,
-                self.display,
-                series=series,
-                bulk=(parsed.bulk or parsed.both) if bulk is None else bulk,
-                back=parsed.both if back is None else back,
+            # A series listing already names every episode, so there is no next episode to follow.
+            series = extractor.is_series(url)
+            if series and bulk is None and (parsed.bulk or parsed.both):
+                logger.warning("warning: -b/-B does nothing for a series, every listed episode is downloaded.")
+            downloader = Downloader(
+                extractor,
+                parsed.savedir,
+                overwrite=parsed.overwrite,
+                only_first=parsed.first,
+                save_metadata=parsed.metadata,
+                progress=self.display.pages,
+                fmt=parsed.format,
+                cbz=parsed.cbz,
             )
-        finally:
-            # Whatever ended the work, the display comes down and says what it got through.
-            self.display.done()
-        if series and all(result.status == "locked" for result in visited):
-            msg = f"no episode in the series at {url} was readable."
-            raise NothingReadableError(msg)
-        return visited
+            self.display.work(url)
+            try:
+                queue = episode_urls(extractor, url, self.display)
+                visited = download(
+                    downloader,
+                    queue,
+                    self.display,
+                    series=series,
+                    bulk=(parsed.bulk or parsed.both) if bulk is None else bulk,
+                    back=parsed.both if back is None else back,
+                )
+            finally:
+                # Whatever ended the work, the display comes down and says what it got through.
+                self.display.done()
+            if series and all(result.status == "locked" for result in visited):
+                msg = f"no episode in the series at {url} was readable."
+                raise NothingReadableError(msg)
+            return visited
 
     def visit(self, work: Work, *, bulk: bool | None = None, back: bool | None = None) -> Work | None:
         """Download `work`, the way `-S` stored it, and say what to store now.
@@ -658,12 +659,13 @@ class Runner:
             NothingReadableError: The series lists no episode to read the title from.
         """
         extractor = self.extractor(url)
-        self.login(extractor, url)
-        episodes = episode_urls(extractor, url)
-        if not episodes:
-            msg = f"the series at {url} lists no episode."
-            raise NothingReadableError(msg)
-        return extractor.episode(episodes[0]).series_title
+        with site(extractor.NAME):
+            self.login(extractor, url)
+            episodes = episode_urls(extractor, url)
+            if not episodes:
+                msg = f"the series at {url} lists no episode."
+                raise NothingReadableError(msg)
+            return extractor.episode(episodes[0]).series_title
 
     def search(self, url: str) -> None:
         """Download every link on the page at `url` that an extractor takes.

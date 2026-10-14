@@ -350,7 +350,7 @@ def test_quiet_prints_nothing(recording, capsys):
 def test_quiet_still_warns(recording, capsys):
     recording.missing = {"https://mangabu.jp/episodes/1"}
     main(["-q", "-b", "https://mangabu.jp/episodes/0"])
-    assert capsys.readouterr().err == "stop: the next episode is not readable.\n"
+    assert capsys.readouterr().err == "[recording] stop: the next episode is not readable.\n"
 
 
 def test_verbose_logs_every_step_with_a_timestamp(recording, capsys):
@@ -361,19 +361,19 @@ def test_verbose_logs_every_step_with_a_timestamp(recording, capsys):
         re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} (DEBUG|INFO|WARNING) +getjmanga: ", line) for line in lines
     )
     assert [line.split(": ", 1)[1] for line in lines] == [
-        "get: https://mangabu.jp/episodes/0",
-        "'ep1': 1 pages",
-        "page 1/1",
-        "saved: mangabu.jp/S/ep1",
-        "packed: mangabu.jp/S/_cbz/ep1.cbz",
-        "get: https://mangabu.jp/episodes/1",
-        "skip: 'ep2' needs a purchase, a wait or a login.",
-        "get: https://mangabu.jp/episodes/2",
-        "'ep3': 1 pages",
-        "page 1/1",
-        "saved: mangabu.jp/S/ep3",
-        "packed: mangabu.jp/S/_cbz/ep3.cbz",
-        "saved: mangabu.jp/S (2 episodes, 1 locked)",
+        "[recording] get: https://mangabu.jp/episodes/0",
+        "[recording] 'ep1': 1 pages",
+        "[recording] page 1/1",
+        "[recording] saved: mangabu.jp/S/ep1",
+        "[recording] packed: mangabu.jp/S/_cbz/ep1.cbz",
+        "[recording] get: https://mangabu.jp/episodes/1",
+        "[recording] skip: 'ep2' needs a purchase, a wait or a login.",
+        "[recording] get: https://mangabu.jp/episodes/2",
+        "[recording] 'ep3': 1 pages",
+        "[recording] page 1/1",
+        "[recording] saved: mangabu.jp/S/ep3",
+        "[recording] packed: mangabu.jp/S/_cbz/ep3.cbz",
+        "[recording] saved: mangabu.jp/S (2 episodes, 1 locked)",
         "done.",
     ]
 

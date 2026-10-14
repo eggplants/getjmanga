@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import TYPE_CHECKING
 
 from rich.console import Console, Group
@@ -28,6 +30,8 @@ from rich.progress import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from .downloader import Result, Status
     from .extractor import Episode
 
@@ -35,8 +39,37 @@ if TYPE_CHECKING:
 logger = logging.getLogger("getjmanga")
 
 #: What `-v` writes each line as.
-LOG_FORMAT = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
+LOG_FORMAT = "%(asctime)s %(levelname)-7s %(name)s: %(prefix)s%(message)s"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+#: The `NAME` of the extractor at work, which every line names while it is set.
+_site: ContextVar[str] = ContextVar("site", default="")
+
+
+@contextmanager
+def site(name: str) -> Generator[None]:
+    """Start every line with `[name] ` until the block is left."""
+    token = _site.set(name)
+    try:
+        yield
+    finally:
+        _site.reset(token)
+
+
+def prefix() -> str:
+    """What every line starts with: `[name] ` inside `site()`, else nothing."""
+    name = _site.get()
+    return f"[{name}] " if name else ""
+
+
+class SitePrefix(logging.Filter):
+    """Hand every record the `prefix` of the extractor at work, for the handler to put in front."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Set `record.prefix`, and let the record through."""
+        record.prefix = prefix()
+        return True
+
 
 #: How the summary line names what became of an episode.
 _LEAD: dict[Status, str] = {"saved": "saved", "exists": "skipped", "locked": "locked"}
@@ -166,7 +199,7 @@ class LiveDisplay(Display):
             TextColumn("pages"),
             TimeRemainingColumn(),
         )
-        self._work_task = self._work.add_task(url)
+        self._work_task = self._work.add_task(prefix() + url)
         self._pages_task = self._pages.add_task("", total=None, visible=False)
         self._live = Live(Group(self._work, self._pages), console=self.console, transient=True, refresh_per_second=10)
         self._live.start()
@@ -213,7 +246,7 @@ class LiveDisplay(Display):
             parts.append(f"episode {index}/{self._total}")
         elif self.results:
             parts.append(f"episode {index}")
-        self._work.update(self._work_task, description=" · ".join([*parts, *tail]))
+        self._work.update(self._work_task, description=prefix() + " · ".join([*parts, *tail]))
 
 
 class ConsoleHandler(logging.Handler):
@@ -227,10 +260,11 @@ class ConsoleHandler(logging.Handler):
         super().__init__()
         self._out = console
         self._err = Console(stderr=True)
+        self.addFilter(SitePrefix())
 
     def emit(self, record: logging.LogRecord) -> None:
-        """Print the record, with `error:` in front of an error."""
-        message = record.getMessage()
+        """Print the record, with the extractor's `[name]`, and `error:` in front of an error."""
+        message = getattr(record, "prefix", "") + record.getMessage()
         if record.levelno >= logging.ERROR:
             message = f"error: {message}"
         console = self._err if record.levelno >= logging.WARNING else self._out
@@ -254,6 +288,7 @@ def setup(*, quiet: bool = False, verbose: bool = False) -> Display:
     if verbose:
         handler = logging.StreamHandler()
         handler.setFormatter(logging.Formatter(LOG_FORMAT, LOG_DATE_FORMAT))
+        handler.addFilter(SitePrefix())
         logger.setLevel(logging.DEBUG)
         requests.setLevel(logging.INFO)
         for log in (logger, requests):
