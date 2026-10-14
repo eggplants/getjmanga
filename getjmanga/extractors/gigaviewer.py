@@ -16,6 +16,8 @@ from getjmanga.errors import LoginError, NotAnEpisodePageError, UnsupportedUrlEr
 from getjmanga.extractor import Episode, Extractor, Page, numbered, published_on
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from httpx2 import Client
     from PIL import Image
 
@@ -102,7 +104,7 @@ class GigaViewer(Extractor):
         "https://<host>/series/<id>/first_episode",
         "https://<host>/rss/series/<id>",
     )
-    PUBLISHERS: ClassVar[dict[str, str]] = {
+    PUBLISHERS: ClassVar[Mapping[str, str]] = {
         "comic-action.com": "双葉社",
         "comic-days.com": "講談社",
         "comic-earthstar.com": "アース・スター エンターテイメント",

@@ -17,7 +17,7 @@ from getjmanga.errors import GetjmangaError, LoginError, NotAnEpisodePageError, 
 from getjmanga.extractor import Episode, Extractor, Page, published_on
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
     from datetime import date
 
     from httpx2 import Client
@@ -216,7 +216,7 @@ class Comici(Extractor):
         "https://<host>/<imprint>/series/<id>",
     )
     CONFIG_KEY = "comici-plus"
-    PUBLISHERS: ClassVar[dict[str, str]] = {
+    PUBLISHERS: ClassVar[Mapping[str, str]] = {
         "asacomi.jp": "朝日新聞出版",
         "bibibi-comic.com": "ツインエンジン",
         "bigcomics.jp": "小学館",
