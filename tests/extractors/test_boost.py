@@ -79,7 +79,21 @@ LAST_COLOPHON_HTML = f"""
 <div class="js-share-btn-twitter" data-title="{SERIES_TITLE}" data-title-sub="第10話" data-id="01700010"></div>
 </div></body></html>
 """
-LOCKED_COLOPHON_HTML = COLOPHON_HTML.replace("第1話", "第8話").replace("01700002", "01700009").replace("第2話", "第9話")
+LOCKED_COLOPHON_HTML = f"""
+<html><body><div class="colophon">
+<div class="pos-center">
+<p class="js-read primary next btn" href="javascript:void(0);" data-href="/product/01700009?coin=31" data-id="01700009"
+ data-title="第9話" data-coin="31"><span>次の話を読む</span></p>
+</div>
+<div class="pos-center"><a class="btn" href="/content/01700001"><span>作品詳細へ戻る</span></a></div>
+<div class="pos-center">
+<p class="js-read btn" href="javascript:void(0);" data-href="/product/01700007?coin=31" data-id="01700007"
+ data-title="第7話" data-coin="31"><span>前の話を読む</span></p>
+</div>
+<div class="js-share-btn-twitter colophon-btn-list-item twitter" data-title="{SERIES_TITLE}"
+ data-title-sub="第8話" data-id="01700001" data-url="{SERIES_URL}"></div>
+</div></body></html>
+"""
 EMPTY_COLOPHON_HTML = "<html><body><div class='colophon-outer'><div class='colophon'></div></div></body></html>"
 LOCKED_PRODUCT_HTML = (
     "<html><head><script>alert('閲覧するにはログインが必要です。');history.back();</script></head></html>"
@@ -272,7 +286,8 @@ def test_locked_episode_has_no_pages_but_keeps_its_titles(client):
     assert not episode.readable
     assert episode.series_title == SERIES_TITLE
     assert episode.episode_title == "第8話"
-    assert episode.next_url == f"{BASE_URL}/product/01700009"
+    # Both neighbours cost coins, so their buttons are `<p data-href>`, not links.
+    assert (episode.prev_url, episode.next_url) == (f"{BASE_URL}/product/01700007", f"{BASE_URL}/product/01700009")
     assert LICENSE_URL not in session.calls
 
 

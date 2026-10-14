@@ -54,11 +54,20 @@ class Colophon:
     raw: dict[str, Any] = field(default_factory=dict)
 
 
+# A free episode is an `<a href>`; one that costs coins a `<p class="js-read" data-href="/product/<id>?coin=29">`.
+_EPISODE_BUTTONS = 'a[href^="/product/"], [data-href^="/product/"]'
+
+
+def _button_url(button: Tag) -> str:
+    """The canonical URL of the episode a colophon button opens, without its `?coin=`."""
+    return urljoin(BASE_URL, urlparse(str(button.attrs.get("data-href") or button.attrs["href"])).path)
+
+
 def _prev_link(soup: BeautifulSoup, next_link: Tag | None) -> str | None:
     """The previous episode's link: the other `/product/` button of the colophon, which has no class of its own."""
-    for anchor in soup.select('a[href^="/product/"]'):
-        if anchor is not next_link:
-            return urljoin(BASE_URL, str(anchor.attrs["href"]))
+    for button in soup.select(_EPISODE_BUTTONS):
+        if button is not next_link:
+            return _button_url(button)
     return None
 
 
@@ -92,13 +101,15 @@ def parse_colophon(html: str | bytes) -> Colophon | None:
     share = soup.find(class_="js-share-btn-twitter")
     if not isinstance(share, Tag) or not share.attrs.get("data-title"):
         return None
-    next_link = soup.select_one("a.next[href]")
+    next_link = next(
+        (button for button in soup.select(_EPISODE_BUTTONS) if "next" in button.get_attribute_list("class")), None
+    )
     back = soup.select_one('a[href^="/content/"]')
     return Colophon(
         series_title=str(share.attrs["data-title"]),
         episode_title=str(share.attrs.get("data-title-sub") or ""),
         prev_url=_prev_link(soup, next_link),
-        next_url=urljoin(BASE_URL, str(next_link.attrs["href"])) if isinstance(next_link, Tag) else None,
+        next_url=_button_url(next_link) if next_link is not None else None,
         content_url=urljoin(BASE_URL, str(back.attrs["href"])) if isinstance(back, Tag) else None,
         raw={key: str(value) for key, value in share.attrs.items() if key.startswith("data-")},
     )
