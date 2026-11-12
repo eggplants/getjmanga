@@ -30,6 +30,10 @@ OLD_WORK_URL = "https://www.shinshokan.com/webwings/title20.html"
 SMOOZY_URL = "https://www.shinshokan.com/webwings/contents/punichan/"
 SLICED_URL = "https://www.shinshokan.com/webwings/contents/title75c/"
 
+# Every page of www.shinshokan.com is a "システムメンテナンスのお知らせ"; CI has failed on
+# it since 2026-11-01. Drop this once the site is back.
+UNDER_MAINTENANCE = pytest.mark.skip(reason="shinshokan.com is under maintenance")
+
 # A work page as the magazine writes it: the title, three viewer buttons (one
 # of them commented out, one pointing at a store, one repeated) and the rest.
 WORK_HTML = """
@@ -641,6 +645,7 @@ TEST_URLS: dict[str, str] = {
 
 
 @pytest.mark.network
+@UNDER_MAINTENANCE
 @pytest.mark.parametrize("host", TEST_URLS)
 def test_site_download(tmp_path, host):
     result = Downloader(Wings(), tmp_path, only_first=True).download(TEST_URLS[host])
@@ -652,6 +657,7 @@ def test_site_download(tmp_path, host):
 
 
 @pytest.mark.network
+@UNDER_MAINTENANCE
 def test_site_work_page_lists_episodes():
     urls = Wings().series_urls(WORK_URL)
     assert urls[0] == EPISODE_URL
@@ -659,6 +665,7 @@ def test_site_work_page_lists_episodes():
 
 
 @pytest.mark.network
+@UNDER_MAINTENANCE
 def test_site_smoozy_book_is_readable(tmp_path):
     result = Downloader(Wings(), tmp_path, only_first=True).download(SMOOZY_URL)
     assert result.status == "saved"
@@ -668,6 +675,7 @@ def test_site_smoozy_book_is_readable(tmp_path):
 
 
 @pytest.mark.network
+@UNDER_MAINTENANCE
 def test_site_flipper_3_tiles_are_stitched(tmp_path):
     result = Downloader(Wings(), tmp_path, only_first=True).download(SLICED_URL)
     assert result.status == "saved"

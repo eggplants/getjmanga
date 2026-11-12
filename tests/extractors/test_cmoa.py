@@ -27,6 +27,10 @@ INFO_URL = "https://www.cmoa.jp/bib/sws/bibGetCntntInfo.php"
 SERVER = "https://free-binb-cmoa.akamaized.net/sbc"
 TOKEN = "1PHuF6KVPnDhccBnXZxappY6kCI"
 
+# The title and search pages answer with a 503 "サービス復旧をお待ちください" page; CI has
+# failed on it since 2026-11-01. Drop this once they are back.
+UNDER_MAINTENANCE = pytest.mark.skip(reason="cmoa.jp is under maintenance (503 on its title pages)")
+
 # A 2x2 grid, two pixels of padding, with the narrow column and the short row last
 # on both sides: `BB` (short row per column) + `BB` (narrow column per row) + order.
 IDENTITY_CTBL = "=2-2+2-BBBBABCD"
@@ -521,6 +525,7 @@ TEST_URLS: dict[str, str] = {
 
 
 @pytest.mark.network
+@UNDER_MAINTENANCE
 @pytest.mark.parametrize("host", TEST_URLS)
 def test_site_download(tmp_path, host):
     result = Downloader(Cmoa(), tmp_path, only_first=True).download(TEST_URLS[host])
@@ -534,6 +539,7 @@ def test_site_download(tmp_path, host):
 
 
 @pytest.mark.network
+@UNDER_MAINTENANCE
 def test_title_page_lists_volumes_oldest_first():
     cmoa = Cmoa()
     assert cmoa.is_series(TITLE_URL)
@@ -544,6 +550,7 @@ def test_title_page_lists_volumes_oldest_first():
 
 
 @pytest.mark.network
+@UNDER_MAINTENANCE
 def test_missing_content_is_not_an_episode_on_the_site():
     with pytest.raises(NotAnEpisodePageError, match="leads to no reader"):
         Cmoa().episode("https://www.cmoa.jp/reader/sample/title_id/104860/content_id/999/")
