@@ -575,6 +575,7 @@ SITE_LOCKED_URL = f"{ORIGIN}/reader/20474"
 
 
 @pytest.mark.network
+@pytest.mark.geoblocked
 @pytest.mark.parametrize("host", TEST_URLS)
 def test_site_download(tmp_path, host):
     result = Downloader(FireCross(), tmp_path, only_first=True).download(TEST_URLS[host])
@@ -585,6 +586,7 @@ def test_site_download(tmp_path, host):
 
 
 @pytest.mark.network
+@pytest.mark.geoblocked
 def test_site_series_lists_episodes_oldest_first():
     urls = FireCross().series_urls(SERIES_URL)
     assert urls[0] == EPISODE_URL
@@ -593,6 +595,7 @@ def test_site_series_lists_episodes_oldest_first():
 
 
 @pytest.mark.network
+@pytest.mark.geoblocked
 def test_site_locks_a_rental_without_an_account():
     episode = FireCross().episode(SITE_LOCKED_URL)
     assert episode.pages == ()

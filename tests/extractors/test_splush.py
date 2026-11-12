@@ -352,6 +352,7 @@ TEST_URLS: dict[str, str] = {
 
 
 @pytest.mark.network
+@pytest.mark.geoblocked
 @pytest.mark.parametrize("host", TEST_URLS)
 def test_site_download(tmp_path, host):
     result = Downloader(Splush(), tmp_path, only_first=True).download(TEST_URLS[host])
@@ -361,6 +362,7 @@ def test_site_download(tmp_path, host):
 
 
 @pytest.mark.network
+@pytest.mark.geoblocked
 def test_work_page_lists_episodes_oldest_first():
     splush = Splush()
     assert splush.is_series(WORK_URL)

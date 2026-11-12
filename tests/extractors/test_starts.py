@@ -420,6 +420,7 @@ TEST_URLS: dict[str, str] = {
 
 
 @pytest.mark.network
+@pytest.mark.geoblocked
 @pytest.mark.parametrize("host", TEST_URLS)
 def test_site_download(tmp_path, host):
     result = Downloader(Starts(), tmp_path, only_first=True).download(TEST_URLS[host])
@@ -428,6 +429,7 @@ def test_site_download(tmp_path, host):
 
 
 @pytest.mark.network
+@pytest.mark.geoblocked
 def test_series_page_lists_episodes():
     urls = Starts().series_urls("https://www.berrys-cafe.jp/comic/serial/n291")
     assert urls[0] == "https://www.berrys-cafe.jp/comic/serial/n291/n1/1"
@@ -435,6 +437,7 @@ def test_series_page_lists_episodes():
 
 
 @pytest.mark.network
+@pytest.mark.geoblocked
 def test_closed_episode_is_locked_not_an_error():
     # Episode 23 of this finished series is "各電子書店で読む": listed, but 404.
     episode = Starts().episode("https://www.berrys-cafe.jp/comic/serial/n53/n23/1")
